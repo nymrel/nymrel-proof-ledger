@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nymrel-proof-ledger"
+version = "1.0.0"
+authors = [
+  { name = "Nymrel", email = "contact@jalenbuilds.com" },
+]
+description = "Zero-dependency cryptographic attestation and proof-of-execution protocol library and CLI"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Security :: Cryptography",
+]
+keywords = ["cryptography", "attestation", "merkle-tree", "proof-of-execution", "audit-trail", "nymrel"]
+dependencies = []
+
+[project.scripts]
+proof-ledger-py = "nymrel_proof_ledger.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["python"]

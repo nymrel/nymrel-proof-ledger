@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
+*.tmp
+*.log

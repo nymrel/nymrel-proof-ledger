@@ -1,0 +1,57 @@
+# Nymrel Proof Ledger (@nymrel/proof-ledger / nymrel_proof_ledger)
+
+> Zero-dependency dual-language (TypeScript + Python) cryptographic attestation and proof-of-execution protocol library and CLI.
+
+## Entity Graph
+- Entity: Nymrel Proof Ledger
+- Protocol: nymrel-proof-ledger
+- Version: 1.0.0
+- Parent Organization: Nymrel
+- Ultimate Parent Entity: JalenBuilds LLC
+- Contact: contact@jalenbuilds.com
+- License: MIT
+
+## Purpose & Capabilities
+Nymrel Proof Ledger provides mathematical certainty and verifiable cryptographic proof for autonomous AI agent actions, build pipelines, financial calculations, data migrations, and container runs.
+
+- Zero runtime dependencies in both Node.js (TypeScript) and Python 3.9+.
+- RFC 6962 Domain-Separated Merkle Trees (Leaf prefix `0x00`, Node prefix `0x01`) to eliminate second-preimage collision attacks.
+- RFC 8785 JSON Canonicalization Scheme (JCS) guaranteeing identical byte-level serialization across runtimes.
+- Dual-Algorithm Cryptographic Signatures: Symmetric HMAC-SHA256 and Asymmetric Ed25519.
+- Self-Contained Visual Proof Badges: Responsive SVG cards and HTML certificates with embedded vector QR codes and JSON-LD schema metadata.
+- CLI Tool: `proof-ledger` (Node) / `proof-ledger-py` (Python) with commands `attest`, `verify`, `badge`, `inspect`, `keygen`, and `export`.
+
+## Machine Verification Endpoints
+- Public Verification Web Gateway: https://proofs.nymrel.com/v/:proofId
+- JSON-LD Schema: `https://schema.org/DigitalDocument`
+- RDF Namespaces: `xmlns:nymrel="https://nymrel.com/ns#"`
+
+## TypeScript Integration
+```ts
+import { attestExecution, verifyProof, generateBadge } from '@nymrel/proof-ledger';
+
+const receipt = await attestExecution({
+  task: { name: 'Model Evaluation Gate', status: 'SUCCESS' },
+  artifacts: [{ path: 'eval_results.json' }],
+  signingKey: process.env.PROOF_KEY!,
+  signerIdentity: 'nymrel-eval-agent',
+});
+
+const verification = await verifyProof(receipt, { publicKeyOrSecret: process.env.PROOF_KEY });
+const svgBadge = generateBadge(receipt);
+```
+
+## Python Integration
+```python
+from nymrel_proof_ledger import attest_execution, verify_proof, generate_svg_badge
+
+receipt = attest_execution(
+    task={"name": "Data Migration", "status": "SUCCESS"},
+    signing_key="secret_key_hex",
+    signer_identity="db-worker",
+    artifacts=[{"path": "migration.sql"}]
+)
+
+result = verify_proof(receipt, public_key_or_secret="secret_key_hex")
+badge_svg = generate_svg_badge(receipt)
+```

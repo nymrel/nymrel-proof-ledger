@@ -1,0 +1,79 @@
+{
+  "name": "@nymrel/proof-ledger",
+  "version": "1.0.0",
+  "description": "Zero-dependency dual-language cryptographic attestation and proof-of-execution protocol library and CLI.",
+  "author": "Nymrel <contact@jalenbuilds.com>",
+  "license": "MIT",
+  "homepage": "https://nymrel.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nymrel/nymrel-proof-ledger.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nymrel/nymrel-proof-ledger/issues"
+  },
+  "keywords": [
+    "cryptography",
+    "attestation",
+    "merkle-tree",
+    "proof-of-execution",
+    "audit-trail",
+    "machine-trust",
+    "nymrel",
+    "zero-dependency",
+    "ed25519",
+    "hmac-sha256"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./core/merkle": {
+      "import": "./dist/core/merkle.js",
+      "types": "./dist/core/merkle.d.ts"
+    },
+    "./core/signer": {
+      "import": "./dist/core/signer.js",
+      "types": "./dist/core/signer.d.ts"
+    },
+    "./core/receipt": {
+      "import": "./dist/core/receipt.js",
+      "types": "./dist/core/receipt.d.ts"
+    },
+    "./visual/badge": {
+      "import": "./dist/visual/badge.js",
+      "types": "./dist/visual/badge.d.ts"
+    }
+  },
+  "bin": {
+    "proof-ledger": "./bin/proof-ledger.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "LICENSE",
+    "README.md",
+    "llms.txt"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/test/ts/*.test.js",
+    "test:ts": "node --test dist/test/ts/*.test.js",
+    "test:py": "python -m unittest discover -s test/python -p \"test_*.py\"",
+    "test:all": "npm run test && npm run test:py",
+    "prepublishOnly": "npm run build && npm run test:all"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
