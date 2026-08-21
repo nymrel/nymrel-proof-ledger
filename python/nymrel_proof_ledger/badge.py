@@ -164,6 +164,7 @@ def generate_html_certificate(receipt: Dict[str, Any]) -> str:
     json_str = json.dumps(receipt, indent=2)
     task = receipt.get("task", {})
     artifacts = receipt.get("artifacts", [])
+    merkle_root = receipt.get("merkle", {}).get("root", "") if isinstance(receipt.get("merkle"), dict) else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -330,7 +331,7 @@ def generate_html_certificate(receipt: Dict[str, Any]) -> str:
     <div class="section-title">Cryptographic Proofs</div>
     <div class="data-card">
       <div class="label">Merkle Root</div>
-      <div class="value mono" style="color: var(--terracotta); margin-bottom: 16px;">{html.escape(receipt.get("merkle", {{}}).get("root", ""))}</div>
+      <div class="value mono" style="color: var(--terracotta); margin-bottom: 16px;">{html.escape(merkle_root)}</div>
 
       <div class="label">Artifacts ({len(artifacts)})</div>
       <table>

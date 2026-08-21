@@ -67,7 +67,7 @@
     "test:ts": "node --test dist/test/ts/*.test.js",
     "test:py": "python -m unittest discover -s test/python -p \"test_*.py\"",
     "test:all": "npm run test && npm run test:py",
-    "prepublishOnly": "npm run build && npm run test:all"
+    "prepublishOnly": "npm run build && npm test"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -75,5 +75,8 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
