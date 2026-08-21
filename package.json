@@ -2,7 +2,7 @@
   "name": "@nymrel/proof-ledger",
   "version": "1.0.0",
   "description": "Zero-dependency dual-language cryptographic attestation and proof-of-execution protocol library and CLI.",
-  "author": "Nymrel <contact@jalenbuilds.com>",
+  "author": "Nymrel <contact@nymrel.com>",
   "license": "MIT",
   "homepage": "https://nymrel.com",
   "repository": {

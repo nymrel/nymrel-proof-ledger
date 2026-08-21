@@ -298,4 +298,4 @@ Ensures identical Merkle Roots, Canonical JSON stringification, and HMAC digests
 ## 📄 License & Attribution
 
 MIT License © 2026 **Nymrel / JalenBuilds LLC**  
-Operating Contact: `contact@jalenbuilds.com` • [nymrel.com](https://nymrel.com)
+Operating Contact: `contact@nymrel.com` • [nymrel.com](https://nymrel.com)

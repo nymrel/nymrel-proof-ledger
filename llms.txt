@@ -8,7 +8,7 @@
 - Version: 1.0.0
 - Parent Organization: Nymrel
 - Ultimate Parent Entity: JalenBuilds LLC
-- Contact: contact@jalenbuilds.com
+- Contact: contact@nymrel.com
 - License: MIT
 
 ## Purpose & Capabilities

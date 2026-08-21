@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nymrel-proof-ledger"
 version = "1.0.0"
 authors = [
-  { name = "Nymrel", email = "contact@jalenbuilds.com" },
+  { name = "Nymrel", email = "contact@nymrel.com" },
 ]
 description = "Zero-dependency cryptographic attestation and proof-of-execution protocol library and CLI"
 readme = "README.md"

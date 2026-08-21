@@ -7,7 +7,7 @@ Parent Organization: Nymrel -> JalenBuilds LLC
 """
 
 __version__ = "1.0.0"
-__author__ = "Nymrel <contact@jalenbuilds.com>"
+__author__ = "Nymrel <contact@nymrel.com>"
 
 from .canonical import canonicalize, canonical_hash
 from .merkle import MerkleTree, hash_leaf, hash_nodes, MerkleProofStep
