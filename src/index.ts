@@ -24,6 +24,7 @@ export * from './core/canonical.js';
 export * from './core/merkle.js';
 export * from './core/signer.js';
 export * from './core/receipt.js';
+export * from './profiles/signal.js';
 export * from './visual/qr.js';
 export * from './visual/badge.js';
 
