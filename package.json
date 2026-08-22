@@ -67,11 +67,12 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "test": "node --test dist/test/ts/*.test.js",
-    "test:ts": "node --test dist/test/ts/*.test.js",
+    "test": "npm run build && npm run test:ts",
+    "test:ts": "node dist/test/ts/run-tests.js",
     "test:py": "python -m unittest discover -s test/python -p \"test_*.py\"",
     "test:all": "npm run test && npm run test:py",
-    "prepublishOnly": "npm run build && npm test"
+    "test:release": "npm run test:all",
+    "prepublishOnly": "npm run test:release"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

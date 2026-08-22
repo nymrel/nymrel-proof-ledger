@@ -13,7 +13,7 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
-import { canonicalHash, canonicalize } from './canonical.js';
+import { canonicalHash } from './canonical.js';
 import { MerkleTree } from './merkle.js';
 import { ProofSigner, type SignatureAlgorithm, type SignatureRecord } from './signer.js';
 
