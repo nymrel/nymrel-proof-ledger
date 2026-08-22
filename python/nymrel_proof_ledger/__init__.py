@@ -10,6 +10,12 @@ __version__ = "1.0.0"
 __author__ = "Nymrel <contact@nymrel.com>"
 
 from .canonical import canonicalize, canonical_hash
+from .envelope import (
+    EnvelopeErrorCode,
+    RECEIPT_PROTOCOL,
+    SUPPORTED_RECEIPT_VERSION,
+    validate_receipt_envelope,
+)
 from .merkle import MerkleTree, hash_leaf, hash_nodes, MerkleProofStep
 from .signer import ProofSigner
 from .receipt import create_receipt, verify_receipt, hash_artifact, get_git_context
@@ -23,6 +29,10 @@ generate_badge = generate_svg_badge
 __all__ = [
     "canonicalize",
     "canonical_hash",
+    "EnvelopeErrorCode",
+    "RECEIPT_PROTOCOL",
+    "SUPPORTED_RECEIPT_VERSION",
+    "validate_receipt_envelope",
     "MerkleTree",
     "hash_leaf",
     "hash_nodes",

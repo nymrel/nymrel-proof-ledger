@@ -21,6 +21,7 @@ import { ProofSigner } from './core/signer.js';
 
 // Core exports
 export * from './core/canonical.js';
+export * from './core/envelope.js';
 export * from './core/merkle.js';
 export * from './core/signer.js';
 export * from './core/receipt.js';

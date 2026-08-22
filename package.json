@@ -25,28 +25,32 @@
     "hmac-sha256"
   ],
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     },
     "./core/merkle": {
-      "import": "./dist/core/merkle.js",
-      "types": "./dist/core/merkle.d.ts"
+      "import": "./dist/src/core/merkle.js",
+      "types": "./dist/src/core/merkle.d.ts"
     },
     "./core/signer": {
-      "import": "./dist/core/signer.js",
-      "types": "./dist/core/signer.d.ts"
+      "import": "./dist/src/core/signer.js",
+      "types": "./dist/src/core/signer.d.ts"
     },
     "./core/receipt": {
-      "import": "./dist/core/receipt.js",
-      "types": "./dist/core/receipt.d.ts"
+      "import": "./dist/src/core/receipt.js",
+      "types": "./dist/src/core/receipt.d.ts"
+    },
+    "./core/envelope": {
+      "import": "./dist/src/core/envelope.js",
+      "types": "./dist/src/core/envelope.d.ts"
     },
     "./visual/badge": {
-      "import": "./dist/visual/badge.js",
-      "types": "./dist/visual/badge.d.ts"
+      "import": "./dist/src/visual/badge.js",
+      "types": "./dist/src/visual/badge.d.ts"
     }
   },
   "bin": {
