@@ -180,10 +180,10 @@ describe('Nymrel Signal proof profile', () => {
   });
 
   it('fails closed on unsupported versions and reserved artifact-path collisions', async () => {
-    const unsupported = fixtureEnvelope() as SignalProofEnvelopeV1 & {
-      profileVersion: string;
+    const unsupported: unknown = {
+      ...fixtureEnvelope(),
+      profileVersion: '2.0.0',
     };
-    unsupported.profileVersion = '2.0.0';
     assert.ok(validateSignalProofEnvelope(unsupported).some((error) => error.includes('version')));
 
     await assert.rejects(
