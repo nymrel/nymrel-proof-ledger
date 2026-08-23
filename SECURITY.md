@@ -6,7 +6,7 @@ Nymrel and JalenBuilds LLC take cryptographic protocol security seriously. If yo
 
 ### Contact
 
-- **Primary Contact:** `security@jalenbuilds.com` or `contact@nymrel.com`
+- **Primary Contact:** `contact@nymrel.com`
 - **PGP / Sensitive Inquiries:** Please request our security team's public key before transmitting unencrypted vulnerability details.
 
 ### Scope
