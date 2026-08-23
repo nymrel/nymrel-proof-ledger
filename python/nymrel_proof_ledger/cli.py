@@ -11,6 +11,39 @@ from .badge import generate_svg_badge, generate_shield_svg, generate_html_certif
 from .signer import ProofSigner
 
 
+def _load_key_material(key_file, role):
+    """
+    Loads signing key material from a file.
+
+    Supports both plain-text key files and the JSON envelopes written by
+    `proof-ledger-py keygen`:
+      - HMAC-SHA256: {"algorithm": "HMAC-SHA256", "secretKey": "<hex>"}
+      - Ed25519:     {"algorithm": "Ed25519", "privateKey": "...", "publicKey": "..."}
+    """
+    with open(key_file, "r", encoding="utf-8") as f:
+        raw = f.read().strip()
+
+    if raw.startswith("{"):
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return raw
+        if isinstance(data, dict):
+            secret_key = data.get("secretKey")
+            private_key = data.get("privateKey")
+            public_key = data.get("publicKey")
+            if isinstance(secret_key, str) and secret_key:
+                return secret_key
+            if role == "sign" and isinstance(private_key, str) and private_key:
+                return private_key
+            if role == "verify":
+                if isinstance(public_key, str) and public_key:
+                    return public_key
+                if isinstance(private_key, str) and private_key:
+                    return private_key
+    return raw
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="proof-ledger-py",
@@ -87,8 +120,7 @@ def main(argv=None):
     if args.command == "attest":
         key = args.key
         if not key and args.key_file:
-            with open(args.key_file, "r", encoding="utf-8") as f:
-                key = f.read().strip()
+            key = _load_key_material(args.key_file, "sign")
         if not key:
             key = ProofSigner.generate_secret_key()
             print(f"Warning: No key provided. Generated ephemeral key: {key}", file=sys.stderr)
@@ -139,8 +171,7 @@ def main(argv=None):
 
         key = args.key
         if not key and args.key_file:
-            with open(args.key_file, "r", encoding="utf-8") as f:
-                key = f.read().strip()
+            key = _load_key_material(args.key_file, "verify")
 
         result = verify_receipt(
             receipt,

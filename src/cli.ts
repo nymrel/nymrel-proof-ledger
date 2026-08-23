@@ -56,6 +56,47 @@ interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
+/**
+ * Reads a flag value trying multiple spellings (kebab-case and camelCase),
+ * because parseArgs stores flag names verbatim as typed by the user.
+ */
+function getFlag(parsed: ParsedArgs, ...names: string[]): string | undefined {
+  for (const name of names) {
+    const value = parsed.flags[name];
+    if (typeof value === 'string' && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+/**
+ * Loads signing key material from a file.
+ *
+ * Supports both plain-text key files and the JSON envelopes written by
+ * `proof-ledger keygen`:
+ *   - HMAC-SHA256: { "algorithm": "HMAC-SHA256", "secretKey": "<hex>" }
+ *   - Ed25519:     { "algorithm": "Ed25519", "privateKey": "...", "publicKey": "..." }
+ */
+async function loadKeyMaterial(keyFile: string, role: 'sign' | 'verify'): Promise<string> {
+  const raw = (await fs.readFile(path.resolve(keyFile), 'utf8')).trim();
+  if (raw.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const secretKey = parsed.secretKey;
+      const privateKey = parsed.privateKey;
+      const publicKey = parsed.publicKey;
+      if (typeof secretKey === 'string' && secretKey.length > 0) return secretKey;
+      if (role === 'sign' && typeof privateKey === 'string' && privateKey.length > 0) return privateKey;
+      if (role === 'verify') {
+        if (typeof publicKey === 'string' && publicKey.length > 0) return publicKey;
+        if (typeof privateKey === 'string' && privateKey.length > 0) return privateKey;
+      }
+    } catch {
+      // Not valid JSON — treat the file as raw key material below.
+    }
+  }
+  return raw;
+}
+
 function parseArgs(args: string[]): ParsedArgs {
   const result: ParsedArgs = {
     positionals: [],
@@ -138,10 +179,10 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       const signer = (parsed.flags.signer as string) || 'nymrel-agent';
       const algo = (parsed.flags.algo as SignatureAlgorithm) || 'HMAC-SHA256';
       let key = parsed.flags.key as string | undefined;
-      const keyFile = parsed.flags.keyFile as string | undefined;
+      const keyFile = getFlag(parsed, 'key-file', 'keyFile');
 
       if (!key && keyFile) {
-        key = (await fs.readFile(path.resolve(keyFile), 'utf8')).trim();
+        key = await loadKeyMaterial(keyFile, 'sign');
       }
       if (!key) {
         key = ProofSigner.generateSecretKey();
@@ -198,10 +239,10 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
     case 'verify': {
       const proofPath = (parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json');
       const key = parsed.flags.key as string | undefined;
-      const keyFile = parsed.flags.keyFile as string | undefined;
+      const keyFile = getFlag(parsed, 'key-file', 'keyFile');
       let signingKey = key;
       if (!signingKey && keyFile) {
-        signingKey = (await fs.readFile(path.resolve(keyFile), 'utf8')).trim();
+        signingKey = await loadKeyMaterial(keyFile, 'verify');
       }
 
       const checkFiles = Boolean(parsed.flags.checkFiles || parsed.flags['check-files']);

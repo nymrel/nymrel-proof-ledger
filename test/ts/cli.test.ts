@@ -13,6 +13,8 @@ describe('CLI Driver End-to-End', () => {
     const htmlFile = path.join(tmpDir, 'cert.html');
     const reportFile = path.join(tmpDir, 'report.md');
     const dummyArtifact = path.join(tmpDir, 'artifact.txt');
+    const keyFile = path.join(tmpDir, 'secret.key');
+    const keyedProofFile = path.join(tmpDir, 'proof-keyed.json');
 
     await fs.writeFile(dummyArtifact, 'cryptographic test payload data', 'utf8');
 
@@ -63,6 +65,37 @@ describe('CLI Driver End-to-End', () => {
 
       const reportExists = await fs.stat(reportFile);
       assert.ok(reportExists.size > 0);
+
+      // 6. keygen --out -> attest --key-file -> verify --key-file round-trip.
+      // Regression guard: `--key-file` must be honored (not silently dropped)
+      // and must unwrap the JSON envelope written by `keygen`.
+      const keygenFileCode = await runCli(['keygen', '--algo', 'HMAC-SHA256', '--out', keyFile]);
+      assert.strictEqual(keygenFileCode, 0);
+
+      const keyedAttestCode = await runCli([
+        'attest',
+        '--task', 'Key File Round-Trip',
+        '--files', dummyArtifact,
+        '--key-file', keyFile,
+        '--out', keyedProofFile,
+      ]);
+      assert.strictEqual(keyedAttestCode, 0);
+
+      const keyedVerifyCode = await runCli([
+        'verify',
+        keyedProofFile,
+        '--key-file', keyFile,
+      ]);
+      assert.strictEqual(keyedVerifyCode, 0);
+
+      // The receipt must NOT have been signed with an ephemeral key: verifying
+      // with a deliberately wrong secret has to fail signature validation.
+      const wrongKeyVerifyCode = await runCli([
+        'verify',
+        keyedProofFile,
+        '--key', 'definitely-not-the-signing-key',
+      ]);
+      assert.strictEqual(wrongKeyVerifyCode, 1);
     } finally {
       // Cleanup temporary files
       await fs.rm(tmpDir, { recursive: true, force: true });
