@@ -14,6 +14,12 @@
 
 ## ⚡ 60-Second Quickstart
 
+> **Install today:** the `@nymrel/proof-ledger` npm / `nymrel-proof-ledger` PyPI packages are rolling out. Until they resolve on your registry, install from source:
+> ```bash
+> git clone https://github.com/nymrel/nymrel-proof-ledger && cd nymrel-proof-ledger
+> ```
+> then run the CLI from the repo root (`node bin/proof-ledger.js …` or `python -m proof_ledger …`). The steps below work unchanged against the local install.
+
 ```bash
 # 1. Install (either runtime — receipts are cross-verifiable)
 npm install @nymrel/proof-ledger      # or: pip install nymrel-proof-ledger
