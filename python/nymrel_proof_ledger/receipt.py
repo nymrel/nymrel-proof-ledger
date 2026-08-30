@@ -1,274 +1,378 @@
-"""
-Cryptographic Proof-of-Execution Receipt Engine in Python.
+"""Versioned proof receipt generation and verification."""
 
-Provides full parity with the TypeScript @nymrel/proof-ledger implementation.
-"""
+from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
 import hashlib
 import os
 import platform
+import re
 import subprocess
-import sys
-from typing import List, Dict, Any, Optional, Union
+from datetime import UTC, datetime
+from typing import Any
+from urllib.parse import urlsplit, urlunsplit
+
 from .canonical import canonical_hash
+from .envelope import validate_receipt_envelope
 from .merkle import MerkleTree
 from .signer import ProofSigner
 
+RECEIPT_PROTOCOL = "nymrel-proof-ledger"
+RECEIPT_VERSION = "2.0.0"
+LEGACY_RECEIPT_VERSION = "1.0.0"
+RFC6962_MERKLE_ALGORITHM = "RFC6962-SHA256"
+LEGACY_MERKLE_ALGORITHM = "SHA-256"
 
-def get_git_context(cwd: str = None) -> Optional[Dict[str, Any]]:
-    """Gathers Git repository context safely."""
-    cwd = cwd or os.getcwd()
+
+def sanitize_git_remote(remote: str) -> str | None:
+    trimmed = remote.strip()
+    if re.fullmatch(r"git@[A-Za-z0-9.-]+:[^\s?#]+", trimmed):
+        return trimmed
     try:
-        commit = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=cwd,
-            stderr=subprocess.DEVNULL
-        ).decode("utf-8").strip()
-
-        branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=cwd,
-            stderr=subprocess.DEVNULL
-        ).decode("utf-8").strip()
-
-        status_out = subprocess.check_output(
-            ["git", "status", "--porcelain"],
-            cwd=cwd,
-            stderr=subprocess.DEVNULL
-        ).decode("utf-8").strip()
-
-        remote = None
-        try:
-            remote = subprocess.check_output(
-                ["git", "config", "--get", "remote.origin.url"],
-                cwd=cwd,
-                stderr=subprocess.DEVNULL
-            ).decode("utf-8").strip()
-        except Exception:
-            pass
-
-        ctx = {
-            "commit": commit,
-            "branch": branch,
-            "dirty": len(status_out) > 0,
-        }
-        if remote:
-            ctx["remote"] = remote
-        return ctx
-    except Exception:
+        parsed = urlsplit(trimmed)
+        if parsed.scheme not in ("https", "http", "ssh", "git") or not parsed.hostname:
+            return None
+        host = parsed.hostname
+        if parsed.port is not None:
+            host = f"{host}:{parsed.port}"
+        return urlunsplit((parsed.scheme, host, parsed.path, "", ""))
+    except (ValueError, TypeError):
         return None
 
 
-def hash_artifact(artifact_path: str, data: Optional[Union[str, bytes]] = None, cwd: str = None) -> Dict[str, Any]:
-    """Computes SHA-256 hash and size of a file or buffer."""
+def get_git_context(cwd: str | None = None) -> dict[str, Any] | None:
     cwd = cwd or os.getcwd()
-    resolved_path = artifact_path if os.path.isabs(artifact_path) else os.path.abspath(os.path.join(cwd, artifact_path))
-
-    if data is not None:
-        buf = data.encode("utf-8") if isinstance(data, str) else bytes(data)
-    else:
-        with open(resolved_path, "rb") as f:
-            buf = f.read()
-
-    sha256 = hashlib.sha256(buf).hexdigest()
     try:
-        rel_path = os.path.relpath(resolved_path, cwd).replace("\\", "/")
-    except ValueError:
-        rel_path = artifact_path
+        commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=cwd, stderr=subprocess.DEVNULL
+            )
+            .decode("utf-8")
+            .strip()
+        )
+        branch = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=cwd,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode("utf-8")
+            .strip()
+        )
+        dirty = bool(
+            subprocess.check_output(
+                ["git", "status", "--porcelain"], cwd=cwd, stderr=subprocess.DEVNULL
+            )
+            .decode("utf-8")
+            .strip()
+        )
+        remote = None
+        try:
+            remote = sanitize_git_remote(
+                subprocess.check_output(
+                    ["git", "config", "--get", "remote.origin.url"],
+                    cwd=cwd,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8")
+            )
+        except (OSError, subprocess.SubprocessError):
+            remote = None
+        return {
+            "commit": commit,
+            "branch": branch,
+            "dirty": dirty,
+            **({} if remote is None else {"remote": remote}),
+        }
+    except (OSError, subprocess.SubprocessError):
+        return None
 
+
+def hash_artifact(
+    artifact_path: str,
+    data: str | bytes | None = None,
+    cwd: str | None = None,
+) -> dict[str, Any]:
+    cwd = cwd or os.getcwd()
+    resolved = (
+        artifact_path
+        if os.path.isabs(artifact_path)
+        else os.path.abspath(os.path.join(cwd, artifact_path))
+    )
+    if data is None:
+        with open(resolved, "rb") as file:
+            buffer = file.read()
+    else:
+        buffer = data.encode("utf-8") if isinstance(data, str) else bytes(data)
+    try:
+        relative = os.path.relpath(resolved, cwd).replace("\\", "/")
+    except ValueError:
+        relative = artifact_path
     return {
-        "path": rel_path or artifact_path,
-        "sha256": sha256,
-        "sizeBytes": len(buf),
+        "path": relative or artifact_path,
+        "sha256": hashlib.sha256(buffer).hexdigest(),
+        "sizeBytes": len(buffer),
+    }
+
+
+def _profiles(version: str) -> tuple[str, str]:
+    return (
+        ("legacy", "legacy-duplicated")
+        if version == LEGACY_RECEIPT_VERSION
+        else ("rfc8785", "rfc6962")
+    )
+
+
+def _receipt_leaves(
+    task: dict[str, Any],
+    environment: dict[str, Any],
+    artifacts: list[dict[str, Any]],
+    version: str,
+) -> list[str]:
+    canonical_profile, _ = _profiles(version)
+    artifact_leaves = (
+        [artifact["sha256"] for artifact in artifacts]
+        if version == LEGACY_RECEIPT_VERSION
+        else [
+            canonical_hash(artifact, profile=canonical_profile)
+            for artifact in artifacts
+        ]
+    )
+    return [
+        canonical_hash(task, profile=canonical_profile),
+        canonical_hash(environment, profile=canonical_profile),
+        *artifact_leaves,
+    ]
+
+
+def _signing_payload(
+    receipt: dict[str, Any],
+    signature: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    legacy_payload = {
+        "proofId": receipt["proofId"],
+        "timestamp": receipt["timestamp"],
+        "parentOrganization": receipt["parentOrganization"],
+        "taskName": receipt["task"]["name"],
+        "merkleRoot": receipt["merkle"]["root"],
+    }
+    if receipt["version"] == LEGACY_RECEIPT_VERSION:
+        return legacy_payload
+    if signature is None:
+        raise ValueError("Protocol v2 signing requires a complete signature header")
+    return {
+        "protocol": receipt["protocol"],
+        "version": receipt["version"],
+        "merkleAlgorithm": receipt["merkle"]["algorithm"],
+        "metadataHash": canonical_hash(receipt["metadata"]),
+        "signatureAlgorithm": signature["algorithm"],
+        "signatureKeyId": signature["keyId"],
+        "signerIdentity": signature["signerIdentity"],
+        "signatureTimestamp": signature["timestamp"],
+        **legacy_payload,
     }
 
 
 def create_receipt(
-    task: Dict[str, Any],
+    task: dict[str, Any],
     signing_key: str,
     signer_identity: str,
-    artifacts: Optional[List[Dict[str, Any]]] = None,
-    key_id: Optional[str] = None,
+    artifacts: list[dict[str, Any]] | None = None,
+    key_id: str | None = None,
     algorithm: str = "HMAC-SHA256",
-    metadata: Optional[Dict[str, Any]] = None,
-    cwd: Optional[str] = None,
+    metadata: dict[str, Any] | None = None,
+    cwd: str | None = None,
     include_hostname: bool = False,
-) -> Dict[str, Any]:
-    """
-    Generates a signed cryptographic proof receipt.
-    """
+) -> dict[str, Any]:
     cwd = cwd or os.getcwd()
-    ts_now = datetime.now(timezone.utc)
-    proof_id = f"prf_{int(ts_now.timestamp()):x}_{os.urandom(6).hex()}"
-    timestamp = ts_now.isoformat()
+    now = datetime.now(UTC)
+    proof_id = f"prf_{int(now.timestamp()):x}_{os.urandom(6).hex()}"
+    timestamp = now.isoformat().replace("+00:00", "Z")
+    processed_artifacts: list[dict[str, Any]] = []
+    for item in artifacts or []:
+        artifact = hash_artifact(item["path"], item.get("data"), cwd)
+        if "mimeType" in item:
+            artifact["mimeType"] = item["mimeType"]
+        processed_artifacts.append(artifact)
 
-    # 1. Process Artifacts
-    processed_artifacts = []
-    if artifacts:
-        for item in artifacts:
-            art = hash_artifact(item["path"], item.get("data"), cwd)
-            if "mimeType" in item:
-                art["mimeType"] = item["mimeType"]
-            processed_artifacts.append(art)
-
-    # 2. Build Environment
-    env_record: Dict[str, Any] = {
+    environment: dict[str, Any] = {
         "platform": platform.system().lower(),
         "arch": platform.machine().lower(),
         "runtime": f"python {platform.python_version()}",
     }
     if include_hostname:
-        env_record["hostname"] = platform.node()
-    git_ctx = get_git_context(cwd)
-    if git_ctx:
-        env_record["git"] = git_ctx
+        environment["hostname"] = platform.node()
+    git = get_git_context(cwd)
+    if git is not None:
+        environment["git"] = git
 
-    # 3. Build Task Record
-    task_record = {
+    task_record: dict[str, Any] = {
         "name": task["name"],
         "runner": task.get("runner", "nymrel-agent"),
         "status": task.get("status", "SUCCESS"),
         "exitCode": task.get("exitCode", 0),
     }
-    if "description" in task:
-        task_record["description"] = task["description"]
-    if "durationMs" in task:
-        task_record["durationMs"] = task["durationMs"]
-    if "command" in task:
-        task_record["command"] = task["command"]
+    for optional in ("description", "durationMs", "command"):
+        if optional in task:
+            task_record[optional] = task[optional]
 
-    # 4. Construct Merkle Leaves
-    task_hash = canonical_hash(task_record)
-    env_hash = canonical_hash(env_record)
-    artifact_leaves = [a["sha256"] for a in processed_artifacts]
-
-    raw_leaves = [task_hash, env_hash] + artifact_leaves
-    merkle_tree = MerkleTree(raw_leaves, is_pre_hashed=True)
-    merkle_root = merkle_tree.get_root()
-
-    # 5. Sign the Proof Payload
-    sign_payload_obj = {
-        "proofId": proof_id,
-        "timestamp": timestamp,
-        "parentOrganization": "Nymrel -> JalenBuilds LLC",
-        "taskName": task_record["name"],
-        "merkleRoot": merkle_root,
-    }
-
-    resolved_key_id = key_id or ("ed25519-primary" if algorithm == "Ed25519" else "hmac-default")
-    signature = ProofSigner.create_signature_record(
-        sign_payload_obj,
-        signing_key,
-        signer_identity,
-        resolved_key_id,
-        algorithm,
+    leaves = _receipt_leaves(
+        task_record, environment, processed_artifacts, RECEIPT_VERSION
     )
-
-    return {
-        "version": "1.0.0",
-        "protocol": "nymrel-proof-ledger",
+    tree = MerkleTree(leaves, is_pre_hashed=True, profile="rfc6962")
+    receipt_metadata = metadata or {}
+    unsigned: dict[str, Any] = {
+        "protocol": RECEIPT_PROTOCOL,
+        "version": RECEIPT_VERSION,
         "proofId": proof_id,
         "timestamp": timestamp,
-        "parentOrganization": "Nymrel -> JalenBuilds LLC",
+        "parentOrganization": "Nymrel",
         "task": task_record,
-        "environment": env_record,
-        "artifacts": processed_artifacts,
         "merkle": {
-            "algorithm": "SHA-256",
-            "leaves": merkle_tree.get_leaves(),
-            "root": merkle_root,
+            "algorithm": RFC6962_MERKLE_ALGORITHM,
+            "leaves": tree.get_leaves(),
+            "root": tree.get_root(),
         },
-        "signature": signature,
-        "metadata": metadata or {},
+        "metadata": receipt_metadata,
     }
+    resolved_key_id = key_id or (
+        "ed25519-primary" if algorithm == "Ed25519" else "hmac-default"
+    )
+    signature_header = {
+        "algorithm": algorithm,
+        "keyId": resolved_key_id,
+        "signerIdentity": signer_identity,
+        "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+    }
+    signature = {
+        **signature_header,
+        "value": ProofSigner.sign_payload(
+            _signing_payload(unsigned, signature_header),
+            signing_key,
+            algorithm,
+            "rfc8785",
+        ),
+    }
+    return {
+        **unsigned,
+        "environment": environment,
+        "artifacts": processed_artifacts,
+        "signature": signature,
+        "metadata": receipt_metadata,
+    }
+
+
+def _artifact_path_within(cwd: str, artifact_path: str) -> str | None:
+    root = os.path.realpath(os.path.abspath(cwd))
+    candidate = os.path.realpath(os.path.abspath(os.path.join(root, artifact_path)))
+    try:
+        return candidate if os.path.commonpath((root, candidate)) == root else None
+    except ValueError:
+        return None
 
 
 def verify_receipt(
-    receipt: Dict[str, Any],
-    public_key_or_secret: Optional[str] = None,
+    receipt: Any,
+    public_key_or_secret: str | None = None,
     check_files_on_disk: bool = False,
-    cwd: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Verifies a proof receipt against mathematical Merkle invariants and cryptographic signature.
-    """
-    errors: List[str] = []
-    warnings: List[str] = []
-    cwd = cwd or os.getcwd()
-
-    # 1. Protocol & Schema checks
-    if receipt.get("protocol") != "nymrel-proof-ledger":
-        errors.append(f"Invalid protocol identifier: expected 'nymrel-proof-ledger', got '{receipt.get('protocol')}'")
-    if receipt.get("version") != "1.0.0":
-        errors.append(f"Unsupported proof version: '{receipt.get('version')}'")
-    if not receipt.get("proofId") or not receipt.get("merkle") or not receipt.get("signature"):
-        errors.append("Malformed receipt structure: missing required core fields")
-
-    # 2. Merkle Root Integrity
-    task_hash = canonical_hash(receipt.get("task", {}))
-    env_hash = canonical_hash(receipt.get("environment", {}))
-    artifact_leaves = [a["sha256"] for a in receipt.get("artifacts", [])]
-    expected_raw_leaves = [task_hash, env_hash] + artifact_leaves
-
-    calculated_tree = MerkleTree(expected_raw_leaves, is_pre_hashed=True)
-    calculated_root = calculated_tree.get_root()
-
-    merkle_valid = True
-    receipt_root = receipt.get("merkle", {}).get("root", "")
-    if calculated_root.lower() != receipt_root.lower():
-        merkle_valid = False
-        errors.append(f"Merkle root mismatch! Expected '{receipt_root}', recalculated '{calculated_root}'")
-
-    # 3. Artifact verification on disk
-    artifacts_valid = True
-    checked_artifacts = 0
-
-    if check_files_on_disk and receipt.get("artifacts"):
-        for art in receipt["artifacts"]:
-            art_path = art["path"]
-            full_path = art_path if os.path.isabs(art_path) else os.path.abspath(os.path.join(cwd, art_path))
-            try:
-                with open(full_path, "rb") as f:
-                    actual_hash = hashlib.sha256(f.read()).hexdigest()
-                checked_artifacts += 1
-                if actual_hash.lower() != art["sha256"].lower():
-                    artifacts_valid = False
-                    errors.append(f"Artifact tampered: '{art_path}' (hash mismatch)")
-            except Exception as e:
-                artifacts_valid = False
-                errors.append(f"Artifact missing on disk: '{art_path}' ({e})")
-
-    # 4. Signature Verification
-    signature_valid = True
-    if public_key_or_secret:
-        sign_payload_obj = {
-            "proofId": receipt.get("proofId"),
-            "timestamp": receipt.get("timestamp"),
-            "parentOrganization": receipt.get("parentOrganization"),
-            "taskName": receipt.get("task", {}).get("name"),
-            "merkleRoot": receipt_root,
+    cwd: str | None = None,
+) -> dict[str, Any]:
+    envelope = validate_receipt_envelope(receipt)
+    if not envelope["valid"]:
+        return {
+            "valid": False,
+            "trusted": False,
+            "merkleValid": False,
+            "signatureChecked": False,
+            "signatureValid": None,
+            "artifactsValid": False,
+            "errors": [
+                f"Envelope {error['code']}"
+                + ("" if error["path"] is None else f" at {error['path']}")
+                + f": {error['message']}"
+                for error in envelope["errors"]
+            ],
+            "warnings": [],
+            "checkedArtifacts": 0,
+            "receipt": None,
         }
 
-        is_verified = ProofSigner.verify_signature(
-            sign_payload_obj,
-            receipt.get("signature", {}).get("value", ""),
-            public_key_or_secret,
-            receipt.get("signature", {}).get("algorithm", "HMAC-SHA256"),
+    errors: list[str] = []
+    warnings: list[str] = []
+    cwd = cwd or os.getcwd()
+    canonical_profile, merkle_profile = _profiles(receipt["version"])
+    expected_raw_leaves = _receipt_leaves(
+        receipt["task"],
+        receipt["environment"],
+        receipt["artifacts"],
+        receipt["version"],
+    )
+    calculated_tree = MerkleTree(
+        expected_raw_leaves, is_pre_hashed=True, profile=merkle_profile
+    )
+    calculated_leaves = calculated_tree.get_leaves()
+    recorded_leaves = [leaf.lower() for leaf in receipt["merkle"]["leaves"]]
+    leaves_valid = calculated_leaves == recorded_leaves
+    calculated_root = calculated_tree.get_root()
+    recorded_root = receipt["merkle"]["root"].lower()
+    merkle_valid = leaves_valid and calculated_root == recorded_root
+    if not leaves_valid:
+        errors.append("Merkle leaf list does not match the receipt payload")
+    if calculated_root != recorded_root:
+        errors.append(
+            f"Merkle root mismatch: recorded '{receipt['merkle']['root']}', "
+            f"recalculated '{calculated_root}'"
         )
 
-        if not is_verified:
-            signature_valid = False
-            errors.append("Cryptographic signature verification failed with provided key")
+    artifacts_valid = True
+    checked_artifacts = 0
+    if check_files_on_disk:
+        for artifact in receipt["artifacts"]:
+            full_path = _artifact_path_within(cwd, artifact["path"])
+            if full_path is None:
+                artifacts_valid = False
+                errors.append(
+                    f"Artifact path escapes verification root: '{artifact['path']}'"
+                )
+                continue
+            try:
+                with open(full_path, "rb") as file:
+                    actual_hash = hashlib.sha256(file.read()).hexdigest()
+                checked_artifacts += 1
+                if actual_hash != artifact["sha256"].lower():
+                    artifacts_valid = False
+                    errors.append(
+                        f"Artifact tampered: '{artifact['path']}' (hash mismatch)"
+                    )
+            except OSError as error:
+                artifacts_valid = False
+                errors.append(
+                    f"Artifact missing on disk: '{artifact['path']}' ({error})"
+                )
+
+    signature_checked = public_key_or_secret is not None
+    signature_valid: bool | None = None
+    if signature_checked:
+        signature_valid = ProofSigner.verify_signature(
+            _signing_payload(receipt, receipt["signature"]),
+            receipt["signature"]["value"],
+            public_key_or_secret,
+            receipt["signature"]["algorithm"],
+            canonical_profile,
+        )
+        if not signature_valid:
+            errors.append(
+                "Cryptographic signature verification failed with provided key"
+            )
     else:
-        warnings.append("Signature was not cryptographically verified (no public key / secret key provided)")
+        warnings.append(
+            "Signature was not cryptographically verified (no public key or secret provided)"
+        )
 
-    valid = len(errors) == 0
-
+    valid = not errors
     return {
         "valid": valid,
+        "trusted": valid and signature_valid is True,
         "merkleValid": merkle_valid,
+        "signatureChecked": signature_checked,
         "signatureValid": signature_valid,
         "artifactsValid": artifacts_valid,
         "errors": errors,

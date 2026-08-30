@@ -21,9 +21,9 @@ import { ProofSigner, type SignatureAlgorithm } from './core/signer.js';
 
 function printHelp(): void {
   console.log(`
-\x1b[1m\x1b[32mNYMREL PROOF LEDGER CLI\x1b[0m (v1.0.0)
+\x1b[1m\x1b[32mNYMREL PROOF LEDGER CLI\x1b[0m (v2.0.0)
 Cryptographic Attestation & Proof-of-Execution Protocol
-Parent Organization: Nymrel -> JalenBuilds LLC
+Parent Organization: Nymrel
 
 \x1b[1mUSAGE:\x1b[0m
   proof-ledger <command> [options]
@@ -142,7 +142,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
   }
 
   if (parsed.flags.version || parsed.flags.v) {
-    console.log('1.0.0');
+    console.log('2.0.0');
     return 0;
   }
 
@@ -248,7 +248,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       const checkFiles = Boolean(parsed.flags.checkFiles || parsed.flags['check-files']);
 
       const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: ProofReceipt = JSON.parse(raw);
+      const receipt: unknown = JSON.parse(raw);
 
       const result = await verifyReceipt(receipt, {
         publicKeyOrSecret: signingKey,
@@ -261,15 +261,20 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       }
 
       console.log('\n\x1b[1m--- PROOF VERIFICATION REPORT ---\x1b[0m');
-      console.log(`Proof ID:    ${receipt.proofId}`);
-      console.log(`Task:        ${receipt.task.name}`);
-      console.log(`Merkle Root: ${receipt.merkle.root}`);
+      if (result.receipt === null) {
+        result.errors.forEach((error) => console.log(`  ✗ ${error}`));
+        console.log('\nOverall:     \x1b[1m\x1b[31mFAILED (UNVERIFIED)\x1b[0m\n');
+        return 1;
+      }
+      console.log(`Proof ID:    ${result.receipt.proofId}`);
+      console.log(`Task:        ${result.receipt.task.name}`);
+      console.log(`Merkle Root: ${result.receipt.merkle.root}`);
       console.log(`Merkle Math: ${result.merkleValid ? '\x1b[32mVALID ✓\x1b[0m' : '\x1b[31mINVALID ✗\x1b[0m'}`);
       
-      if (signingKey) {
+      if (result.signatureChecked) {
         console.log(`Signature:   ${result.signatureValid ? '\x1b[32mVALID ✓\x1b[0m' : '\x1b[31mINVALID ✗\x1b[0m'}`);
       } else {
-        console.log(`Signature:   \x1b[33mSKIPPED (no key supplied)\x1b[0m`);
+        console.log(`Signature:   \x1b[33mNOT CHECKED (no key supplied)\x1b[0m`);
       }
 
       if (checkFiles) {
@@ -286,7 +291,12 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
         result.warnings.forEach((w) => console.log(`  ! ${w}`));
       }
 
-      console.log(`\nOverall:     ${result.valid ? '\x1b[1m\x1b[32mPASSED (TRUSTED)\x1b[0m' : '\x1b[1m\x1b[31mFAILED (UNVERIFIED)\x1b[0m'}\n`);
+      const overall = result.trusted
+        ? '\x1b[1m\x1b[32mPASSED (TRUSTED)\x1b[0m'
+        : result.valid
+          ? '\x1b[1m\x1b[33mPASSED (INTEGRITY ONLY)\x1b[0m'
+          : '\x1b[1m\x1b[31mFAILED (UNVERIFIED)\x1b[0m';
+      console.log(`\nOverall:     ${overall}\n`);
       return result.valid ? 0 : 1;
     }
 
@@ -369,10 +379,6 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
             parentOrganization: {
               '@type': 'Organization',
               name: 'Nymrel',
-              parentOrganization: {
-                '@type': 'Organization',
-                name: 'JalenBuilds LLC',
-              },
             },
             merkleRoot: receipt.merkle.root,
             hasPart: receipt.artifacts.map((a) => ({

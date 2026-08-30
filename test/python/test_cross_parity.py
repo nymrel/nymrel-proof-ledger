@@ -1,47 +1,50 @@
-import unittest
-import sys
+import json
 import os
+import sys
+import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
+)
 
-from nymrel_proof_ledger.canonical import canonicalize, canonical_hash
-from nymrel_proof_ledger.merkle import MerkleTree, hash_leaf, hash_nodes
+from nymrel_proof_ledger.canonical import canonical_hash, canonicalize
+from nymrel_proof_ledger.merkle import MerkleTree
 from nymrel_proof_ledger.signer import ProofSigner
+
+FIXTURE_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "fixtures", "protocol-v2-vectors.json"
+)
+with open(FIXTURE_PATH, encoding="utf-8") as fixture_file:
+    VECTORS = json.load(fixture_file)
 
 
 class TestCrossLanguageParity(unittest.TestCase):
-    def test_canonical_json_parity(self):
-        # A test vector with unsorted keys and nested structures
-        sample = {
-            "z": 100,
-            "a": "hello",
-            "m": [3, 2, {"b": True, "a": None}],
-            "task": {"runner": "ci", "status": "SUCCESS"},
-        }
-        expected = '{"a":"hello","m":[3,2,{"a":null,"b":true}],"task":{"runner":"ci","status":"SUCCESS"},"z":100}'
-        self.assertEqual(canonicalize(sample), expected)
+    def test_rfc8785_shared_vectors(self):
+        canonical = VECTORS["canonical"]
+        self.assertEqual(
+            canonicalize(canonical["sample"]), canonical["sampleCanonical"]
+        )
+        self.assertEqual(
+            canonicalize(canonical["numeric"]), canonical["numericCanonical"]
+        )
+        self.assertEqual(
+            canonicalize({"דּ": "hebrew", "😀": "emoji", "€": "euro"}),
+            '{"€":"euro","😀":"emoji","דּ":"hebrew"}',
+        )
 
-    def test_merkle_leaf_and_node_parity(self):
-        # Leaf hashing: SHA256(0x00 || "nymrel-core")
-        leaf_hex = hash_leaf("nymrel-core")
-        self.assertEqual(len(leaf_hex), 64)
+    def test_rfc6962_shared_vectors(self):
+        vector = VECTORS["merkle"]
+        self.assertEqual(MerkleTree().get_root(), vector["emptyRoot"])
+        tree = MerkleTree(vector["items"])
+        self.assertEqual(tree.get_leaves(), vector["leaves"])
+        self.assertEqual(tree.get_root(), vector["threeLeafRoot"])
 
-        # Node hashing: SHA256(0x01 || left || right)
-        node_hex = hash_nodes(leaf_hex, leaf_hex)
-        self.assertEqual(len(node_hex), 64)
-
-        # Deterministic root calculation across 3 leaves
-        leaves = ["art_a", "art_b", "art_c"]
-        tree = MerkleTree(leaves)
-        root = tree.get_root()
-        self.assertEqual(len(root), 64)
-
-    def test_hmac_parity(self):
-        secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    def test_hmac_is_deterministic_over_jcs(self):
+        secret = "0123456789abcdef" * 4
         payload = {"merkleRoot": "1234", "task": "Parity"}
-        sig = ProofSigner.sign_payload(payload, secret, "HMAC-SHA256")
-        self.assertEqual(len(sig), 64)
-        self.assertTrue(ProofSigner.verify_signature(payload, sig, secret, "HMAC-SHA256"))
+        signature = ProofSigner.sign_payload(payload, secret)
+        self.assertTrue(ProofSigner.verify_signature(payload, signature, secret))
+        self.assertEqual(len(canonical_hash(payload)), 64)
 
 
 if __name__ == "__main__":

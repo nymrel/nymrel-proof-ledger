@@ -1,21 +1,19 @@
-/**
- * Cryptographic Proof-of-Execution Receipt Engine.
- *
- * Implements structured, machine-verifiable attestation records anchoring
- * execution artifacts, environment metadata, and git lineage into an immutable
- * Merkle Tree and signed receipt.
- *
- * @module @nymrel/proof-ledger/core/receipt
- */
+/** Versioned proof receipt generation and verification. */
 
 import { createHash, randomBytes } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
-import { canonicalHash } from './canonical.js';
-import { MerkleTree } from './merkle.js';
+import { canonicalHash, type CanonicalizationProfile } from './canonical.js';
+import { RECEIPT_PROTOCOL, validateReceiptEnvelope } from './envelope.js';
+import { MerkleTree, type MerkleProfile } from './merkle.js';
 import { ProofSigner, type SignatureAlgorithm, type SignatureRecord } from './signer.js';
+
+export const RECEIPT_VERSION = '2.0.0' as const;
+export const LEGACY_RECEIPT_VERSION = '1.0.0' as const;
+export const RFC6962_MERKLE_ALGORITHM = 'RFC6962-SHA256' as const;
+export const LEGACY_MERKLE_ALGORITHM = 'SHA-256' as const;
 
 export interface ProofTask {
   name: string;
@@ -50,16 +48,16 @@ export interface ProofArtifact {
 }
 
 export interface ProofReceipt {
-  version: '1.0.0';
-  protocol: 'nymrel-proof-ledger';
+  version: typeof RECEIPT_VERSION | typeof LEGACY_RECEIPT_VERSION;
+  protocol: typeof RECEIPT_PROTOCOL;
   proofId: string;
   timestamp: string;
-  parentOrganization: 'Nymrel -> JalenBuilds LLC';
+  parentOrganization: string;
   task: ProofTask;
   environment: ProofEnvironment;
   artifacts: ProofArtifact[];
   merkle: {
-    algorithm: 'SHA-256';
+    algorithm: typeof RFC6962_MERKLE_ALGORITHM | typeof LEGACY_MERKLE_ALGORITHM;
     leaves: string[];
     root: string;
   };
@@ -81,13 +79,15 @@ export interface CreateReceiptOptions {
 
 export interface VerificationResult {
   valid: boolean;
+  trusted: boolean;
   merkleValid: boolean;
-  signatureValid: boolean;
+  signatureChecked: boolean;
+  signatureValid: boolean | null;
   artifactsValid: boolean;
   errors: string[];
   warnings: string[];
   checkedArtifacts: number;
-  receipt: ProofReceipt;
+  receipt: ProofReceipt | null;
 }
 
 export interface VerifyReceiptOptions {
@@ -96,250 +96,312 @@ export interface VerifyReceiptOptions {
   cwd?: string;
 }
 
-/**
- * Gathers Git repository context safely without throwing on non-git directories.
- */
-export function getGitContext(cwd: string = process.cwd()): ProofGitContext | undefined {
+export function sanitizeGitRemote(remote: string): string | undefined {
+  const trimmed = remote.trim();
+  if (/^git@[A-Za-z0-9.-]+:[^\s?#]+$/.test(trimmed)) return trimmed;
   try {
-    const commit = execSync('git rev-parse HEAD', { cwd, stdio: ['ignore', 'pipe', 'ignore'] })
-      .toString()
-      .trim();
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd, stdio: ['ignore', 'pipe', 'ignore'] })
-      .toString()
-      .trim();
-    const statusOut = execSync('git status --porcelain', { cwd, stdio: ['ignore', 'pipe', 'ignore'] })
-      .toString()
-      .trim();
-    let remote: string | undefined;
-    try {
-      remote = execSync('git config --get remote.origin.url', { cwd, stdio: ['ignore', 'pipe', 'ignore'] })
-        .toString()
-        .trim();
-    } catch {
-      // Remote may not exist
-    }
-
-    return {
-      commit,
-      branch,
-      dirty: statusOut.length > 0,
-      ...(remote ? { remote } : {}),
-    };
+    const parsed = new URL(trimmed);
+    if (!['https:', 'http:', 'ssh:', 'git:'].includes(parsed.protocol)) return undefined;
+    parsed.username = '';
+    parsed.password = '';
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString();
   } catch {
     return undefined;
   }
 }
 
-/**
- * Computes SHA-256 hash and size of a file or buffer.
- */
+/** Gathers non-secret Git lineage without throwing outside a repository. */
+export function getGitContext(cwd: string = process.cwd()): ProofGitContext | undefined {
+  try {
+    const commit = execSync('git rev-parse HEAD', { cwd, stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim();
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+      cwd,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString().trim();
+    const dirty = execSync('git status --porcelain', {
+      cwd,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString().trim().length > 0;
+    let remote: string | undefined;
+    try {
+      remote = sanitizeGitRemote(
+        execSync('git config --get remote.origin.url', {
+          cwd,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).toString()
+      );
+    } catch {
+      remote = undefined;
+    }
+    return { commit, branch, dirty, ...(remote === undefined ? {} : { remote }) };
+  } catch {
+    return undefined;
+  }
+}
+
 export async function hashArtifact(
   artifactPath: string,
   data?: Buffer | string,
   cwd: string = process.cwd()
 ): Promise<ProofArtifact> {
-  let buffer: Buffer;
-  const resolvedPath = path.isAbsolute(artifactPath) ? artifactPath : path.resolve(cwd, artifactPath);
-
-  if (data !== undefined) {
-    buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
-  } else {
-    buffer = await fs.readFile(resolvedPath);
-  }
-
-  const sha256 = createHash('sha256').update(buffer).digest('hex');
-  const relPath = path.relative(cwd, resolvedPath).replace(/\\/g, '/');
-
+  const resolved = path.isAbsolute(artifactPath) ? artifactPath : path.resolve(cwd, artifactPath);
+  const buffer = data === undefined
+    ? await fs.readFile(resolved)
+    : typeof data === 'string'
+      ? Buffer.from(data, 'utf8')
+      : data;
   return {
-    path: relPath || artifactPath,
-    sha256,
+    path: path.relative(cwd, resolved).replace(/\\/g, '/') || artifactPath,
+    sha256: createHash('sha256').update(buffer).digest('hex'),
     sizeBytes: buffer.length,
   };
 }
 
-/**
- * Generates an attestation proof receipt.
- */
-export async function createReceipt(options: CreateReceiptOptions): Promise<ProofReceipt> {
-  const cwd = options.cwd || process.cwd();
-  const proofId = `prf_${Date.now().toString(36)}_${randomBytes(6).toString('hex')}`;
-  const timestamp = new Date().toISOString();
+function profilesFor(version: ProofReceipt['version']): {
+  canonical: CanonicalizationProfile;
+  merkle: MerkleProfile;
+} {
+  return version === LEGACY_RECEIPT_VERSION
+    ? { canonical: 'legacy', merkle: 'legacy-duplicated' }
+    : { canonical: 'rfc8785', merkle: 'rfc6962' };
+}
 
-  // 1. Process Artifacts
-  const artifacts: ProofArtifact[] = [];
-  if (options.artifacts && options.artifacts.length > 0) {
-    for (const item of options.artifacts) {
-      const art = await hashArtifact(item.path, item.data, cwd);
-      if (item.mimeType) art.mimeType = item.mimeType;
-      artifacts.push(art);
-    }
+function receiptLeaves(
+  task: ProofTask,
+  environment: ProofEnvironment,
+  artifacts: ProofArtifact[],
+  version: ProofReceipt['version']
+): string[] {
+  const { canonical } = profilesFor(version);
+  const artifactLeaves = version === LEGACY_RECEIPT_VERSION
+    ? artifacts.map((artifact) => artifact.sha256)
+    : artifacts.map((artifact) => canonicalHash(artifact, 'sha256', canonical));
+  return [
+    canonicalHash(task, 'sha256', canonical),
+    canonicalHash(environment, 'sha256', canonical),
+    ...artifactLeaves,
+  ];
+}
+
+function signingPayload(receipt: Pick<
+  ProofReceipt,
+  'protocol' | 'version' | 'proofId' | 'timestamp' | 'parentOrganization' | 'task' | 'merkle' | 'metadata'
+>, signature?: Pick<
+  SignatureRecord,
+  'algorithm' | 'keyId' | 'signerIdentity' | 'timestamp'
+>): Record<string, unknown> {
+  const legacyPayload = {
+    proofId: receipt.proofId,
+    timestamp: receipt.timestamp,
+    parentOrganization: receipt.parentOrganization,
+    taskName: receipt.task.name,
+    merkleRoot: receipt.merkle.root,
+  };
+  if (receipt.version === LEGACY_RECEIPT_VERSION) return legacyPayload;
+  if (signature === undefined) {
+    throw new TypeError('Protocol v2 signing requires a complete signature header');
   }
-
-  // 2. Build Environment Record
-  const environment: ProofEnvironment = {
-    platform: os.platform(),
-    arch: os.arch(),
-    ...(options.includeHostname ? { hostname: os.hostname() } : {}),
-    runtime: `node ${process.version}`,
-    git: getGitContext(cwd),
-  };
-
-  // 3. Build Task Record
-  const task: ProofTask = {
-    name: options.task.name,
-    description: options.task.description,
-    runner: options.task.runner || 'nymrel-agent',
-    status: options.task.status || 'SUCCESS',
-    exitCode: options.task.exitCode ?? 0,
-    durationMs: options.task.durationMs,
-    command: options.task.command,
-  };
-
-  // 4. Construct Merkle Leaves
-  // Leaf 1: Canonical Task Hash
-  const taskHash = canonicalHash(task);
-  // Leaf 2: Canonical Environment Hash
-  const envHash = canonicalHash(environment);
-
-  // Remaining leaves: Artifact hashes
-  const artifactLeaves = artifacts.map((a) => a.sha256);
-
-  const rawLeaves = [taskHash, envHash, ...artifactLeaves];
-  const merkleTree = new MerkleTree(rawLeaves, { isPreHashed: true });
-  const merkleRoot = merkleTree.getRoot();
-
-  // 5. Sign the Proof Payload (proofId + timestamp + merkleRoot + parentOrganization)
-  const signPayloadObj = {
-    proofId,
-    timestamp,
-    parentOrganization: 'Nymrel -> JalenBuilds LLC',
-    taskName: task.name,
-    merkleRoot,
-  };
-
-  const algorithm = options.algorithm || 'HMAC-SHA256';
-  const keyId = options.keyId || (algorithm === 'Ed25519' ? 'ed25519-primary' : 'hmac-default');
-
-  const signature = ProofSigner.createSignatureRecord(
-    signPayloadObj,
-    options.signingKey,
-    options.signerIdentity,
-    keyId,
-    algorithm
-  );
-
   return {
-    version: '1.0.0',
-    protocol: 'nymrel-proof-ledger',
-    proofId,
-    timestamp,
-    parentOrganization: 'Nymrel -> JalenBuilds LLC',
-    task,
-    environment,
-    artifacts,
-    merkle: {
-      algorithm: 'SHA-256',
-      leaves: merkleTree.getLeaves(),
-      root: merkleRoot,
-    },
-    signature,
-    metadata: options.metadata || {},
+    protocol: receipt.protocol,
+    version: receipt.version,
+    merkleAlgorithm: receipt.merkle.algorithm,
+    metadataHash: canonicalHash(receipt.metadata),
+    signatureAlgorithm: signature.algorithm,
+    signatureKeyId: signature.keyId,
+    signerIdentity: signature.signerIdentity,
+    signatureTimestamp: signature.timestamp,
+    ...legacyPayload,
   };
 }
 
-/**
- * Verifies a proof receipt against mathematical, artifact, and cryptographic invariants.
- */
+export async function createReceipt(options: CreateReceiptOptions): Promise<ProofReceipt> {
+  const cwd = options.cwd ?? process.cwd();
+  const proofId = `prf_${Date.now().toString(36)}_${randomBytes(6).toString('hex')}`;
+  const timestamp = new Date().toISOString();
+  const artifacts: ProofArtifact[] = [];
+  for (const item of options.artifacts ?? []) {
+    const artifact = await hashArtifact(item.path, item.data, cwd);
+    artifacts.push(item.mimeType === undefined ? artifact : { ...artifact, mimeType: item.mimeType });
+  }
+
+  const git = getGitContext(cwd);
+  const environment: ProofEnvironment = {
+    platform: os.platform(),
+    arch: os.arch(),
+    runtime: `node ${process.version}`,
+    ...(options.includeHostname === true ? { hostname: os.hostname() } : {}),
+    ...(git === undefined ? {} : { git }),
+  };
+  const task: ProofTask = {
+    name: options.task.name,
+    runner: options.task.runner ?? 'nymrel-agent',
+    status: options.task.status ?? 'SUCCESS',
+    exitCode: options.task.exitCode ?? 0,
+    ...(options.task.description === undefined ? {} : { description: options.task.description }),
+    ...(options.task.durationMs === undefined ? {} : { durationMs: options.task.durationMs }),
+    ...(options.task.command === undefined ? {} : { command: options.task.command }),
+  };
+
+  const leaves = receiptLeaves(task, environment, artifacts, RECEIPT_VERSION);
+  const merkleTree = new MerkleTree(leaves, { isPreHashed: true, profile: 'rfc6962' });
+  const algorithm = options.algorithm ?? 'HMAC-SHA256';
+  const keyId = options.keyId ?? (algorithm === 'Ed25519' ? 'ed25519-primary' : 'hmac-default');
+  const metadata = options.metadata ?? {};
+  const unsigned: Pick<
+    ProofReceipt,
+    'protocol' | 'version' | 'proofId' | 'timestamp' | 'parentOrganization' | 'task' | 'merkle' | 'metadata'
+  > = {
+    protocol: RECEIPT_PROTOCOL,
+    version: RECEIPT_VERSION,
+    proofId,
+    timestamp,
+    parentOrganization: 'Nymrel',
+    task,
+    merkle: {
+      algorithm: RFC6962_MERKLE_ALGORITHM,
+      leaves: merkleTree.getLeaves(),
+      root: merkleTree.getRoot(),
+    },
+    metadata,
+  };
+  const signatureHeader = {
+    algorithm,
+    keyId,
+    signerIdentity: options.signerIdentity,
+    timestamp: new Date().toISOString(),
+  };
+  const signature: SignatureRecord = {
+    ...signatureHeader,
+    value: ProofSigner.signPayload(
+      signingPayload(unsigned, signatureHeader),
+      options.signingKey,
+      algorithm,
+      'rfc8785'
+    ),
+  };
+  return {
+    ...unsigned,
+    environment,
+    artifacts,
+    signature,
+    metadata,
+  };
+}
+
+async function artifactPathWithin(cwd: string, artifactPath: string): Promise<string | undefined> {
+  const unresolvedRoot = path.resolve(cwd);
+  const root = await fs.realpath(unresolvedRoot).catch(() => unresolvedRoot);
+  const unresolvedCandidate = path.resolve(root, artifactPath);
+  const candidate = await fs.realpath(unresolvedCandidate).catch(() => unresolvedCandidate);
+  const relative = path.relative(root, candidate);
+  if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) return candidate;
+  return undefined;
+}
+
 export async function verifyReceipt(
-  receipt: ProofReceipt,
+  receiptInput: unknown,
   options: VerifyReceiptOptions = {}
 ): Promise<VerificationResult> {
+  const envelope = validateReceiptEnvelope(receiptInput);
+  if (!envelope.valid) {
+    return {
+      valid: false,
+      trusted: false,
+      merkleValid: false,
+      signatureChecked: false,
+      signatureValid: null,
+      artifactsValid: false,
+      errors: envelope.errors.map((error) =>
+        `Envelope ${error.code}${error.path === null ? '' : ` at ${error.path}`}: ${error.message}`
+      ),
+      warnings: [],
+      checkedArtifacts: 0,
+      receipt: null,
+    };
+  }
+
+  const receipt = receiptInput as ProofReceipt;
   const errors: string[] = [];
   const warnings: string[] = [];
-  const cwd = options.cwd || process.cwd();
-
-  // 1. Basic Protocol & Schema checks
-  if (receipt.protocol !== 'nymrel-proof-ledger') {
-    errors.push(`Invalid protocol identifier: expected 'nymrel-proof-ledger', got '${receipt.protocol}'`);
-  }
-  if (receipt.version !== '1.0.0') {
-    errors.push(`Unsupported proof version: '${receipt.version}'`);
-  }
-  if (!receipt.proofId || !receipt.merkle || !receipt.signature) {
-    errors.push('Malformed receipt structure: missing required core fields');
-  }
-
-  // 2. Merkle Root Integrity
-  const taskHash = canonicalHash(receipt.task);
-  const envHash = canonicalHash(receipt.environment);
-  const artifactLeaves = receipt.artifacts.map((a) => a.sha256);
-  const expectedRawLeaves = [taskHash, envHash, ...artifactLeaves];
-
-  const calculatedTree = new MerkleTree(expectedRawLeaves, { isPreHashed: true });
+  const cwd = options.cwd ?? process.cwd();
+  const profiles = profilesFor(receipt.version);
+  const expectedLeaves = receiptLeaves(
+    receipt.task,
+    receipt.environment,
+    receipt.artifacts,
+    receipt.version
+  );
+  const calculatedTree = new MerkleTree(expectedLeaves, {
+    isPreHashed: true,
+    profile: profiles.merkle,
+  });
   const calculatedRoot = calculatedTree.getRoot();
-
-  let merkleValid = true;
-  if (calculatedRoot.toLowerCase() !== receipt.merkle.root.toLowerCase()) {
-    merkleValid = false;
+  const calculatedLeaves = calculatedTree.getLeaves();
+  const leavesValid =
+    calculatedLeaves.length === receipt.merkle.leaves.length &&
+    calculatedLeaves.every(
+      (leaf, index) => leaf === receipt.merkle.leaves[index].toLowerCase()
+    );
+  const merkleValid =
+    leavesValid && calculatedRoot === receipt.merkle.root.toLowerCase();
+  if (!leavesValid) errors.push('Merkle leaf list does not match the receipt payload');
+  if (calculatedRoot !== receipt.merkle.root.toLowerCase()) {
     errors.push(
-      `Merkle root mismatch! Expected '${receipt.merkle.root}', recalculated '${calculatedRoot}'`
+      `Merkle root mismatch: recorded '${receipt.merkle.root}', recalculated '${calculatedRoot}'`
     );
   }
 
-  // 3. Artifact verification on disk (if requested)
   let artifactsValid = true;
   let checkedArtifacts = 0;
-
-  if (options.checkFilesOnDisk && receipt.artifacts.length > 0) {
-    for (const art of receipt.artifacts) {
-      const fullPath = path.isAbsolute(art.path) ? art.path : path.resolve(cwd, art.path);
+  if (options.checkFilesOnDisk === true) {
+    for (const artifact of receipt.artifacts) {
+      const fullPath = await artifactPathWithin(cwd, artifact.path);
+      if (fullPath === undefined) {
+        artifactsValid = false;
+        errors.push(`Artifact path escapes verification root: '${artifact.path}'`);
+        continue;
+      }
       try {
         const fileData = await fs.readFile(fullPath);
-        const actualHash = createHash('sha256').update(fileData).digest('hex');
         checkedArtifacts++;
-        if (actualHash.toLowerCase() !== art.sha256.toLowerCase()) {
+        const actualHash = createHash('sha256').update(fileData).digest('hex');
+        if (actualHash !== artifact.sha256.toLowerCase()) {
           artifactsValid = false;
-          errors.push(`Artifact tampered: '${art.path}' (hash mismatch)`);
+          errors.push(`Artifact tampered: '${artifact.path}' (hash mismatch)`);
         }
-      } catch (err: unknown) {
+      } catch (error: unknown) {
         artifactsValid = false;
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`Artifact missing on disk: '${art.path}' (${msg})`);
+        errors.push(
+          `Artifact missing on disk: '${artifact.path}' (${error instanceof Error ? error.message : String(error)})`
+        );
       }
     }
   }
 
-  // 4. Signature Verification
-  let signatureValid = true;
-  if (options.publicKeyOrSecret) {
-    const signPayloadObj = {
-      proofId: receipt.proofId,
-      timestamp: receipt.timestamp,
-      parentOrganization: receipt.parentOrganization,
-      taskName: receipt.task.name,
-      merkleRoot: receipt.merkle.root,
-    };
-
-    const isVerified = ProofSigner.verifySignature(
-      signPayloadObj,
+  const signatureChecked = options.publicKeyOrSecret !== undefined;
+  let signatureValid: boolean | null = null;
+  if (signatureChecked) {
+    signatureValid = ProofSigner.verifySignature(
+      signingPayload(receipt, receipt.signature),
       receipt.signature.value,
-      options.publicKeyOrSecret,
-      receipt.signature.algorithm
+      options.publicKeyOrSecret as string,
+      receipt.signature.algorithm,
+      profiles.canonical
     );
-
-    if (!isVerified) {
-      signatureValid = false;
-      errors.push(`Cryptographic signature verification failed with provided key`);
-    }
+    if (!signatureValid) errors.push('Cryptographic signature verification failed with provided key');
   } else {
-    warnings.push('Signature was not cryptographically verified (no public key / secret key provided)');
+    warnings.push('Signature was not cryptographically verified (no public key or secret provided)');
   }
 
   const valid = errors.length === 0;
-
   return {
     valid,
+    trusted: valid && signatureValid === true,
     merkleValid,
+    signatureChecked,
     signatureValid,
     artifactsValid,
     errors,

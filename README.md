@@ -1,373 +1,212 @@
-# Nymrel Proof Ledger (`@nymrel/proof-ledger` / `nymrel_proof_ledger`)
+# Nymrel Proof Ledger
 
-<p align="center">
-  <img src="https://img.shields.io/badge/nymrel%20proof-verified%20%E2%9C%93-2A332E?style=for-the-badge&labelColor=1C2320" alt="Nymrel Verified"/>
-  <img src="https://img.shields.io/badge/dependencies-0%20runtime-A8541F?style=for-the-badge&labelColor=1C2320" alt="Zero Dependencies"/>
-  <img src="https://img.shields.io/badge/language-TypeScript%20%2B%20Python-FAF8F2?style=for-the-badge&labelColor=2A332E" alt="Dual Language"/>
-  <img src="https://img.shields.io/badge/license-MIT-E2DDD5?style=for-the-badge&labelColor=1C2320" alt="MIT License"/>
-</p>
+Nymrel Proof Ledger is a dual-runtime cryptographic attestation library and CLI for
+producing portable, offline-verifiable proof receipts.
 
-> **Zero-dependency, dual-language (TypeScript/Node.js + Python) cryptographic attestation and proof-of-execution protocol library and CLI.**
-> Prove what ran, what it produced, and that nothing changed since — then let anyone else verify it independently.
+Protocol v2 uses:
 
----
+- RFC 8785 JSON Canonicalization Scheme (JCS)
+- RFC 6962 domain-separated Merkle trees
+- HMAC-SHA256 or Ed25519 signatures
+- identical shared vectors in TypeScript and Python
+- fail-closed envelope validation before hashing, cryptography, or disk access
 
-## ⚡ 60-Second Quickstart
+The repository is the current source of truth. The npm name
+@nymrel/proof-ledger and PyPI name nymrel-proof-ledger are not currently
+published, and proofs.nymrel.com is not represented here as an active
+verification service.
 
-> **Install today:** the `@nymrel/proof-ledger` npm / `nymrel-proof-ledger` PyPI packages are rolling out. Until they resolve on your registry, install from source:
-> ```bash
-> git clone https://github.com/nymrel/nymrel-proof-ledger && cd nymrel-proof-ledger
-> ```
-> then run the CLI from the repo root (`node bin/proof-ledger.js …` or `python -m proof_ledger …`). The steps below work unchanged against the local install.
+## Runtime support
 
-```bash
-# 1. Install (either runtime — receipts are cross-verifiable)
-npm install @nymrel/proof-ledger      # or: pip install nymrel-proof-ledger
+| Runtime | Supported | Production dependencies |
+| --- | --- | --- |
+| Node.js | 22.12 through 26.x | None |
+| Python | 3.11 through 3.14 | cryptography, rfc8785 |
 
-# 2. Generate a signing key
-npx proof-ledger keygen --algo HMAC-SHA256 --out secret.key
+TypeScript is compiled with TypeScript 7 and explicit Node types. Python Ed25519
+operations use PyCA cryptography; there is no homegrown curve implementation.
 
-# 3. Attest an execution: hashes your files into an RFC 6962 Merkle tree and signs them
-npx proof-ledger attest \
-  --task "Production Release Build" \
-  --files "dist/index.js,package.json" \
-  --key-file secret.key \
-  --signer "ci-bot-01" \
-  --out proof.json \
-  --badge badge.svg
+## Trust semantics
 
-# 4. Verify it (exit code 0 = trusted; wire this into CI to gate deploys)
-npx proof-ledger verify proof.json --key-file secret.key --check-files
-```
+The verify command distinguishes mathematical integrity from authenticated trust:
 
-That's a complete proof: task metadata, environment, git lineage, and artifact hashes,
-Merkle-committed and signed — plus an SVG badge you can embed anywhere.
+| Result | Meaning |
+| --- | --- |
+| valid true, trusted true | Envelope, Merkle data, requested disk checks, and signature all passed with a supplied key. |
+| valid true, trusted false | Integrity passed, but no verification key was supplied. The signature was not checked. |
+| valid false | At least one structural, Merkle, artifact, or signature check failed. |
 
----
+A badge or certificate is a presentation of receipt data, not independent proof.
+Trust requires verification with key material obtained through an authenticated
+channel.
 
-## 🤝 Verifying a Proof Left by Someone Else
+## Local development
 
-This is what the protocol is built for: **the producer and the verifier don't have to be
-the same machine, runtime, or even organization.**
+### Node.js
 
-### The one rule to remember
+~~~powershell
+npm install --ignore-scripts
+npm run test:release
+~~~
 
-| You have | What you can prove |
-| :--- | :--- |
-| Just `proof.json` | **Integrity** — the Merkle math is internally consistent and untampered |
-| + producer's **public key** (Ed25519) | **Authenticity** — the producer signed exactly this proof |
-| + producer's **secret** (HMAC) | Authenticity — but you could also forge proofs, so prefer Ed25519 for third parties |
+### Python
 
-### Walkthrough: Alice produces, Bob verifies
+~~~powershell
+uv run --isolated --no-project --python 3.13 --with "cryptography>=50.0.1,<51" --with "rfc8785==0.1.4" python -m unittest discover -s test/python -p "test_*.py"
+~~~
 
-**Alice (producer)** attests her build with Ed25519 so she never shares signing power:
+To install the Python package from this checkout:
 
-```bash
-npx proof-ledger keygen --algo Ed25519 --out alice.key          # contains privateKey + publicKey
-npx proof-ledger attest --task "nightly-build" \
-  --files "dist/app.js" --algo Ed25519 \
-  --key-file alice.key --out proof.json
-# Alice ships proof.json (+ the artifacts) and publishes alice.key's publicKey
-```
+~~~powershell
+python -m pip install .
+~~~
 
-**Bob (verifier)** — a different person, machine, or runtime entirely:
+## TypeScript API
 
-```bash
-# Integrity check, no key needed: Merkle root recomputation + structure validation
-npx proof-ledger verify proof.json
+~~~typescript
+import {
+  ProofLedger,
+  attestExecution,
+  verifyProof,
+} from '@nymrel/proof-ledger';
 
-# Full verification once Bob has Alice's public key
-npx proof-ledger verify proof.json --key-file alice-public.key
-```
-
-Or programmatically, cross-runtime (proof produced by the Node CLI, verified in Python):
-
-```python
-from nymrel_proof_ledger import validate_receipt_envelope, verify_receipt
-import json
-
-with open("proof.json", encoding="utf-8") as f:
-    receipt = json.load(f)
-
-envelope = validate_receipt_envelope(receipt)   # protocol/version/schema gate
-assert envelope["valid"], envelope["errors"]
-
-result = verify_receipt(receipt, public_key_or_secret="<alice-public-key-hex>")
-print("Trusted:", result["valid"])              # False = tampered or forged
-```
-
-`verify` exits non-zero on any failure, so `proof-ledger verify proof.json --key-file ...`
-is a drop-in CI gate. Receipts carry a versioned envelope (`nymrel-proof-ledger` / `1.0.0`)
-validated identically in both runtimes, so a TypeScript-produced proof verifies byte-for-byte
-in Python and vice versa.
-
----
-
-## 📋 Feature Examples (copy-paste)
-
-### Attest an execution
-
-```typescript
-import { attestExecution, ProofLedger } from '@nymrel/proof-ledger';
-
-const secretKey = ProofLedger.generateSecretKey();
+const secret = ProofLedger.generateSecretKey();
 
 const receipt = await attestExecution({
-  task: { name: 'Core Security Suite', status: 'SUCCESS', exitCode: 0 },
-  artifacts: [{ path: 'dist/app.bundle.js' }, { path: 'reports/security.json' }],
-  signingKey: secretKey,
-  signerIdentity: 'nymrel-security-agent',
+  task: {
+    name: 'Release acceptance',
+    status: 'SUCCESS',
+    exitCode: 0,
+  },
+  artifacts: [{ path: 'dist/manifest.json' }],
+  signingKey: secret,
+  signerIdentity: 'nymrel-release',
+  metadata: { environment: 'local-acceptance' },
 });
 
-console.log('Proof ID:', receipt.proofId);
-console.log('Merkle Root:', receipt.merkle.root);
-```
-
-```python
-from nymrel_proof_ledger import attest_execution, ProofSigner
-
-secret_key = ProofSigner.generate_secret_key()
-
-receipt = attest_execution(
-    task={"name": "ETL Pipeline Execution", "status": "SUCCESS", "exitCode": 0},
-    artifacts=[{"path": "data/processed_transactions.parquet"}],
-    signing_key=secret_key,
-    signer_identity="etl-daemon",
-)
-```
-
-### Verify a receipt
-
-```typescript
-import { verifyProof } from '@nymrel/proof-ledger';
-
-const verification = await verifyProof(receipt, {
-  publicKeyOrSecret: secretKey,   // omit to check integrity only
-  checkFilesOnDisk: true,         // re-hash artifacts against the committed Merkle leaves
+const result = await verifyProof(receipt, {
+  publicKeyOrSecret: secret,
+  checkFilesOnDisk: true,
 });
 
-if (verification.valid) {
-  console.log('✓ Cryptographic attestation verified');
-} else {
-  console.log('Errors:', verification.errors);
+if (!result.trusted) {
+  throw new Error(result.errors.join('\n') || 'Signature was not checked');
 }
-```
+~~~
 
-```python
-from nymrel_proof_ledger import verify_proof
+## Python API
 
-result = verify_proof(receipt, public_key_or_secret=secret_key, check_files_on_disk=True)
-print("Valid:", result["valid"], "| Errors:", result["errors"])
-```
+~~~python
+from nymrel_proof_ledger import ProofSigner, create_receipt, verify_receipt
 
-### Embed a proof badge
+secret = ProofSigner.generate_secret_key()
 
-```bash
-# Full SVG card, compact card, GitHub-style shield, or HTML certificate
-npx proof-ledger badge proof.json --format svg    --out badge.svg
-npx proof-ledger badge proof.json --format shield --out shield.svg
-npx proof-ledger badge proof.json --format html   --out certificate.html
-```
+receipt = create_receipt(
+    task={"name": "Release acceptance", "status": "SUCCESS", "exitCode": 0},
+    artifacts=[{"path": "dist/manifest.json"}],
+    signing_key=secret,
+    signer_identity="nymrel-release",
+    metadata={"environment": "local-acceptance"},
+)
 
-Commit the generated file and drop it into any README or page:
+result = verify_receipt(
+    receipt,
+    public_key_or_secret=secret,
+    check_files_on_disk=True,
+)
 
-```markdown
-![verified build](./shield.svg)
-```
+if not result["trusted"]:
+    raise RuntimeError(result["errors"] or ["Signature was not checked"])
+~~~
 
-```html
-<iframe src="certificate.html" width="480" height="640" style="border:0"></iframe>
-```
+## CLI
 
-Every badge is a single self-contained SVG/HTML file — vector QR code included, no external
-assets, no JavaScript, no tracking.
+~~~powershell
+# Generate portable raw-hex Ed25519 keys.
+node bin/proof-ledger.js keygen --algo Ed25519 --out signer.key
 
----
+# Create a v2 receipt.
+node bin/proof-ledger.js attest --task "Build and test" --files "dist/index.js,README.md" --key-file signer.key --algo Ed25519 --out proof.json
 
-## 🌍 Language & Runtime Coverage
+# Authenticated verification.
+node bin/proof-ledger.js verify proof.json --key-file signer.key --check-files
 
-**Works today:**
+# Integrity-only verification is explicit and is never labeled trusted.
+node bin/proof-ledger.js verify proof.json
+~~~
 
-| Runtime | Library | CLI | Status |
-| :--- | :--- | :--- | :--- |
-| Node.js ≥ 18 (TypeScript) | ✅ Full API | ✅ `proof-ledger` | Production-ready, zero runtime deps |
-| Python ≥ 3.9 | ✅ Full API | ✅ `proof-ledger-py` | Production-ready, zero runtime deps |
+The Python entry point is proof-ledger-py after package installation.
+--key-file accepts raw text or the JSON envelope produced by keygen.
 
-- Both engines implement the identical protocol (`nymrel-proof-ledger` v1.0.0): RFC 6962
-  Merkle trees, RFC 8785 canonical JSON, HMAC-SHA256 + Ed25519 signatures, envelope
-  validation, SVG/HTML badges. A receipt from either runtime verifies in the other
-  (enforced by a dedicated cross-parity test suite).
-- **Ed25519 key encodings differ between runtimes** (Node uses PEM via `node:crypto`;
-  Python uses raw hex seeds per RFC 8032). Signatures cross-verify, but key *material* is
-  not directly portable — generate keys with the runtime that will sign. HMAC-SHA256 hex
-  secrets work identically in both.
-- Not available today: browser/WASM builds, bindings for other languages (Rust, Go, Java),
-  and a hosted verification gateway. Badge QR codes encode a verification URL
-  (`https://proofs.nymrel.com/v/:proofId`) reserved for a future service; offline
-  verification with this library/CLI is the supported path today.
+Disk checks are confined to the verification working directory after real-path
+resolution. Receipts cannot use parent traversal, absolute external paths, or
+symlink indirection to make verification read outside that root.
 
----
+## Protocol v2
 
-## 🔒 Cryptographic Architecture
+Every emitted receipt has:
 
-```
-                       ┌────────────────────────────────────────┐
-                       │          EXECUTION CONTEXT             │
-                       │ Task Metadata + Git Lineage + Env Hash │
-                       └───────────────────┬────────────────────┘
-                                           │
- ┌──────────────────────┐                  │                 ┌──────────────────────┐
- │ Artifact 1 (SHA-256) │                  │                 │ Artifact 2 (SHA-256) │
- └──────────┬───────────┘                  │                 └──────────┬───────────┘
-            │                              │                            │
-            ▼                              ▼                            ▼
-   H(0x00 || Leaf_1)              H(0x00 || Leaf_2)            H(0x00 || Leaf_3)
-            │                              │                            │
-            └──────────────┬───────────────┘                            │
-                           ▼                                            │
-               H(0x01 || Node_L || Node_R)                              │
-                           │                                            │
-                           └──────────────────────┬─────────────────────┘
-                                                  ▼
-                                     ┌─────────────────────────┐
-                                     │    MERKLE ROOT (32B)    │
-                                     └────────────┬────────────┘
-                                                  │
-                                                  ▼  Canonical RFC 8785 Payload
-                                     ┌─────────────────────────┐
-                                     │  CRYPTOGRAPHIC SIGNER   │
-                                     │   (HMAC-SHA256/Ed25519) │
-                                     └────────────┬────────────┘
-                                                  │
-                                                  ▼
-                                     ┌─────────────────────────┐
-                                     │       PROOF.JSON        │
-                                     │  + Standalone SVG/HTML  │
-                                     └─────────────────────────┘
-```
+- protocol: nymrel-proof-ledger
+- version: 2.0.0
+- merkle.algorithm: RFC6962-SHA256
 
-### Core Cryptographic Invariants
-- **Domain-Separated Merkle Trees (RFC 6962):** Leaves are hashed as `SHA-256(0x00 || data)` and interior nodes as `SHA-256(0x01 || left || right)`. This provably defends against second-preimage collision attacks.
-- **Canonical JSON Serialization (RFC 8785):** Guarantees exact byte-for-byte serialization and hashing parity across TypeScript and Python runtimes regardless of key insertion order.
-- **Dual Signing Engines:** Symmetric **HMAC-SHA256** (constant-time verification) and asymmetric **Ed25519** (pure-python RFC 8032 and Node.js `node:crypto`).
-- **100% Zero Runtime Dependencies:** Standard library only (`node:crypto` / Python `hashlib` & `hmac`).
+The Merkle input order is:
 
----
+1. RFC 8785 hash of the task record
+2. RFC 8785 hash of the environment record
+3. one RFC 8785 hash per complete artifact record
 
-## 🖥️ CLI Reference
+Each input is then encoded as an RFC 6962 leaf:
+SHA-256(0x00 || input). Interior nodes are
+SHA-256(0x01 || left || right). The empty root is SHA-256 of the empty
+byte string; an odd node is promoted without duplication.
 
-```bash
-proof-ledger <command> [options]
+The v2 signature authenticates the protocol/version, Merkle algorithm and root,
+proof identifier and timestamps, organization and task name, signature
+algorithm/key ID/signer identity, and an RFC 8785 hash of metadata.
 
-attest    Generate cryptographic attestation receipt for task and files
-verify    Verify Merkle root, artifact hashes, and signature of a proof.json
-badge     Generate SVG badge, shield, or HTML certificate from a proof.json
-inspect   Pretty-print audit trail and cryptographic details in terminal
-keygen    Generate HMAC-SHA256 secret or Ed25519 keypair
-export    Export proof as Markdown audit report, JSON-LD, or HTML certificate
-```
+Malformed I-JSON values, non-finite numbers, lone UTF-16 surrogates, sparse
+arrays, accessors, symbol properties, invalid hashes, and malformed key material
+fail closed.
 
-Key files written by `keygen` (JSON envelopes) are accepted directly by
-`--key-file` on `attest` and `verify`; plain-text key files work too.
-Python users: same commands via `proof-ledger-py`.
+## Protocol v1 compatibility
 
----
+Receipts with version 1.0.0 remain verification-compatible. Their frozen legacy
+serializer and duplicated-odd Merkle profile are selected only by the v1 version
+gate. New receipts are always v2.
 
-## 🎨 Visual Proof Badges (Nymrel Aesthetics)
+The shared fixture at test/fixtures/protocol-v2-vectors.json contains:
 
-| Token | Hex Code | Usage |
-| :--- | :--- | :--- |
-| **Warm Cream** | `#FAF8F2` | Card surface and canvas background |
-| **Warm Paper** | `#F4F0E6` | Gradient depth and container fill |
-| **Cedar Green** | `#2A332E` | Verified status pill and primary headers |
-| **Terracotta** | `#A8541F` | Hash highlights and warning accents |
-| **Stone Slate** | `#1C2320` | High-contrast typography and QR code modules |
-| **Warm Linen** | `#E2DDD5` | Card borders and divider rules |
+- RFC 8785 number and Unicode ordering vectors
+- RFC 6962 empty and three-leaf vectors
+- RFC 8032 Ed25519 test vector 1
+- a cross-runtime v2 receipt
+- a frozen real-shape v1 receipt
 
-Every badge renders a pure-vector QR code encoding the verification URI (`https://proofs.nymrel.com/v/:proofId`) with zero third-party canvas or bitmap dependencies.
+## Key handling
 
----
+- HMAC keys are symmetric: possession permits both signing and verification.
+- Ed25519 private and public keys are exact 32-byte raw values encoded as
+  64 hexadecimal characters.
+- The Node implementation also accepts valid Ed25519 PEM keys for source
+  compatibility.
+- Invalid Python Ed25519 text is never transformed into a key.
+- Generated ephemeral keys are suitable only for local experiments. Production
+  key custody, rotation, revocation, and identity binding are operator concerns
+  outside this library.
 
-## 📂 Repository Structure
+## Acceptance commands
 
-```
-nymrel-proof-ledger/
-├── bin/
-│   ├── proof-ledger.js          # Node.js executable wrapper
-│   └── proof-ledger             # Unix shell executable
-├── src/                         # TypeScript Engine (Zero runtime deps)
-│   ├── index.ts                 # Main Public API & ProofLedger class
-│   ├── cli.ts                   # Multi-command CLI tool
-│   ├── core/
-│   │   ├── canonical.ts         # RFC 8785 Canonical JSON (JCS)
-│   │   ├── envelope.ts          # Portable receipt envelope validator
-│   │   ├── merkle.ts            # RFC 6962 Domain-Separated Merkle Tree
-│   │   ├── signer.ts            # HMAC-SHA256 & Ed25519 Signers
-│   │   └── receipt.ts           # Proof receipt generator & validator
-│   └── visual/
-│       ├── qr.ts                # Zero-dependency QR matrix synthesizer
-│       └── badge.ts             # SVG & HTML badge generator
-├── python/                      # Python Engine (Zero runtime deps)
-│   └── nymrel_proof_ledger/
-│       ├── __init__.py          # Python Public API
-│       ├── canonical.py         # RFC 8785 Canonical JSON
-│       ├── envelope.py          # Portable receipt envelope validator
-│       ├── merkle.py            # RFC 6962 Domain-Separated Merkle Tree
-│       ├── signer.py            # HMAC & pure-python Ed25519
-│       ├── receipt.py           # Proof receipt generator & validator
-│       ├── qr.py                # Zero-dependency QR synthesizer
-│       ├── badge.py             # SVG & HTML badge generator
-│       └── cli.py               # Python CLI runner (proof-ledger-py)
-├── test/
-│   ├── ts/                      # Node.js test suite (node:test)
-│   │   ├── run-tests.ts         # Test discovery runner
-│   │   ├── canonical.test.ts
-│   │   ├── merkle.test.ts
-│   │   ├── signer.test.ts
-│   │   ├── receipt.test.ts
-│   │   ├── envelope.test.ts
-│   │   ├── badge.test.ts
-│   │   └── cli.test.ts
-│   └── python/                  # Python unittest suite
-│       ├── test_merkle.py
-│       ├── test_signer.py
-│       ├── test_receipt.py
-│       ├── test_envelope.py
-│       ├── test_badge.py
-│       ├── test_keyfile.py      # Key-file loading regression tests
-│       └── test_cross_parity.py # Exact TS/Python mathematical parity
-├── .github/workflows/publish.yml  # npm & PyPI release automation (OIDC provenance)
-├── package.json
-├── tsconfig.json
-├── pyproject.toml
-├── setup.py
-├── llms.txt                     # Autonomous AI Discoverability
-├── SECURITY.md
-├── CONTRIBUTING.md
-└── LICENSE                      # MIT License
-```
+~~~powershell
+npm run test:release
+npm audit --audit-level=high
+npm pack --dry-run
+uvx ruff check python test/python
+uvx pip-audit .
+~~~
 
----
+See SECURITY.md before using receipts as an authorization or release gate.
 
-## 🧪 Testing & Verification
+## License
 
-### Running TypeScript Tests
-```bash
-npm run build
-npm test
-```
-
-### Running Python Tests
-```bash
-python -m unittest discover -s test/python -p "test_*.py"
-```
-
-### Cross-Language Mathematical Parity Test
-Ensures identical Merkle Roots, Canonical JSON stringification, and HMAC digests across both engines.
-
----
-
-## 📄 License & Attribution
-
-MIT License © 2026 **Nymrel / JalenBuilds LLC**  
-Operating Contact: `contact@nymrel.com` • [nymrel.com](https://nymrel.com)
+MIT License. Copyright 2026 Nymrel.

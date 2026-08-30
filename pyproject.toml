@@ -1,25 +1,45 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=80,<82"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "nymrel-proof-ledger"
-version = "1.0.0"
+version = "2.0.0"
+description = "Versioned cryptographic attestation protocol with RFC 8785, RFC 6962, HMAC-SHA256, and Ed25519"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
   { name = "Nymrel", email = "contact@nymrel.com" },
 ]
-description = "Zero-dependency cryptographic attestation and proof-of-execution protocol library and CLI"
-readme = "README.md"
-license = { text = "MIT" }
-requires-python = ">=3.9"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Topic :: Security :: Cryptography",
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+  "Topic :: Security :: Cryptography",
 ]
-keywords = ["cryptography", "attestation", "merkle-tree", "proof-of-execution", "audit-trail", "nymrel"]
-dependencies = []
+keywords = [
+  "cryptography",
+  "attestation",
+  "merkle-tree",
+  "proof-of-execution",
+  "audit-trail",
+  "nymrel",
+]
+dependencies = [
+  "cryptography>=50.0.1,<51",
+  "rfc8785==0.1.4",
+]
+
+[project.urls]
+Homepage = "https://nymrel.com"
+Repository = "https://github.com/nymrel/nymrel-proof-ledger"
+Issues = "https://github.com/nymrel/nymrel-proof-ledger/issues"
 
 [project.scripts]
 proof-ledger-py = "nymrel_proof_ledger.cli:main"

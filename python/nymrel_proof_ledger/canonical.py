@@ -1,56 +1,59 @@
-"""
-RFC 8785 compliant Canonical JSON (JSON Canonicalization Scheme - JCS)
-and cryptographic hashing utilities in pure standard library Python.
+"""RFC 8785 JSON canonicalization with a frozen v1 compatibility profile."""
 
-Guaranteeing exact byte-for-byte serialization parity with TypeScript.
-"""
+from __future__ import annotations
 
-from datetime import datetime
 import hashlib
 import json
-from typing import Any
+import math
+from typing import Any, Literal
+
+import rfc8785
+
+CanonicalizationProfile = Literal["rfc8785", "legacy"]
 
 
-def canonicalize(value: Any) -> str:
-    """
-    Serializes any Python data structure into an RFC 8785 Canonical JSON string.
-    Object keys are sorted lexicographically by UTF-16 code units / Unicode points.
-    No extraneous whitespace is added.
-    """
+def canonicalize_legacy(value: Any) -> str:
+    """Frozen serializer used by protocol v1 receipts."""
     if value is None:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        # Check finite
-        if isinstance(value, float) and (value != value or value == float("inf") or value == float("-inf")):
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, float) and not math.isfinite(value):
             raise ValueError("Cannot canonicalize non-finite numbers")
-        return json.dumps(value, separators=(",", ":"))
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-    if isinstance(value, datetime):
-        return json.dumps(value.isoformat(), separators=(",", ":"))
     if isinstance(value, (list, tuple)):
-        elements = [canonicalize(elem) for elem in value]
-        return "[" + ",".join(elements) + "]"
+        return "[" + ",".join(canonicalize_legacy(item) for item in value) + "]"
     if isinstance(value, dict):
-        # Sort keys lexicographically by Unicode code point
-        sorted_keys = sorted(str(k) for k in value.keys())
         entries = []
-        for k in sorted_keys:
-            key_str = json.dumps(k, ensure_ascii=False, separators=(",", ":"))
-            val_str = canonicalize(value[k])
-            entries.append(f"{key_str}:{val_str}")
+        for key in sorted(value.keys()):
+            if not isinstance(key, str):
+                raise TypeError("Canonical JSON object keys must be strings")
+            entries.append(
+                json.dumps(key, ensure_ascii=False, separators=(",", ":"))
+                + ":"
+                + canonicalize_legacy(value[key])
+            )
         return "{" + ",".join(entries) + "}"
-
     raise TypeError(f"Unsupported type for canonicalization: {type(value)}")
 
 
-def canonical_hash(data: Any, algorithm: str = "sha256") -> str:
-    """
-    Calculates a cryptographic hash of a canonicalized JSON payload.
-    """
-    canonical_str = canonicalize(data)
-    h = hashlib.new(algorithm)
-    h.update(canonical_str.encode("utf-8"))
-    return h.hexdigest()
+def canonicalize(value: Any, profile: CanonicalizationProfile = "rfc8785") -> str:
+    """Returns RFC 8785 JCS text, or the frozen v1 form when requested."""
+    if profile == "legacy":
+        return canonicalize_legacy(value)
+    if profile != "rfc8785":
+        raise ValueError(f"Unsupported canonicalization profile: {profile}")
+    return rfc8785.dumps(value).decode("utf-8")
+
+
+def canonical_hash(
+    data: Any,
+    algorithm: str = "sha256",
+    profile: CanonicalizationProfile = "rfc8785",
+) -> str:
+    digest = hashlib.new(algorithm)
+    digest.update(canonicalize(data, profile).encode("utf-8"))
+    return digest.hexdigest()

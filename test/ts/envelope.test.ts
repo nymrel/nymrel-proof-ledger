@@ -17,11 +17,11 @@ const SIG_HEX = 'f'.repeat(128);
 /** Portable valid envelope vector, mirrored in test/python/test_envelope.py. */
 function buildValidEnvelope(): Record<string, unknown> {
   return {
-    version: '1.0.0',
+    version: '2.0.0',
     protocol: 'nymrel-proof-ledger',
     proofId: 'prf_interop_vector_0001',
     timestamp: '2026-08-21T12:00:00.000Z',
-    parentOrganization: 'Nymrel -> JalenBuilds LLC',
+    parentOrganization: 'Nymrel',
     task: {
       name: 'interop-envelope-vector',
       runner: 'test-runner',
@@ -38,7 +38,7 @@ function buildValidEnvelope(): Record<string, unknown> {
       },
     ],
     merkle: {
-      algorithm: 'SHA-256',
+      algorithm: 'RFC6962-SHA256',
       leaves: [HASH_B, HASH_C, HASH_D],
       root: HASH_E,
     },
@@ -120,10 +120,25 @@ describe('Receipt Envelope Interop Validator', () => {
 
   it('rejects an unsupported version', () => {
     const envelope = buildValidEnvelope();
-    envelope['version'] = '2.0.0';
+    envelope['version'] = '3.0.0';
     const result = validateReceiptEnvelope(envelope);
     assert.deepStrictEqual(codesOf(result), [EnvelopeErrorCode.VERSION_UNSUPPORTED]);
     assert.strictEqual(result.errors[0].path, 'version');
+  });
+
+  it('accepts the legacy v1 envelope and algorithm for verification', () => {
+    const envelope = buildValidEnvelope();
+    envelope['version'] = '1.0.0';
+    (envelope['merkle'] as Record<string, unknown>)['algorithm'] = 'SHA-256';
+    assert.deepStrictEqual(validateReceiptEnvelope(envelope), { valid: true, errors: [] });
+  });
+
+  it('rejects a Merkle algorithm that does not match the receipt era', () => {
+    const envelope = buildValidEnvelope();
+    (envelope['merkle'] as Record<string, unknown>)['algorithm'] = 'SHA-256';
+    const result = validateReceiptEnvelope(envelope);
+    assert.deepStrictEqual(codesOf(result), [EnvelopeErrorCode.FIELD_TYPE_INVALID]);
+    assert.strictEqual(result.errors[0].path, 'merkle.algorithm');
   });
 
   it('rejects a missing proofId', () => {

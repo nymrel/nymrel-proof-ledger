@@ -21,8 +21,9 @@
 /** Protocol identifier emitted by every Nymrel proof receipt. */
 export const RECEIPT_PROTOCOL = 'nymrel-proof-ledger';
 
-/** The only receipt version this validator accepts as portable. */
-export const SUPPORTED_RECEIPT_VERSION = '1.0.0';
+/** Current emission version plus the legacy version accepted for verification. */
+export const SUPPORTED_RECEIPT_VERSION = '2.0.0';
+export const SUPPORTED_RECEIPT_VERSIONS = ['1.0.0', SUPPORTED_RECEIPT_VERSION] as const;
 
 /** Stable machine-readable error codes reported by envelope validation. */
 export const EnvelopeErrorCode = {
@@ -145,11 +146,16 @@ export function validateReceiptEnvelope(input: unknown): ReceiptEnvelopeValidati
   // 2. Version gate
   if (!('version' in input)) {
     push(EnvelopeErrorCode.VERSION_MISSING, 'version', "Required field 'version' is missing.");
-  } else if (input['version'] !== SUPPORTED_RECEIPT_VERSION) {
+  } else if (
+    typeof input['version'] !== 'string' ||
+    !SUPPORTED_RECEIPT_VERSIONS.includes(
+      input['version'] as (typeof SUPPORTED_RECEIPT_VERSIONS)[number]
+    )
+  ) {
     push(
       EnvelopeErrorCode.VERSION_UNSUPPORTED,
       'version',
-      `Unsupported receipt version: expected '${SUPPORTED_RECEIPT_VERSION}', got ${renderValue(input['version'])}.`
+      `Unsupported receipt version: expected one of '1.0.0', '${SUPPORTED_RECEIPT_VERSION}', got ${renderValue(input['version'])}.`
     );
   }
 
@@ -264,12 +270,21 @@ export function validateReceiptEnvelope(input: unknown): ReceiptEnvelopeValidati
         'merkle.algorithm',
         "Required field 'merkle.algorithm' is missing."
       );
-    } else if (merkle['algorithm'] !== 'SHA-256') {
-      push(
-        EnvelopeErrorCode.FIELD_TYPE_INVALID,
-        'merkle.algorithm',
-        "Field 'merkle.algorithm' must be 'SHA-256'."
-      );
+    } else if (
+      typeof input['version'] === 'string' &&
+      SUPPORTED_RECEIPT_VERSIONS.includes(
+        input['version'] as (typeof SUPPORTED_RECEIPT_VERSIONS)[number]
+      )
+    ) {
+      const expectedAlgorithm =
+        input['version'] === SUPPORTED_RECEIPT_VERSION ? 'RFC6962-SHA256' : 'SHA-256';
+      if (merkle['algorithm'] !== expectedAlgorithm) {
+        push(
+          EnvelopeErrorCode.FIELD_TYPE_INVALID,
+          'merkle.algorithm',
+          `Field 'merkle.algorithm' must be '${expectedAlgorithm}' for receipt version '${String(input['version'])}'.`
+        );
+      }
     }
 
     const leaves = merkle['leaves'];
@@ -323,7 +338,22 @@ export function validateReceiptEnvelope(input: unknown): ReceiptEnvelopeValidati
       "Field 'signature' must be a JSON object."
     );
   } else {
-    requireNonEmptyString(signature, 'algorithm', 'signature.algorithm');
+    const signatureAlgorithmValid = requireNonEmptyString(
+      signature,
+      'algorithm',
+      'signature.algorithm'
+    );
+    if (
+      signatureAlgorithmValid &&
+      signature['algorithm'] !== 'HMAC-SHA256' &&
+      signature['algorithm'] !== 'Ed25519'
+    ) {
+      push(
+        EnvelopeErrorCode.FIELD_TYPE_INVALID,
+        'signature.algorithm',
+        "Field 'signature.algorithm' must be 'HMAC-SHA256' or 'Ed25519'."
+      );
+    }
     requireNonEmptyString(signature, 'keyId', 'signature.keyId');
     requireNonEmptyString(signature, 'signerIdentity', 'signature.signerIdentity');
     requireNonEmptyString(signature, 'value', 'signature.value');

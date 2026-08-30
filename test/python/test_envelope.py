@@ -1,16 +1,17 @@
-import unittest
 import json
 import os
 import sys
+import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
+)
 
 from nymrel_proof_ledger import (
     EnvelopeErrorCode,
     validate_receipt_envelope,
 )
 from nymrel_proof_ledger.receipt import create_receipt
-
 
 HASH_A = "a" * 64
 HASH_B = "b" * 64
@@ -23,11 +24,11 @@ SIG_HEX = "f" * 128
 def build_valid_envelope():
     """Portable valid envelope vector, mirrored in test/ts/envelope.test.ts."""
     return {
-        "version": "1.0.0",
+        "version": "2.0.0",
         "protocol": "nymrel-proof-ledger",
         "proofId": "prf_interop_vector_0001",
         "timestamp": "2026-08-21T12:00:00.000Z",
-        "parentOrganization": "Nymrel -> JalenBuilds LLC",
+        "parentOrganization": "Nymrel",
         "task": {
             "name": "interop-envelope-vector",
             "runner": "test-runner",
@@ -44,7 +45,7 @@ def build_valid_envelope():
             }
         ],
         "merkle": {
-            "algorithm": "SHA-256",
+            "algorithm": "RFC6962-SHA256",
             "leaves": [HASH_B, HASH_C, HASH_D],
             "root": HASH_E,
         },
@@ -90,7 +91,9 @@ class TestReceiptEnvelopeInterop(unittest.TestCase):
             with self.subTest(input=bad_input):
                 result = validate_receipt_envelope(bad_input)
                 self.assertFalse(result["valid"])
-                self.assertEqual(codes_of(result), [EnvelopeErrorCode.ENVELOPE_NOT_OBJECT])
+                self.assertEqual(
+                    codes_of(result), [EnvelopeErrorCode.ENVELOPE_NOT_OBJECT]
+                )
                 self.assertIsNone(result["errors"][0]["path"])
 
     def test_rejects_unsupported_protocol_identifier(self):
@@ -119,10 +122,25 @@ class TestReceiptEnvelopeInterop(unittest.TestCase):
 
     def test_rejects_unsupported_version(self):
         envelope = build_valid_envelope()
-        envelope["version"] = "2.0.0"
+        envelope["version"] = "3.0.0"
         result = validate_receipt_envelope(envelope)
         self.assertEqual(codes_of(result), [EnvelopeErrorCode.VERSION_UNSUPPORTED])
         self.assertEqual(result["errors"][0]["path"], "version")
+
+    def test_accepts_legacy_v1_envelope_for_verification(self):
+        envelope = build_valid_envelope()
+        envelope["version"] = "1.0.0"
+        envelope["merkle"]["algorithm"] = "SHA-256"
+        self.assertEqual(
+            validate_receipt_envelope(envelope), {"valid": True, "errors": []}
+        )
+
+    def test_rejects_merkle_algorithm_from_wrong_receipt_era(self):
+        envelope = build_valid_envelope()
+        envelope["merkle"]["algorithm"] = "SHA-256"
+        result = validate_receipt_envelope(envelope)
+        self.assertEqual(codes_of(result), [EnvelopeErrorCode.FIELD_TYPE_INVALID])
+        self.assertEqual(result["errors"][0]["path"], "merkle.algorithm")
 
     def test_rejects_missing_proof_id(self):
         envelope = build_valid_envelope()
@@ -182,7 +200,10 @@ class TestReceiptEnvelopeInterop(unittest.TestCase):
         result = validate_receipt_envelope(envelope)
         self.assertFalse(result["valid"])
         self.assertEqual(
-            [{"code": error["code"], "path": error["path"]} for error in result["errors"]],
+            [
+                {"code": error["code"], "path": error["path"]}
+                for error in result["errors"]
+            ],
             [
                 {"code": EnvelopeErrorCode.VERSION_MISSING, "path": "version"},
                 {"code": EnvelopeErrorCode.TIMESTAMP_MALFORMED, "path": "timestamp"},

@@ -1,60 +1,61 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import { readFileSync } from 'node:fs';
 import { ProofSigner } from '../../src/core/signer.js';
 
-describe('ProofSigner (HMAC-SHA256 & Ed25519)', () => {
-  it('generates secret keys and signs/verifies with HMAC-SHA256', () => {
+interface SignerVectors {
+  ed25519: {
+    secretKey: string;
+    publicKey: string;
+    message: string;
+    signature: string;
+  };
+}
+
+const vectors = JSON.parse(
+  readFileSync('test/fixtures/protocol-v2-vectors.json', 'utf8')
+) as SignerVectors;
+
+describe('ProofSigner', () => {
+  it('signs and verifies HMAC-SHA256 in constant-time-compatible form', () => {
     const secret = ProofSigner.generateSecretKey();
-    assert.strictEqual(secret.length, 64);
-
-    const payload = { task: 'Verify Suite', timestamp: '2026-08-21T12:00:00Z', root: 'abc123' };
-    const signature = ProofSigner.signPayload(payload, secret, 'HMAC-SHA256');
-
+    const payload = { task: 'Verify Suite', root: 'abc123' };
+    const signature = ProofSigner.signPayload(payload, secret);
     assert.match(signature, /^[0-9a-f]{64}$/);
-
-    const isValid = ProofSigner.verifySignature(payload, signature, secret, 'HMAC-SHA256');
-    assert.strictEqual(isValid, true);
-
-    const isInvalid = ProofSigner.verifySignature(payload, signature, 'wrong-secret', 'HMAC-SHA256');
-    assert.strictEqual(isInvalid, false);
-
-    const isTampered = ProofSigner.verifySignature({ ...payload, root: 'tampered' }, signature, secret, 'HMAC-SHA256');
-    assert.strictEqual(isTampered, false);
+    assert.strictEqual(ProofSigner.verifySignature(payload, signature, secret), true);
+    assert.strictEqual(ProofSigner.verifySignature({ ...payload, root: 'changed' }, signature, secret), false);
+    assert.strictEqual(ProofSigner.verifySignature(payload, 'zz', secret), false);
   });
 
-  it('generates Ed25519 keypairs and performs asymmetric signing and verification', () => {
-    const keypair = ProofSigner.generateKeyPair();
-    assert.ok(keypair.publicKey.includes('BEGIN PUBLIC KEY'));
-    assert.ok(keypair.privateKey.includes('BEGIN PRIVATE KEY'));
-
-    const payload = { proofId: 'prf_12345', root: '8f7e3a9c' };
-    const signature = ProofSigner.signPayload(payload, keypair.privateKey, 'Ed25519');
-
-    assert.ok(signature.length > 0);
-
-    const isValid = ProofSigner.verifySignature(payload, signature, keypair.publicKey, 'Ed25519');
-    assert.strictEqual(isValid, true);
-
-    // Test with another keypair
-    const otherKeypair = ProofSigner.generateKeyPair();
-    const isInvalid = ProofSigner.verifySignature(payload, signature, otherKeypair.publicKey, 'Ed25519');
-    assert.strictEqual(isInvalid, false);
-  });
-
-  it('creates structured SignatureRecord objects', () => {
-    const secret = ProofSigner.generateSecretKey();
-    const record = ProofSigner.createSignatureRecord(
-      { task: 'Deploy' },
-      secret,
-      'nymrel-agent-01',
-      'key-1',
-      'HMAC-SHA256'
+  it('matches RFC 8032 test vector 1 exactly', () => {
+    const vector = vectors.ed25519;
+    const signature = ProofSigner.signPayload(vector.message, vector.secretKey, 'Ed25519');
+    assert.strictEqual(signature, vector.signature);
+    assert.strictEqual(
+      ProofSigner.verifySignature(vector.message, signature, vector.publicKey, 'Ed25519'),
+      true
     );
+  });
 
-    assert.strictEqual(record.algorithm, 'HMAC-SHA256');
-    assert.strictEqual(record.signerIdentity, 'nymrel-agent-01');
-    assert.strictEqual(record.keyId, 'key-1');
-    assert.match(record.value, /^[0-9a-f]{64}$/);
-    assert.ok(record.timestamp.length > 0);
+  it('generates portable raw-hex Ed25519 keypairs', () => {
+    const keypair = ProofSigner.generateKeyPair();
+    assert.strictEqual(keypair.encoding, 'raw-hex');
+    assert.match(keypair.privateKey, /^[0-9a-f]{64}$/);
+    assert.match(keypair.publicKey, /^[0-9a-f]{64}$/);
+    const signature = ProofSigner.signPayload({ proof: 1 }, keypair.privateKey, 'Ed25519');
+    assert.strictEqual(
+      ProofSigner.verifySignature({ proof: 1 }, signature, keypair.publicKey, 'Ed25519'),
+      true
+    );
+  });
+
+  it('fails closed on malformed Ed25519 material', () => {
+    assert.throws(
+      () => ProofSigner.signPayload('payload', 'not-a-private-key', 'Ed25519')
+    );
+    assert.strictEqual(
+      ProofSigner.verifySignature('payload', '00'.repeat(64), 'not-a-public-key', 'Ed25519'),
+      false
+    );
   });
 });
