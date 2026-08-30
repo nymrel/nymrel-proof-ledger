@@ -12,20 +12,131 @@
  * @module @nymrel/proof-ledger/visual/badge
  */
 
-import type { ProofReceipt } from '../core/receipt.js';
-import { generateQRMatrix, generateQRSvgPath } from './qr.js';
+import { validateReceiptEnvelope } from "../core/envelope.js";
+import type { ProofReceipt, VerificationResult } from "../core/receipt.js";
+import { generateQRMatrix, generateQRSvgPath } from "./qr.js";
+
+export type BadgeVerification = Pick<
+  VerificationResult,
+  "valid" | "trusted" | "signatureChecked" | "signatureValid"
+>;
 
 export interface BadgeOptions {
-  theme?: 'warm' | 'light' | 'dark';
+  theme?: "warm" | "light" | "dark";
   compact?: boolean;
   verificationBaseUrl?: string;
+  verification?: BadgeVerification;
+}
+
+type PresentationState =
+  | "trusted"
+  | "integrity-only"
+  | "unverified"
+  | "invalid";
+
+interface PresentationDetails {
+  state: PresentationState;
+  label: string;
+  color: string;
+}
+
+function assertRenderableReceipt(receipt: ProofReceipt): void {
+  const validation = validateReceiptEnvelope(receipt);
+  if (!validation.valid) {
+    const details = validation.errors.map(
+      (error) => `${error.path ?? "<root>"}: ${error.message}`,
+    );
+    throw new TypeError(
+      `Cannot render an invalid proof receipt: ${details.join("; ")}`,
+    );
+  }
+}
+
+function resolvePresentation(
+  verification?: BadgeVerification,
+): PresentationDetails {
+  if (verification === undefined) {
+    return {
+      state: "unverified",
+      label: "UNVERIFIED RECEIPT",
+      color: "#5C665F",
+    };
+  }
+
+  const trusted =
+    verification.valid &&
+    verification.trusted &&
+    verification.signatureChecked &&
+    verification.signatureValid === true;
+  if (trusted)
+    return { state: "trusted", label: "TRUSTED RECEIPT", color: "#2A332E" };
+
+  if (!verification.valid) {
+    return { state: "invalid", label: "INVALID RECEIPT", color: "#A8541F" };
+  }
+
+  const integrityOnly =
+    !verification.trusted &&
+    !verification.signatureChecked &&
+    verification.signatureValid === null;
+  if (integrityOnly) {
+    return {
+      state: "integrity-only",
+      label: "INTEGRITY ONLY",
+      color: "#A8541F",
+    };
+  }
+
+  return { state: "invalid", label: "INVALID VERIFY RESULT", color: "#A8541F" };
+}
+
+function resolvePresentationTarget(
+  proofId: string,
+  verificationBaseUrl?: string,
+): { value: string; label: string; host: string } {
+  if (verificationBaseUrl === undefined) {
+    return {
+      value: `urn:nymrel:proof:${encodeURIComponent(proofId)}`,
+      label: "RECEIPT ID",
+      host: "nymrel.com",
+    };
+  }
+
+  const base = new URL(verificationBaseUrl);
+  if (
+    base.protocol !== "https:" ||
+    !base.hostname ||
+    base.username ||
+    base.password ||
+    base.search ||
+    base.hash
+  ) {
+    throw new TypeError(
+      "verificationBaseUrl must be an absolute HTTPS URL without credentials, query, or fragment",
+    );
+  }
+  base.pathname = `${base.pathname.replace(/\/$/, "")}/${encodeURIComponent(proofId)}`;
+  return {
+    value: base.toString(),
+    label: "OPEN VERIFIER",
+    host: base.hostname,
+  };
+}
+
+function safeJsonForHtml(value: unknown): string {
+  return JSON.stringify(value, null, 2)
+    .replace(/&/g, "\\u0026")
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 /**
  * Truncates a 64-char hex hash into a copy-friendly 16-char format (8..8).
  */
 export function truncateHash(hash: string, lead = 8, trail = 8): string {
-  if (!hash || hash.length <= lead + trail + 2) return hash || '';
+  if (!hash || hash.length <= lead + trail + 2) return hash || "";
   return `${hash.slice(0, lead)}...${hash.slice(-trail)}`;
 }
 
@@ -34,38 +145,43 @@ export function truncateHash(hash: string, lead = 8, trail = 8): string {
  */
 function escapeXml(unsafe: string): string {
   return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 /**
  * Generates a full vector SVG proof badge card.
  */
-export function generateSvgBadge(receipt: ProofReceipt, options: BadgeOptions = {}): string {
+export function generateSvgBadge(
+  receipt: ProofReceipt,
+  options: BadgeOptions = {},
+): string {
+  assertRenderableReceipt(receipt);
   const isCompact = options.compact ?? false;
-  const baseUrl = options.verificationBaseUrl || 'https://proofs.nymrel.com/v';
-  const verifyUrl = `${baseUrl}/${receipt.proofId}`;
-
-  const isSuccess = receipt.task.status === 'SUCCESS' || receipt.task.status === 'ATTESTED';
-  const statusColor = isSuccess ? '#2A332E' : '#A8541F';
-  const statusText = isSuccess ? 'VERIFIED ATTESTATION' : 'TAMPERED / FAILED';
+  const presentation = resolvePresentation(options.verification);
+  const target = resolvePresentationTarget(
+    receipt.proofId,
+    options.verificationBaseUrl,
+  );
 
   const width = isCompact ? 480 : 640;
   const height = isCompact ? 180 : 300;
 
   // Generate QR Code vector path
-  const qrMatrix = generateQRMatrix(verifyUrl);
+  const qrMatrix = generateQRMatrix(target.value);
   const qrCellSize = isCompact ? 3 : 4;
   const qrSizePx = qrMatrix.length * qrCellSize;
   const qrOffsetX = width - qrSizePx - 32;
   const qrOffsetY = isCompact ? 30 : 60;
   const qrPath = generateQRSvgPath(qrMatrix, qrCellSize, qrOffsetX, qrOffsetY);
 
-  const gitCommit = receipt.environment.git?.commit ? receipt.environment.git.commit.slice(0, 7) : 'n/a';
-  const gitBranch = receipt.environment.git?.branch || 'standalone';
+  const gitCommit = receipt.environment.git?.commit
+    ? receipt.environment.git.commit.slice(0, 7)
+    : "n/a";
+  const gitBranch = receipt.environment.git?.branch || "standalone";
   const truncatedRoot = truncateHash(receipt.merkle.root, 8, 8);
   const truncatedProofId = receipt.proofId;
 
@@ -87,18 +203,18 @@ export function generateSvgBadge(receipt: ProofReceipt, options: BadgeOptions = 
   <!-- Top Decorative Header Bar -->
   <path d="M 8 22 A 14 14 0 0 1 22 8 L ${width - 22} 8 A 14 14 0 0 1 ${width - 8} 22 L ${width - 8} 34 L 8 34 Z" fill="#2A332E"/>
   <text x="24" y="24" fill="#FAF8F2" font-size="11" font-weight="700" letter-spacing="1.2">NYMREL PROOF LEDGER</text>
-  <text x="${width - 24}" y="24" fill="#FAF8F2" opacity="0.8" font-size="10" text-anchor="end" font-weight="500">PARENT: JALENBUILDS LLC</text>
+  <text x="${width - 24}" y="24" fill="#FAF8F2" opacity="0.8" font-size="10" text-anchor="end" font-weight="500">PUBLISHER: NYMREL</text>
 
   <!-- Status Pill -->
   <g transform="translate(24, 48)">
-    <rect width="170" height="24" rx="12" fill="${statusColor}"/>
+    <rect width="190" height="24" rx="12" fill="${presentation.color}"/>
     <circle cx="12" cy="12" r="4" fill="#FAF8F2"/>
-    <text x="24" y="16" fill="#FAF8F2" font-size="10" font-weight="700" letter-spacing="0.5">${statusText}</text>
+    <text x="24" y="16" fill="#FAF8F2" font-size="10" font-weight="700" letter-spacing="0.5">${presentation.label}</text>
   </g>
 
   <!-- Task Title & Proof ID -->
   <text x="24" y="94" fill="#1C2320" font-size="18" font-weight="700">${escapeXml(receipt.task.name)}</text>
-  <text x="24" y="112" fill="#5C665F" font-size="11" font-family="'SF Mono', Monaco, Consolas, monospace">ID: ${escapeXml(truncatedProofId)}</text>
+  <text x="24" y="112" fill="#5C665F" font-size="11" font-family="'SF Mono', Monaco, Consolas, monospace">ID: ${escapeXml(truncatedProofId)} • TASK: ${escapeXml(receipt.task.status)}</text>
 
   <!-- Cryptographic Details Grid -->
   <g transform="translate(24, 134)" font-size="11">
@@ -119,22 +235,23 @@ export function generateSvgBadge(receipt: ProofReceipt, options: BadgeOptions = 
   <g>
     <rect x="${qrOffsetX - 8}" y="${qrOffsetY - 8}" width="${qrSizePx + 16}" height="${qrSizePx + 16}" rx="8" fill="#FFFFFF" stroke="#E2DDD5" stroke-width="1"/>
     <path d="${qrPath}" fill="#1C2320"/>
-    <text x="${qrOffsetX + qrSizePx / 2}" y="${qrOffsetY + qrSizePx + 18}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">SCAN TO VERIFY</text>
+    <text x="${qrOffsetX + qrSizePx / 2}" y="${qrOffsetY + qrSizePx + 18}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">${target.label}</text>
   </g>
 
   <!-- Footer Dual-Audience Marker -->
   <line x1="24" y1="${height - 38}" x2="${width - 24}" y2="${height - 38}" stroke="#E2DDD5" stroke-width="1"/>
-  <text x="24" y="${height - 20}" fill="#5C665F" font-size="10">Autonomous Verification Standard • JSON-LD Entity Graph Active</text>
-  <text x="${width - 24}" y="${height - 20}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">proofs.nymrel.com</text>
+  <text x="24" y="${height - 20}" fill="#5C665F" font-size="10">Portable receipt • Verify with authenticated key material</text>
+  <text x="${width - 24}" y="${height - 20}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">${escapeXml(target.host)}</text>
 
   <!-- Machine-Readable Metadata Anchor -->
   <metadata>
     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:nymrel="https://nymrel.com/ns#">
-      <rdf:Description rdf:about="${verifyUrl}">
+      <rdf:Description rdf:about="${escapeXml(target.value)}">
         <nymrel:proofId>${escapeXml(receipt.proofId)}</nymrel:proofId>
         <nymrel:merkleRoot>${escapeXml(receipt.merkle.root)}</nymrel:merkleRoot>
-        <nymrel:parentOrganization>Nymrel -&gt; JalenBuilds LLC</nymrel:parentOrganization>
-        <nymrel:status>${escapeXml(receipt.task.status)}</nymrel:status>
+        <nymrel:publisher>Nymrel</nymrel:publisher>
+        <nymrel:presentationState>${presentation.state}</nymrel:presentationState>
+        <nymrel:taskStatus>${escapeXml(receipt.task.status)}</nymrel:taskStatus>
       </rdf:Description>
     </rdf:RDF>
   </metadata>
@@ -144,28 +261,32 @@ export function generateSvgBadge(receipt: ProofReceipt, options: BadgeOptions = 
 /**
  * Generates an inline GitHub-style SVG shield badge.
  */
-export function generateShieldSvg(receipt: ProofReceipt): string {
-  const isSuccess = receipt.task.status === 'SUCCESS' || receipt.task.status === 'ATTESTED';
-  const label = 'nymrel proof';
-  const value = isSuccess ? 'verified ✓' : 'tampered ✗';
-  const color = isSuccess ? '#2A332E' : '#A8541F';
+export function generateShieldSvg(
+  receipt: ProofReceipt,
+  options: BadgeOptions = {},
+): string {
+  assertRenderableReceipt(receipt);
+  const presentation = resolvePresentation(options.verification);
+  const label = "nymrel proof";
+  const value = presentation.state;
+  const color = presentation.color;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="20" role="img" aria-label="${label}: ${value}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="20" role="img" aria-label="${label}: ${value}">
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
   <clipPath id="r">
-    <rect width="180" height="20" rx="3" fill="#fff"/>
+    <rect width="220" height="20" rx="3" fill="#fff"/>
   </clipPath>
   <g clip-path="url(#r)">
     <rect width="90" height="20" fill="#1C2320"/>
-    <rect x="90" width="90" height="20" fill="${color}"/>
-    <rect width="180" height="20" fill="url(#s)"/>
+    <rect x="90" width="130" height="20" fill="${color}"/>
+    <rect width="220" height="20" fill="url(#s)"/>
   </g>
   <g fill="#FAF8F2" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
     <text x="45" y="14">${label}</text>
-    <text x="135" y="14" font-weight="bold">${value}</text>
+    <text x="155" y="14" font-weight="bold">${value}</text>
   </g>
 </svg>`;
 }
@@ -173,9 +294,49 @@ export function generateShieldSvg(receipt: ProofReceipt): string {
 /**
  * Generates a complete standalone, interactive HTML certification page.
  */
-export function generateHtmlCertificate(receipt: ProofReceipt): string {
-  const svgBadge = generateSvgBadge(receipt, { compact: false });
+export function generateHtmlCertificate(
+  receipt: ProofReceipt,
+  options: BadgeOptions = {},
+): string {
+  assertRenderableReceipt(receipt);
+  const presentation = resolvePresentation(options.verification);
+  const svgBadge = generateSvgBadge(receipt, { ...options, compact: false });
   const jsonStr = JSON.stringify(receipt, null, 2);
+  const structuredData = safeJsonForHtml({
+    "@context": "https://schema.org",
+    "@type": "DigitalDocument",
+    name: `${receipt.task.name} Attestation`,
+    identifier: receipt.proofId,
+    dateCreated: receipt.timestamp,
+    publisher: {
+      "@type": "Organization",
+      name: "Nymrel",
+      url: "https://nymrel.com",
+    },
+    additionalProperty: [
+      {
+        "@type": "PropertyValue",
+        name: "presentationState",
+        value: presentation.state,
+      },
+      {
+        "@type": "PropertyValue",
+        name: "taskStatus",
+        value: receipt.task.status,
+      },
+      {
+        "@type": "PropertyValue",
+        name: "merkleRoot",
+        value: receipt.merkle.root,
+      },
+    ],
+    hasPart: receipt.artifacts.map((artifact) => ({
+      "@type": "DigitalDocument",
+      name: artifact.path,
+      sha256: artifact.sha256,
+      size: artifact.sizeBytes,
+    })),
+  });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -185,26 +346,9 @@ export function generateHtmlCertificate(receipt: ProofReceipt): string {
   <title>Attestation Certificate - ${escapeXml(receipt.task.name)} | Nymrel Proof Ledger</title>
   <meta name="description" content="Cryptographic proof-of-execution attestation for ${escapeXml(receipt.task.name)}. Merkle Root: ${receipt.merkle.root}">
   
-  <!-- JSON-LD Autonomous Machine Trust Entity Graph -->
+  <!-- JSON-LD receipt metadata; presentation state is not a substitute for verification. -->
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "DigitalDocument",
-    "name": "${escapeXml(receipt.task.name)} Attestation",
-    "identifier": "${receipt.proofId}",
-    "dateCreated": "${receipt.timestamp}",
-    "parentOrganization": {
-      "@type": "Organization",
-      "name": "Nymrel",
-      "parentOrganization": {
-        "@type": "Organization",
-        "name": "JalenBuilds LLC"
-      }
-    },
-    "hasPart": [
-      ${receipt.artifacts.map((a) => `{"@type": "DigitalDocument", "name": "${escapeXml(a.path)}", "sha256": "${a.sha256}"}`).join(',\n      ')}
-    ]
-  }
+${structuredData}
   </script>
 
   <style>
@@ -356,7 +500,7 @@ export function generateHtmlCertificate(receipt: ProofReceipt): string {
         <div class="brand-sub">Cryptographic Attestation &amp; Audit Protocol</div>
       </div>
       <div>
-        <span class="btn btn-secondary" style="font-size: 0.8rem;">Parent: JalenBuilds LLC</span>
+        <span class="btn btn-secondary" style="font-size: 0.8rem;">Publisher: Nymrel</span>
       </div>
     </header>
 
@@ -384,12 +528,16 @@ export function generateHtmlCertificate(receipt: ProofReceipt): string {
           <div class="value">${escapeXml(receipt.timestamp)}</div>
         </div>
         <div>
+          <div class="label">Presentation State</div>
+          <div class="value">${presentation.label}</div>
+        </div>
+        <div>
           <div class="label">Signer Identity</div>
           <div class="value">${escapeXml(receipt.signature.signerIdentity)} (${escapeXml(receipt.signature.algorithm)})</div>
         </div>
         <div>
           <div class="label">Git Lineage</div>
-          <div class="value mono">${escapeXml(receipt.environment.git?.branch || 'standalone')} @ ${escapeXml(receipt.environment.git?.commit ? receipt.environment.git.commit.slice(0, 8) : 'n/a')}</div>
+          <div class="value mono">${escapeXml(receipt.environment.git?.branch || "standalone")} @ ${escapeXml(receipt.environment.git?.commit ? receipt.environment.git.commit.slice(0, 8) : "n/a")}</div>
         </div>
       </div>
     </div>
@@ -409,12 +557,16 @@ export function generateHtmlCertificate(receipt: ProofReceipt): string {
           </tr>
         </thead>
         <tbody>
-          ${receipt.artifacts.map((a) => `
+          ${receipt.artifacts
+            .map(
+              (a) => `
           <tr>
             <td><strong>${escapeXml(a.path)}</strong></td>
             <td class="mono" style="font-size: 0.8rem;">${escapeXml(a.sha256)}</td>
             <td>${a.sizeBytes} B</td>
-          </tr>`).join('')}
+          </tr>`,
+            )
+            .join("")}
         </tbody>
       </table>
     </div>

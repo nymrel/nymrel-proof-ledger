@@ -6,8 +6,94 @@ Implements SVG badges and HTML certificates adhering to Nymrel's warm design aes
 
 import html
 import json
-from typing import Dict, Any, Optional
+from collections.abc import Mapping
+from typing import Any
+from urllib.parse import quote, urlsplit, urlunsplit
+
+from .envelope import validate_receipt_envelope
 from .qr import generate_qr_matrix, generate_qr_svg_path
+
+
+def _assert_renderable_receipt(receipt: Mapping[str, Any]) -> None:
+    validation = validate_receipt_envelope(receipt)
+    if validation["valid"]:
+        return
+    details = "; ".join(
+        f"{error.get('path') or '<root>'}: {error.get('message', 'invalid field')}"
+        for error in validation["errors"]
+    )
+    raise ValueError(f"Cannot render an invalid proof receipt: {details}")
+
+
+def _presentation_state(
+    verification_result: Mapping[str, Any] | None,
+) -> tuple[str, str, str]:
+    if verification_result is None:
+        return "unverified", "UNVERIFIED RECEIPT", "#5C665F"
+
+    trusted = (
+        verification_result.get("valid") is True
+        and verification_result.get("trusted") is True
+        and verification_result.get("signatureChecked") is True
+        and verification_result.get("signatureValid") is True
+    )
+    if trusted:
+        return "trusted", "TRUSTED RECEIPT", "#2A332E"
+
+    if verification_result.get("valid") is not True:
+        return "invalid", "INVALID RECEIPT", "#A8541F"
+
+    integrity_only = (
+        verification_result.get("trusted") is False
+        and verification_result.get("signatureChecked") is False
+        and verification_result.get("signatureValid") is None
+    )
+    if integrity_only:
+        return "integrity-only", "INTEGRITY ONLY", "#A8541F"
+
+    return "invalid", "INVALID VERIFY RESULT", "#A8541F"
+
+
+def _presentation_target(
+    proof_id: str, verification_base_url: str | None
+) -> tuple[str, str, str]:
+    if verification_base_url is None:
+        return (
+            f"urn:nymrel:proof:{quote(proof_id, safe='')}",
+            "RECEIPT ID",
+            "nymrel.com",
+        )
+
+    parsed = urlsplit(verification_base_url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(
+            "verification_base_url must be an absolute HTTPS URL without "
+            "credentials, query, or fragment"
+        )
+    path = f"{parsed.path.rstrip('/')}/{quote(proof_id, safe='')}"
+    return (
+        urlunsplit((parsed.scheme, parsed.netloc, path, "", "")),
+        "OPEN VERIFIER",
+        parsed.hostname,
+    )
+
+
+def _safe_json_for_html(value: Any) -> str:
+    return (
+        json.dumps(value, ensure_ascii=False, indent=2)
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
 
 
 def truncate_hash(h: str, lead: int = 8, trail: int = 8) -> str:
@@ -18,24 +104,28 @@ def truncate_hash(h: str, lead: int = 8, trail: int = 8) -> str:
 
 
 def generate_svg_badge(
-    receipt: Dict[str, Any],
+    receipt: Mapping[str, Any],
     compact: bool = False,
-    verification_base_url: str = "https://proofs.nymrel.com/v",
+    verification_base_url: str | None = None,
+    verification_result: Mapping[str, Any] | None = None,
 ) -> str:
     """Generates a full vector SVG proof badge card."""
-    proof_id = receipt.get("proofId", "")
-    verify_url = f"{verification_base_url}/{proof_id}"
+    _assert_renderable_receipt(receipt)
+    proof_id = str(receipt.get("proofId", ""))
+    presentation_state, status_text, status_color = _presentation_state(
+        verification_result
+    )
+    target_value, target_label, target_host = _presentation_target(
+        proof_id, verification_base_url
+    )
 
     task = receipt.get("task", {})
-    task_status = task.get("status", "SUCCESS")
-    is_success = task_status in ("SUCCESS", "ATTESTED")
-    status_color = "#2A332E" if is_success else "#A8541F"
-    status_text = "VERIFIED ATTESTATION" if is_success else "TAMPERED / FAILED"
+    task_status = str(task.get("status", ""))
 
     width = 480 if compact else 640
     height = 180 if compact else 300
 
-    qr_matrix = generate_qr_matrix(verify_url)
+    qr_matrix = generate_qr_matrix(target_value)
     qr_cell_size = 3 if compact else 4
     qr_size_px = len(qr_matrix) * qr_cell_size
     qr_offset_x = width - qr_size_px - 32
@@ -76,18 +166,18 @@ def generate_svg_badge(
   <!-- Top Header Bar -->
   <path d="M 8 22 A 14 14 0 0 1 22 8 L {width - 22} 8 A 14 14 0 0 1 {width - 8} 22 L {width - 8} 34 L 8 34 Z" fill="#2A332E"/>
   <text x="24" y="24" fill="#FAF8F2" font-size="11" font-weight="700" letter-spacing="1.2">NYMREL PROOF LEDGER</text>
-  <text x="{width - 24}" y="24" fill="#FAF8F2" opacity="0.8" font-size="10" text-anchor="end" font-weight="500">PARENT: JALENBUILDS LLC</text>
+  <text x="{width - 24}" y="24" fill="#FAF8F2" opacity="0.8" font-size="10" text-anchor="end" font-weight="500">PUBLISHER: NYMREL</text>
 
   <!-- Status Pill -->
   <g transform="translate(24, 48)">
-    <rect width="170" height="24" rx="12" fill="{status_color}"/>
+    <rect width="190" height="24" rx="12" fill="{status_color}"/>
     <circle cx="12" cy="12" r="4" fill="#FAF8F2"/>
     <text x="24" y="16" fill="#FAF8F2" font-size="10" font-weight="700" letter-spacing="0.5">{html.escape(status_text)}</text>
   </g>
 
   <!-- Task Title & Proof ID -->
   <text x="24" y="94" fill="#1C2320" font-size="18" font-weight="700">{html.escape(task_name)}</text>
-  <text x="24" y="112" fill="#5C665F" font-size="11" font-family="'SF Mono', Monaco, Consolas, monospace">ID: {html.escape(proof_id)}</text>
+  <text x="24" y="112" fill="#5C665F" font-size="11" font-family="'SF Mono', Monaco, Consolas, monospace">ID: {html.escape(proof_id)} • TASK: {html.escape(task_status)}</text>
 
   <!-- Cryptographic Details -->
   <g transform="translate(24, 134)" font-size="11">
@@ -108,63 +198,112 @@ def generate_svg_badge(
   <g>
     <rect x="{qr_offset_x - 8}" y="{qr_offset_y - 8}" width="{qr_size_px + 16}" height="{qr_size_px + 16}" rx="8" fill="#FFFFFF" stroke="#E2DDD5" stroke-width="1"/>
     <path d="{qr_path}" fill="#1C2320"/>
-    <text x="{qr_offset_x + qr_size_px / 2}" y="{qr_offset_y + qr_size_px + 18}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">SCAN TO VERIFY</text>
+    <text x="{qr_offset_x + qr_size_px / 2}" y="{qr_offset_y + qr_size_px + 18}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">{target_label}</text>
   </g>
 
   <!-- Footer Dual-Audience Marker -->
   <line x1="24" y1="{height - 38}" x2="{width - 24}" y2="{height - 38}" stroke="#E2DDD5" stroke-width="1"/>
-  <text x="24" y="{height - 20}" fill="#5C665F" font-size="10">Autonomous Verification Standard • JSON-LD Entity Graph Active</text>
-  <text x="{width - 24}" y="{height - 20}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">proofs.nymrel.com</text>
+  <text x="24" y="{height - 20}" fill="#5C665F" font-size="10">Portable receipt • Verify with authenticated key material</text>
+  <text x="{width - 24}" y="{height - 20}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">{html.escape(target_host)}</text>
 
   <!-- Machine-Readable Metadata -->
   <metadata>
     <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:nymrel="https://nymrel.com/ns#">
-      <rdf:Description rdf:about="{verify_url}">
+      <rdf:Description rdf:about="{html.escape(target_value, quote=True)}">
         <nymrel:proofId>{html.escape(proof_id)}</nymrel:proofId>
         <nymrel:merkleRoot>{html.escape(merkle_root)}</nymrel:merkleRoot>
-        <nymrel:parentOrganization>Nymrel -&gt; JalenBuilds LLC</nymrel:parentOrganization>
-        <nymrel:status>{html.escape(task_status)}</nymrel:status>
+        <nymrel:publisher>Nymrel</nymrel:publisher>
+        <nymrel:presentationState>{presentation_state}</nymrel:presentationState>
+        <nymrel:taskStatus>{html.escape(task_status)}</nymrel:taskStatus>
       </rdf:Description>
     </rdf:RDF>
   </metadata>
 </svg>"""
 
 
-def generate_shield_svg(receipt: Dict[str, Any]) -> str:
+def generate_shield_svg(
+    receipt: Mapping[str, Any],
+    verification_result: Mapping[str, Any] | None = None,
+) -> str:
     """Generates an inline GitHub-style SVG shield badge."""
-    task = receipt.get("task", {})
-    is_success = task.get("status") in ("SUCCESS", "ATTESTED")
+    _assert_renderable_receipt(receipt)
+    presentation_state, _, color = _presentation_state(verification_result)
     label = "nymrel proof"
-    val = "verified ✓" if is_success else "tampered ✗"
-    color = "#2A332E" if is_success else "#A8541F"
+    val = presentation_state
 
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="180" height="20" role="img" aria-label="{label}: {val}">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="220" height="20" role="img" aria-label="{label}: {val}">
   <linearGradient id="s" x2="0" y2="100%">
     <stop offset="0%" stop-color="#bbb" stop-opacity=".1"/>
     <stop offset="1" stop-opacity=".1"/>
   </linearGradient>
   <clipPath id="r">
-    <rect width="180" height="20" rx="3" fill="#fff"/>
+    <rect width="220" height="20" rx="3" fill="#fff"/>
   </clipPath>
   <g clip-path="url(#r)">
     <rect width="90" height="20" fill="#1C2320"/>
-    <rect x="90" width="90" height="20" fill="{color}"/>
-    <rect width="180" height="20" fill="url(#s)"/>
+    <rect x="90" width="130" height="20" fill="{color}"/>
+    <rect width="220" height="20" fill="url(#s)"/>
   </g>
   <g fill="#FAF8F2" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
     <text x="45" y="14">{label}</text>
-    <text x="135" y="14" font-weight="bold">{val}</text>
+    <text x="155" y="14" font-weight="bold">{val}</text>
   </g>
 </svg>"""
 
 
-def generate_html_certificate(receipt: Dict[str, Any]) -> str:
+def generate_html_certificate(
+    receipt: Mapping[str, Any],
+    verification_result: Mapping[str, Any] | None = None,
+    verification_base_url: str | None = None,
+) -> str:
     """Generates a standalone HTML certification document."""
-    svg_badge = generate_svg_badge(receipt)
+    _assert_renderable_receipt(receipt)
+    presentation_state, presentation_label, _ = _presentation_state(verification_result)
+    svg_badge = generate_svg_badge(
+        receipt,
+        verification_base_url=verification_base_url,
+        verification_result=verification_result,
+    )
     json_str = json.dumps(receipt, indent=2)
     task = receipt.get("task", {})
     artifacts = receipt.get("artifacts", [])
-    merkle_root = receipt.get("merkle", {}).get("root", "") if isinstance(receipt.get("merkle"), dict) else ""
+    merkle_root = (
+        receipt.get("merkle", {}).get("root", "")
+        if isinstance(receipt.get("merkle"), dict)
+        else ""
+    )
+
+    structured_data = _safe_json_for_html(
+        {
+            "@context": "https://schema.org",
+            "@type": "DigitalDocument",
+            "name": f"{task.get('name', 'Task')} Attestation",
+            "identifier": receipt.get("proofId", ""),
+            "dateCreated": receipt.get("timestamp", ""),
+            "publisher": {
+                "@type": "Organization",
+                "name": "Nymrel",
+                "url": "https://nymrel.com",
+            },
+            "additionalProperty": [
+                {
+                    "@type": "PropertyValue",
+                    "name": "presentationState",
+                    "value": presentation_state,
+                },
+                {
+                    "@type": "PropertyValue",
+                    "name": "taskStatus",
+                    "value": task.get("status", ""),
+                },
+                {
+                    "@type": "PropertyValue",
+                    "name": "merkleRoot",
+                    "value": merkle_root,
+                },
+            ],
+        }
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -172,6 +311,9 @@ def generate_html_certificate(receipt: Dict[str, Any]) -> str:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Attestation Certificate - {html.escape(task.get("name", "Task"))} | Nymrel Proof Ledger</title>
+  <script type="application/ld+json">
+{structured_data}
+  </script>
   <style>
     :root {{
       --bg: #FAF8F2;
@@ -298,7 +440,7 @@ def generate_html_certificate(receipt: Dict[str, Any]) -> str:
         <div style="font-size: 0.85rem; color: var(--text-muted);">Python Attestation Engine</div>
       </div>
       <div>
-        <span style="border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;">Parent: JalenBuilds LLC</span>
+        <span style="border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;">Publisher: Nymrel</span>
       </div>
     </header>
 
@@ -325,6 +467,10 @@ def generate_html_certificate(receipt: Dict[str, Any]) -> str:
           <div class="label">Timestamp</div>
           <div class="value">{html.escape(receipt.get("timestamp", ""))}</div>
         </div>
+        <div>
+          <div class="label">Presentation State</div>
+          <div class="value">{presentation_label}</div>
+        </div>
       </div>
     </div>
 
@@ -343,7 +489,7 @@ def generate_html_certificate(receipt: Dict[str, Any]) -> str:
           </tr>
         </thead>
         <tbody>
-          {"".join([f'<tr><td><strong>{html.escape(a.get("path",""))}</strong></td><td class="mono" style="font-size: 0.8rem;">{html.escape(a.get("sha256",""))}</td><td>{a.get("sizeBytes", 0)} B</td></tr>' for a in artifacts])}
+          {"".join([f'<tr><td><strong>{html.escape(a.get("path", ""))}</strong></td><td class="mono" style="font-size: 0.8rem;">{html.escape(a.get("sha256", ""))}</td><td>{a.get("sizeBytes", 0)} B</td></tr>' for a in artifacts])}
         </tbody>
       </table>
     </div>

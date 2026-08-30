@@ -33,6 +33,21 @@ is supplied, signature authenticity. It does not establish:
 Use valid true plus trusted true for authenticated gates. A result with trusted
 false is an integrity-only check.
 
+## Presentation safety
+
+Badge, shield, and certificate generators validate the structural receipt
+envelope but do not perform cryptographic verification themselves. Their default
+state is unverified, regardless of task status. A trusted label requires a
+consistent verification result with a checked, valid signature; integrity-only
+results remain visibly distinct. Inconsistent result objects fail to an invalid
+presentation state.
+
+The default QR payload is an offline receipt URN. Hosted verifier links are
+emitted only when the caller supplies an absolute HTTPS base URL without
+credentials, query parameters, or fragments. Structured metadata is serialized
+for an HTML script context and identifies Nymrel as publisher without implying a
+live verification service.
+
 ## Cryptographic design
 
 - RFC 8785 canonicalization rejects values outside the I-JSON model.
