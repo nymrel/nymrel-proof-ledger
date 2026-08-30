@@ -40,6 +40,13 @@ A badge or certificate is a presentation of receipt data, not independent proof.
 Trust requires verification with key material obtained through an authenticated
 channel.
 
+Visual generators validate the receipt envelope before rendering and default to
+`UNVERIFIED RECEIPT`. Task success is displayed as task outcome; it is never
+used as a trust signal. Pass the corresponding verification result to render
+`TRUSTED RECEIPT` or `INTEGRITY ONLY`. A QR code contains an offline receipt URN
+unless the caller explicitly supplies an absolute HTTPS verifier base URL; this
+package does not assume that a hosted verifier exists.
+
 ## Local development
 
 ### Node.js
