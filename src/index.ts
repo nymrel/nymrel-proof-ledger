@@ -1,8 +1,8 @@
 /**
  * @nymrel/proof-ledger
  *
- * Zero-dependency dual-language cryptographic attestation and proof-of-execution
- * protocol library and CLI.
+ * Dual-runtime cryptographic attestation and proof-of-execution protocol
+ * library and CLI. The Node.js runtime has no production dependencies.
  *
  * @packageDocumentation
  */
@@ -39,7 +39,7 @@ export async function attestExecution(options: CreateReceiptOptions): Promise<Pr
  * Public high-level function: verify a proof receipt against Merkle invariants and cryptographic signature.
  */
 export async function verifyProof(
-  receipt: ProofReceipt,
+  receipt: unknown,
   options?: VerifyReceiptOptions
 ): Promise<VerificationResult> {
   return verifyReceipt(receipt, options);
@@ -80,7 +80,7 @@ export class ProofLedger {
   /**
    * Verifies an existing attestation receipt.
    */
-  public static async verify(receipt: ProofReceipt, options?: VerifyReceiptOptions): Promise<VerificationResult> {
+  public static async verify(receipt: unknown, options?: VerifyReceiptOptions): Promise<VerificationResult> {
     return verifyReceipt(receipt, options);
   }
 

@@ -18,11 +18,12 @@ Any change here must be mirrored there (and vice versa).
 
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 RECEIPT_PROTOCOL = "nymrel-proof-ledger"
 
-SUPPORTED_RECEIPT_VERSION = "1.0.0"
+SUPPORTED_RECEIPT_VERSION = "2.0.0"
+SUPPORTED_RECEIPT_VERSIONS = ("1.0.0", SUPPORTED_RECEIPT_VERSION)
 
 
 class EnvelopeErrorCode:
@@ -72,7 +73,7 @@ def _render_value(value: Any) -> str:
         return str(value)
 
 
-def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
+def validate_receipt_envelope(receipt: Any) -> dict[str, Any]:
     """
     Validates the structural envelope of a Nymrel proof receipt.
 
@@ -94,13 +95,13 @@ def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
             ],
         }
 
-    errors: List[Dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
 
-    def push(code: str, path: Optional[str], message: str) -> None:
+    def push(code: str, path: str | None, message: str) -> None:
         errors.append({"code": code, "path": path, "message": message})
 
     def require_non_empty_string(
-        container: Dict[str, Any], key: str, path: Optional[str] = None
+        container: dict[str, Any], key: str, path: str | None = None
     ) -> bool:
         path = path or key
         if key not in container:
@@ -141,11 +142,14 @@ def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
             "version",
             "Required field 'version' is missing.",
         )
-    elif receipt["version"] != SUPPORTED_RECEIPT_VERSION:
+    elif (
+        not isinstance(receipt["version"], str)
+        or receipt["version"] not in SUPPORTED_RECEIPT_VERSIONS
+    ):
         push(
             EnvelopeErrorCode.VERSION_UNSUPPORTED,
             "version",
-            "Unsupported receipt version: expected "
+            "Unsupported receipt version: expected one of '1.0.0', "
             f"'{SUPPORTED_RECEIPT_VERSION}', got {_render_value(receipt['version'])}.",
         )
 
@@ -175,7 +179,9 @@ def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
 
     # 4. Task record
     if "task" not in receipt:
-        push(EnvelopeErrorCode.FIELD_MISSING, "task", "Required field 'task' is missing.")
+        push(
+            EnvelopeErrorCode.FIELD_MISSING, "task", "Required field 'task' is missing."
+        )
     elif not _is_plain_object(receipt["task"]):
         push(
             EnvelopeErrorCode.FIELD_TYPE_INVALID,
@@ -278,12 +284,19 @@ def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
                 "merkle.algorithm",
                 "Required field 'merkle.algorithm' is missing.",
             )
-        elif merkle["algorithm"] != "SHA-256":
-            push(
-                EnvelopeErrorCode.FIELD_TYPE_INVALID,
-                "merkle.algorithm",
-                "Field 'merkle.algorithm' must be 'SHA-256'.",
+        elif receipt.get("version") in SUPPORTED_RECEIPT_VERSIONS:
+            expected_algorithm = (
+                "RFC6962-SHA256"
+                if receipt.get("version") == SUPPORTED_RECEIPT_VERSION
+                else "SHA-256"
             )
+            if merkle["algorithm"] != expected_algorithm:
+                push(
+                    EnvelopeErrorCode.FIELD_TYPE_INVALID,
+                    "merkle.algorithm",
+                    f"Field 'merkle.algorithm' must be '{expected_algorithm}' "
+                    f"for receipt version '{receipt.get('version')}'.",
+                )
 
         if "leaves" not in merkle:
             push(
@@ -312,7 +325,10 @@ def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
                 "merkle.root",
                 "Required field 'merkle.root' is missing.",
             )
-        elif not isinstance(merkle["root"], str) or HEX_64_PATTERN.match(merkle["root"]) is None:
+        elif (
+            not isinstance(merkle["root"], str)
+            or HEX_64_PATTERN.match(merkle["root"]) is None
+        ):
             push(
                 EnvelopeErrorCode.HASH_MALFORMED,
                 "merkle.root",
@@ -334,9 +350,22 @@ def validate_receipt_envelope(receipt: Any) -> Dict[str, Any]:
         )
     else:
         signature = receipt["signature"]
-        require_non_empty_string(signature, "algorithm", "signature.algorithm")
+        signature_algorithm_valid = require_non_empty_string(
+            signature, "algorithm", "signature.algorithm"
+        )
+        if signature_algorithm_valid and signature["algorithm"] not in (
+            "HMAC-SHA256",
+            "Ed25519",
+        ):
+            push(
+                EnvelopeErrorCode.FIELD_TYPE_INVALID,
+                "signature.algorithm",
+                "Field 'signature.algorithm' must be 'HMAC-SHA256' or 'Ed25519'.",
+            )
         require_non_empty_string(signature, "keyId", "signature.keyId")
-        require_non_empty_string(signature, "signerIdentity", "signature.signerIdentity")
+        require_non_empty_string(
+            signature, "signerIdentity", "signature.signerIdentity"
+        )
         require_non_empty_string(signature, "value", "signature.value")
 
         if "timestamp" not in signature:

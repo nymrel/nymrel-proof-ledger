@@ -1,86 +1,118 @@
-/**
- * RFC 8785 compliant Canonical JSON (JSON Canonicalization Scheme - JCS)
- * and cryptographic hashing utilities for deterministic cross-language attestations.
- *
- * @module @nymrel/proof-ledger/core/canonical
- */
+/** RFC 8785 JSON Canonicalization Scheme (JCS) utilities. */
 
 import { createHash } from 'node:crypto';
 
-/**
- * Serializes any JavaScript object or value into RFC 8785 Canonical JSON string.
- * Object keys are sorted lexicographically by UTF-16 code units.
- * No extraneous whitespace is introduced.
- *
- * @param value - The value to serialize.
- * @returns Deterministic canonical JSON string.
- */
-export function canonicalize(value: unknown): string {
-  if (value === null || value === undefined) {
-    return 'null';
-  }
+export type CanonicalizationProfile = 'rfc8785' | 'legacy';
 
-  if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
+function assertUnicodeScalarString(value: string): void {
+  for (let index = 0; index < value.length; index++) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        throw new TypeError('RFC 8785 forbids lone UTF-16 surrogate code units');
+      }
+      index++;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      throw new TypeError('RFC 8785 forbids lone UTF-16 surrogate code units');
+    }
   }
+}
+
+function canonicalizeRfc8785(value: unknown): string {
+  if (value === null) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
 
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) {
-      throw new TypeError('Cannot canonicalize non-finite numbers');
+      throw new TypeError('RFC 8785 forbids non-finite numbers');
     }
-    // Number format adhering to standard JSON serialization
     return JSON.stringify(value);
   }
 
   if (typeof value === 'string') {
+    assertUnicodeScalarString(value);
     return JSON.stringify(value);
   }
 
   if (Array.isArray(value)) {
-    const serializedElements = value.map((item) =>
-      item === undefined || typeof item === 'symbol' || typeof item === 'function'
-        ? 'null'
-        : canonicalize(item)
-    );
-    return `[${serializedElements.join(',')}]`;
+    const elements: string[] = [];
+    for (let index = 0; index < value.length; index++) {
+      if (!(index in value)) {
+        throw new TypeError('RFC 8785 input must not contain sparse array elements');
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (descriptor !== undefined && ('get' in descriptor || 'set' in descriptor)) {
+        throw new TypeError('RFC 8785 input must not contain accessor properties');
+      }
+      elements.push(canonicalizeRfc8785(value[index]));
+    }
+    return `[${elements.join(',')}]`;
   }
 
   if (typeof value === 'object') {
-    // Handle Date instances by serializing to ISO string
-    if (value instanceof Date) {
-      return JSON.stringify(value.toISOString());
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError('RFC 8785 input must contain only JSON objects');
     }
 
-    const obj = value as Record<string, unknown>;
-    const keys = Object.keys(obj)
-      .filter((k) => obj[k] !== undefined && typeof obj[k] !== 'symbol' && typeof obj[k] !== 'function')
-      .sort((a, b) => {
-        // UTF-16 / Unicode code point sorting (standard ASCII comparison)
-        if (a < b) return -1;
-        if (a > b) return 1;
-        return 0;
-      });
-
+    const objectValue = value as Record<string, unknown>;
+    if (Reflect.ownKeys(objectValue).some((key) => typeof key === 'symbol')) {
+      throw new TypeError('RFC 8785 input must not contain symbol properties');
+    }
+    const keys = Object.keys(objectValue).sort();
     const entries = keys.map((key) => {
-      const escapedKey = JSON.stringify(key);
-      const valStr = canonicalize(obj[key]);
-      return `${escapedKey}:${valStr}`;
+      assertUnicodeScalarString(key);
+      const descriptor = Object.getOwnPropertyDescriptor(objectValue, key);
+      if (descriptor !== undefined && ('get' in descriptor || 'set' in descriptor)) {
+        throw new TypeError('RFC 8785 input must not contain accessor properties');
+      }
+      return `${JSON.stringify(key)}:${canonicalizeRfc8785(objectValue[key])}`;
     });
-
     return `{${entries.join(',')}}`;
   }
 
+  throw new TypeError(`RFC 8785 cannot canonicalize ${typeof value}`);
+}
+
+/** Frozen v1 serializer retained only for existing receipt verification. */
+export function canonicalizeLegacy(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new TypeError('Cannot canonicalize non-finite numbers');
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map((item) =>
+      item === undefined || typeof item === 'symbol' || typeof item === 'function'
+        ? 'null'
+        : canonicalizeLegacy(item)
+    ).join(',')}]`;
+  }
+  if (typeof value === 'object') {
+    if (value instanceof Date) return JSON.stringify(value.toISOString());
+    const objectValue = value as Record<string, unknown>;
+    const keys = Object.keys(objectValue)
+      .filter((key) => objectValue[key] !== undefined && typeof objectValue[key] !== 'symbol' && typeof objectValue[key] !== 'function')
+      .sort();
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalizeLegacy(objectValue[key])}`).join(',')}}`;
+  }
   throw new TypeError(`Unsupported type for canonicalization: ${typeof value}`);
 }
 
-/**
- * Calculates a cryptographic hash of a canonicalized JSON payload.
- *
- * @param data - The data object to hash.
- * @param algorithm - Hash algorithm (default: 'sha256').
- * @returns Hex-encoded hash string.
- */
-export function canonicalHash(data: unknown, algorithm: string = 'sha256'): string {
-  const canonicalString = canonicalize(data);
-  return createHash(algorithm).update(canonicalString, 'utf8').digest('hex');
+export function canonicalize(
+  value: unknown,
+  profile: CanonicalizationProfile = 'rfc8785'
+): string {
+  return profile === 'legacy' ? canonicalizeLegacy(value) : canonicalizeRfc8785(value);
+}
+
+export function canonicalHash(
+  data: unknown,
+  algorithm = 'sha256',
+  profile: CanonicalizationProfile = 'rfc8785'
+): string {
+  return createHash(algorithm).update(canonicalize(data, profile), 'utf8').digest('hex');
 }

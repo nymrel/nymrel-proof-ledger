@@ -4,7 +4,9 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
+)
 
 from nymrel_proof_ledger.cli import _load_key_material
 from nymrel_proof_ledger.signer import ProofSigner

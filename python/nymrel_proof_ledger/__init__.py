@@ -2,52 +2,55 @@
 nymrel_proof_ledger
 ~~~~~~~~~~~~~~~~~~~
 
-Zero-dependency cryptographic attestation and proof-of-execution protocol library and CLI.
-Parent Organization: Nymrel -> JalenBuilds LLC
+Dual-runtime cryptographic attestation and proof-of-execution protocol library.
+Parent Organization: Nymrel
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __author__ = "Nymrel <contact@nymrel.com>"
 
-from .canonical import canonicalize, canonical_hash
+from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
+from .canonical import canonical_hash, canonicalize, canonicalize_legacy
 from .envelope import (
-    EnvelopeErrorCode,
     RECEIPT_PROTOCOL,
     SUPPORTED_RECEIPT_VERSION,
+    SUPPORTED_RECEIPT_VERSIONS,
+    EnvelopeErrorCode,
     validate_receipt_envelope,
 )
-from .merkle import MerkleTree, hash_leaf, hash_nodes, MerkleProofStep
-from .signer import ProofSigner
-from .receipt import create_receipt, verify_receipt, hash_artifact, get_git_context
+from .merkle import MerkleProofStep, MerkleTree, hash_leaf, hash_nodes
 from .qr import generate_qr_matrix, generate_qr_svg_path
-from .badge import generate_svg_badge, generate_shield_svg, generate_html_certificate
+from .receipt import create_receipt, get_git_context, hash_artifact, verify_receipt
+from .signer import ProofSigner
 
 attest_execution = create_receipt
 verify_proof = verify_receipt
 generate_badge = generate_svg_badge
 
 __all__ = [
-    "canonicalize",
-    "canonical_hash",
-    "EnvelopeErrorCode",
     "RECEIPT_PROTOCOL",
     "SUPPORTED_RECEIPT_VERSION",
-    "validate_receipt_envelope",
-    "MerkleTree",
-    "hash_leaf",
-    "hash_nodes",
+    "SUPPORTED_RECEIPT_VERSIONS",
+    "EnvelopeErrorCode",
     "MerkleProofStep",
+    "MerkleTree",
     "ProofSigner",
-    "create_receipt",
-    "verify_receipt",
     "attest_execution",
-    "verify_proof",
+    "canonical_hash",
+    "canonicalize",
+    "canonicalize_legacy",
+    "create_receipt",
     "generate_badge",
-    "generate_svg_badge",
-    "generate_shield_svg",
     "generate_html_certificate",
     "generate_qr_matrix",
     "generate_qr_svg_path",
-    "hash_artifact",
+    "generate_shield_svg",
+    "generate_svg_badge",
     "get_git_context",
+    "hash_artifact",
+    "hash_leaf",
+    "hash_nodes",
+    "validate_receipt_envelope",
+    "verify_proof",
+    "verify_receipt",
 ]

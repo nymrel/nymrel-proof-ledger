@@ -1,36 +1,72 @@
 # Contributing to Nymrel Proof Ledger
 
-We welcome contributions from cryptography engineers, systems architects, and open-source developers.
+Protocol and cryptographic changes require matched TypeScript and Python
+behavior, shared vectors, and fail-closed tests. A green test in only one
+runtime is not sufficient.
 
-## Core Directives
+## Development requirements
 
-1. **Zero External Dependencies:**
-   - The TypeScript engine must remain 100% dependency-free at runtime, using only native `node:crypto`, `node:fs`, and standard platform modules.
-   - The Python engine must remain 100% dependency-free at runtime, using only standard library modules (`hashlib`, `hmac`, `secrets`, `json`, `os`, `sys`).
-2. **Dual-Audience Machine Trust & Human Aesthetics:**
-   - Every badge, certificate, and proof output must support automated AI discovery (`parentOrganization: Nymrel -> JalenBuilds LLC`, `/llms.txt`, JSON-LD schema) and human visual elegance (Nymrel warm aesthetic `#FAF8F2`, `#2A332E`, `#A8541F`).
-3. **Cross-Language Determinism:**
-   - Any cryptographic enhancement (Merkle tree calculation, leaf hashing, canonical JSON formatting) must maintain exact byte-for-byte output parity between TypeScript and Python implementations.
+- Node.js 22.12 or newer, through 26.x
+- npm 11
+- Python 3.11 through 3.14
+- uv for isolated Python matrix runs
 
-## Development Workflow
+Install Node development dependencies without lifecycle scripts:
 
-### TypeScript / Node.js
-```bash
-npm install
-npm run build
-npm test
-```
+~~~powershell
+npm install --ignore-scripts
+~~~
 
-### Python
-```bash
-python -m unittest discover -s test/python -p "test_*.py"
-```
+Run the local release gate:
 
-## Pull Request Guidelines
+~~~powershell
+npm run test:release
+npm audit --audit-level=high
+npm pack --dry-run
+~~~
 
-- Add unit tests in both `test/ts/` and `test/python/` for any new features or bug fixes.
-- Ensure all test suites pass with 100% green execution.
-- Maintain MIT License headers and clean docstrings.
+Run Python checks in an isolated environment:
 
----
-*Parent Organization: Nymrel -> JalenBuilds LLC*
+~~~powershell
+uv run --isolated --no-project --python 3.13 --with "cryptography>=50.0.1,<51" --with "rfc8785==0.1.4" python -m unittest discover -s test/python -p "test_*.py"
+uvx ruff check python test/python
+uvx pip-audit .
+~~~
+
+## Protocol change checklist
+
+1. Identify whether the change affects emitted v2 receipts, v1 verification, or
+   both.
+2. Preserve v1 behavior only in the named legacy canonicalization and Merkle
+   profiles.
+3. Add or update a shared fixture in
+   test/fixtures/protocol-v2-vectors.json.
+4. Add equivalent focused tests in test/ts and test/python.
+5. Verify exact outputs across Node.js 22, 24, and 26 and Python 3.11 through
+   3.14.
+6. Confirm malformed envelopes fail before cryptography or filesystem access.
+7. Update README.md and SECURITY.md when the public contract changes.
+
+Do not silently reinterpret malformed key material, downgrade an unsupported
+version, duplicate odd RFC 6962 nodes, or label an unchecked signature as
+trusted.
+
+## Dependency rules
+
+The Node.js runtime remains production-dependency-free. Python dependencies are
+allowed when they replace sensitive homegrown cryptography or are required for
+standards correctness. New dependencies need a maintenance, provenance,
+licensing, and vulnerability review.
+
+## Pull requests
+
+Keep protocol changes reviewable and include:
+
+- the exact protocol behavior changed
+- compatibility impact
+- test and runtime-matrix evidence
+- package audit and package-build evidence
+- any external publication or provider gate still outstanding
+
+Do not claim npm, PyPI, hosted verification, or release completion from local
+tests alone.

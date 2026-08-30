@@ -1,43 +1,68 @@
-import unittest
-import sys
+import json
 import os
+import sys
+import unittest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
+)
 
 from nymrel_proof_ledger.signer import ProofSigner
+
+FIXTURE_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "fixtures", "protocol-v2-vectors.json"
+)
+with open(FIXTURE_PATH, encoding="utf-8") as fixture_file:
+    ED25519_VECTOR = json.load(fixture_file)["ed25519"]
 
 
 class TestSigner(unittest.TestCase):
     def test_hmac_signing(self):
         secret = ProofSigner.generate_secret_key()
-        self.assertEqual(len(secret), 64)
-
-        payload = {"task": "Verify Suite", "timestamp": "2026-08-21T12:00:00Z", "root": "abc123"}
-        signature = ProofSigner.sign_payload(payload, secret, "HMAC-SHA256")
+        payload = {"task": "Verify Suite", "root": "abc123"}
+        signature = ProofSigner.sign_payload(payload, secret)
         self.assertEqual(len(signature), 64)
+        self.assertTrue(ProofSigner.verify_signature(payload, signature, secret))
+        self.assertFalse(ProofSigner.verify_signature(payload, "zz", secret))
 
-        is_valid = ProofSigner.verify_signature(payload, signature, secret, "HMAC-SHA256")
-        self.assertTrue(is_valid)
+    def test_rfc8032_vector_one(self):
+        signature = ProofSigner.sign_payload(
+            ED25519_VECTOR["message"],
+            ED25519_VECTOR["secretKey"],
+            "Ed25519",
+        )
+        self.assertEqual(signature, ED25519_VECTOR["signature"])
+        self.assertTrue(
+            ProofSigner.verify_signature(
+                ED25519_VECTOR["message"],
+                signature,
+                ED25519_VECTOR["publicKey"],
+                "Ed25519",
+            )
+        )
 
-        is_invalid = ProofSigner.verify_signature(payload, signature, "wrong-key", "HMAC-SHA256")
-        self.assertFalse(is_invalid)
+    def test_raw_hex_key_generation(self):
+        keypair = ProofSigner.generate_key_pair()
+        self.assertEqual(keypair["encoding"], "raw-hex")
+        self.assertEqual(len(keypair["privateKey"]), 64)
+        self.assertEqual(len(keypair["publicKey"]), 64)
+        signature = ProofSigner.sign_payload(
+            {"proof": 1}, keypair["privateKey"], "Ed25519"
+        )
+        self.assertTrue(
+            ProofSigner.verify_signature(
+                {"proof": 1}, signature, keypair["publicKey"], "Ed25519"
+            )
+        )
 
-    def test_ed25519_signing_pure(self):
-        kp = ProofSigner.generate_key_pair()
-        self.assertEqual(kp["algorithm"], "Ed25519")
-        self.assertEqual(len(kp["privateKey"]), 64)
-        self.assertEqual(len(kp["publicKey"]), 64)
-
-        payload = {"proofId": "prf_123", "root": "8f7e3a9c"}
-        signature = ProofSigner.sign_payload(payload, kp["privateKey"], "Ed25519")
-        self.assertEqual(len(signature), 128)  # 64 bytes in hex = 128 chars
-
-        is_valid = ProofSigner.verify_signature(payload, signature, kp["publicKey"], "Ed25519")
-        self.assertTrue(is_valid)
-
-        other_kp = ProofSigner.generate_key_pair()
-        is_invalid = ProofSigner.verify_signature(payload, signature, other_kp["publicKey"], "Ed25519")
-        self.assertFalse(is_invalid)
+    def test_invalid_ed25519_material_fails_closed(self):
+        with self.assertRaises(ValueError):
+            ProofSigner.sign_payload("payload", "not-a-private-key", "Ed25519")
+        self.assertFalse(
+            ProofSigner.verify_signature(
+                "payload", "00" * 64, "not-a-public-key", "Ed25519"
+            )
+        )
 
 
 if __name__ == "__main__":

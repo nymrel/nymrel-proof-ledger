@@ -1,7 +1,7 @@
 {
   "name": "@nymrel/proof-ledger",
-  "version": "1.0.0",
-  "description": "Zero-dependency dual-language cryptographic attestation and proof-of-execution protocol library and CLI.",
+  "version": "2.0.0",
+  "description": "Versioned TypeScript and Python cryptographic attestation protocol with RFC 8785, RFC 6962, HMAC-SHA256, and Ed25519.",
   "author": "Nymrel <contact@nymrel.com>",
   "license": "MIT",
   "homepage": "https://nymrel.com",
@@ -20,7 +20,8 @@
     "audit-trail",
     "machine-trust",
     "nymrel",
-    "zero-dependency",
+    "rfc8785",
+    "rfc6962",
     "ed25519",
     "hmac-sha256"
   ],
@@ -29,35 +30,39 @@
   "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./core/canonical": {
+      "types": "./dist/src/core/canonical.d.ts",
+      "import": "./dist/src/core/canonical.js"
     },
     "./core/merkle": {
-      "import": "./dist/src/core/merkle.js",
-      "types": "./dist/src/core/merkle.d.ts"
+      "types": "./dist/src/core/merkle.d.ts",
+      "import": "./dist/src/core/merkle.js"
     },
     "./core/signer": {
-      "import": "./dist/src/core/signer.js",
-      "types": "./dist/src/core/signer.d.ts"
+      "types": "./dist/src/core/signer.d.ts",
+      "import": "./dist/src/core/signer.js"
     },
     "./core/receipt": {
-      "import": "./dist/src/core/receipt.js",
-      "types": "./dist/src/core/receipt.d.ts"
+      "types": "./dist/src/core/receipt.d.ts",
+      "import": "./dist/src/core/receipt.js"
     },
     "./core/envelope": {
-      "import": "./dist/src/core/envelope.js",
-      "types": "./dist/src/core/envelope.d.ts"
+      "types": "./dist/src/core/envelope.d.ts",
+      "import": "./dist/src/core/envelope.js"
     },
     "./visual/badge": {
-      "import": "./dist/src/visual/badge.js",
-      "types": "./dist/src/visual/badge.d.ts"
+      "types": "./dist/src/visual/badge.d.ts",
+      "import": "./dist/src/visual/badge.js"
     }
   },
   "bin": {
     "proof-ledger": "./bin/proof-ledger.js"
   },
   "files": [
-    "dist",
+    "dist/src",
     "bin",
     "LICENSE",
     "README.md",
@@ -69,18 +74,20 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run build && npm run test:ts",
     "test:ts": "node dist/test/ts/run-tests.js",
-    "test:py": "python -m unittest discover -s test/python -p \"test_*.py\"",
+    "test:py": "uv run --isolated --no-project --python 3.13 --with \"cryptography>=50.0.1,<51\" --with \"rfc8785==0.1.4\" python -m unittest discover -s test/python -p \"test_*.py\"",
     "test:all": "npm run test && npm run test:py",
-    "test:release": "npm run test:all",
+    "test:release": "npm run typecheck && npm run test:all",
     "prepublishOnly": "npm run test:release"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "typescript": "^5.7.0"
+    "@types/node": "24.13.3",
+    "typescript": "7.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.12.0 <27"
   },
+  "packageManager": "npm@11.19.0",
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
   }

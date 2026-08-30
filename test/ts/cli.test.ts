@@ -2,12 +2,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
 import { runCli } from '../../src/cli.js';
 
 describe('CLI Driver End-to-End', () => {
   it('executes keygen, attest, verify, badge, inspect, and export commands', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'nymrel-proof-test-'));
+    const tmpDir = await fs.mkdtemp(path.join(process.cwd(), '.tmp-nymrel-proof-test-'));
     const proofFile = path.join(tmpDir, 'proof.json');
     const badgeFile = path.join(tmpDir, 'badge.svg');
     const htmlFile = path.join(tmpDir, 'cert.html');
@@ -49,6 +48,20 @@ describe('CLI Driver End-to-End', () => {
         '--check-files',
       ]);
       assert.strictEqual(verifyCode, 0);
+
+      // Verification without key remains a successful integrity check, but it
+      // must never be presented as cryptographically trusted.
+      const captured: string[] = [];
+      const originalLog = console.log;
+      console.log = (...args: unknown[]) => captured.push(args.map(String).join(' '));
+      try {
+        const integrityOnlyCode = await runCli(['verify', proofFile]);
+        assert.strictEqual(integrityOnlyCode, 0);
+      } finally {
+        console.log = originalLog;
+      }
+      assert.match(captured.join('\n'), /NOT CHECKED/);
+      assert.match(captured.join('\n'), /PASSED \(INTEGRITY ONLY\)/);
 
       // 4. inspect
       const inspectCode = await runCli(['inspect', proofFile]);
