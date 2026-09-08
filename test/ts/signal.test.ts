@@ -56,6 +56,10 @@ function cloneBundle(bundle: SignalProofBundleV1): SignalProofBundleV1 {
   return JSON.parse(JSON.stringify(bundle)) as SignalProofBundleV1;
 }
 
+function envelopeRecord(): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(fixtureEnvelope())) as Record<string, unknown>;
+}
+
 describe('Nymrel Signal proof profile', () => {
   it('canonicalizes deterministically with the cross-language fixture digest', () => {
     const canonical = canonicalizeSignalProofEnvelope(fixtureEnvelope());
@@ -157,7 +161,7 @@ describe('Nymrel Signal proof profile', () => {
     assert.ok(result.errors.some((error) => error.includes('digest does not match')));
   });
 
-  it('rejects an unbound metadata mirror that disagrees with the envelope', async () => {
+  it('rejects a signed metadata mirror that disagrees with the envelope', async () => {
     const secret = ProofSigner.generateSecretKey();
     const original = await createSignalProofBundle({
       envelope: fixtureEnvelope(),
@@ -173,9 +177,10 @@ describe('Nymrel Signal proof profile', () => {
       publicKeyOrSecret: secret,
     });
 
-    assert.strictEqual(result.core.valid, true);
+    assert.strictEqual(result.core.valid, false);
     assert.strictEqual(result.valid, false);
     assert.strictEqual(result.envelopeBound, true);
+    assert.ok(result.core.errors.some((error) => error.includes('signature verification failed')));
     assert.ok(result.errors.some((error) => error.includes('disagrees')));
   });
 
@@ -196,5 +201,39 @@ describe('Nymrel Signal proof profile', () => {
       }),
       /reserved/
     );
+  });
+
+  it('rejects uppercase digests and unknown envelope claims instead of dropping them', () => {
+    const envelope = envelopeRecord();
+    envelope.claimSnapshotDigest = `sha256:${'A'.repeat(64)}`;
+    envelope.unreviewedClaim = { claim: 'must not be dropped' };
+    (envelope.observer as Record<string, unknown>).unreviewedObserverClaim = true;
+    (envelope.evaluator as Record<string, unknown>).unreviewedEvaluatorClaim = true;
+    (envelope.evidence as Record<string, unknown>[])[0].unreviewedEvidenceClaim = true;
+
+    const errors = validateSignalProofEnvelope(envelope);
+
+    assert.ok(errors.includes('claimSnapshotDigest must use sha256:<64 lowercase hex> form'));
+    assert.deepStrictEqual(
+      errors.filter((error) => error.startsWith('Unknown')),
+      [
+        "Unknown Signal envelope field: 'unreviewedClaim'",
+        "Unknown observer field: 'unreviewedObserverClaim'",
+        "Unknown evaluator field: 'unreviewedEvaluatorClaim'",
+        "Unknown evidence[0] field: 'unreviewedEvidenceClaim'",
+      ]
+    );
+  });
+
+  it('requires an offset timestamp with a real calendar date', () => {
+    for (const timestamp of ['2026-08-21T22:00:00', '2026-02-30T22:00:00Z']) {
+      const envelope = envelopeRecord();
+      (envelope.observer as Record<string, unknown>).observedAt = timestamp;
+      assert.ok(validateSignalProofEnvelope(envelope).includes('observer.observedAt must be an ISO-8601 timestamp'));
+    }
+
+    const validOffset = envelopeRecord();
+    (validOffset.observer as Record<string, unknown>).observedAt = '2026-02-28T22:00:00.123+05:30';
+    assert.ok(!validateSignalProofEnvelope(validOffset).includes('observer.observedAt must be an ISO-8601 timestamp'));
   });
 });

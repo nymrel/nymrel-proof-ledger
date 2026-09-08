@@ -110,10 +110,18 @@ export interface SignalProofVerificationResult {
 }
 
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
-const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 const ALLOWED_SCOPES = new Set<string>(SIGNAL_ATTESTED_SCOPES);
 const ALLOWED_OBSERVER_KINDS = new Set<string>(['self', 'system', 'independent']);
 const ALLOWED_PRIVACY = new Set<string>(['public', 'private', 'restricted']);
+const ENVELOPE_FIELDS = new Set([
+  'profile', 'profileVersion', 'signalReceiptId', 'needDropId', 'challengeId',
+  'claimSnapshotDigest', 'disclosureSnapshotDigest', 'attestedScopes', 'observer',
+  'evaluator', 'evidence', 'limitations',
+]);
+const OBSERVER_FIELDS = new Set(['kind', 'id', 'observedAt', 'method']);
+const EVALUATOR_FIELDS = new Set(['id', 'version']);
+const EVIDENCE_FIELDS = new Set(['ref', 'privacy', 'digest']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -128,15 +136,35 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 function isDigest(value: unknown): value is string {
-  return typeof value === 'string' && DIGEST_PATTERN.test(value.toLowerCase());
+  return typeof value === 'string' && DIGEST_PATTERN.test(value);
 }
 
 function isIsoTimestamp(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    ISO_TIMESTAMP_PATTERN.test(value) &&
-    !Number.isNaN(Date.parse(value))
-  );
+  if (typeof value !== 'string') return false;
+  const match = ISO_TIMESTAMP_PATTERN.exec(value);
+  if (match === null) return false;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+  if (
+    year < 1 || month < 1 || month > 12 || day < 1 || hour > 23 || minute > 59 || second > 59
+  ) return false;
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return false;
+  }
+  const offset = match[7];
+  if (offset !== 'Z') {
+    const offsetHour = Number(offset.slice(1, 3));
+    const offsetMinute = Number(offset.slice(4, 6));
+    if (offsetHour > 23 || offsetMinute > 59) return false;
+  }
+  return true;
+}
+
+function unknownFieldErrors(value: Record<string, unknown>, allowed: Set<string>, label: string): string[] {
+  return Object.keys(value)
+    .filter((key) => !allowed.has(key))
+    .map((key) => `Unknown ${label} field: '${key}'`);
 }
 
 function cloneAndNormalizeEnvelope(envelope: SignalProofEnvelopeV1): SignalProofEnvelopeV1 {
@@ -191,6 +219,8 @@ export function validateSignalProofEnvelope(value: unknown): string[] {
   const errors: string[] = [];
   if (!isRecord(value)) return ['Signal proof envelope must be an object'];
 
+  errors.push(...unknownFieldErrors(value, ENVELOPE_FIELDS, 'Signal envelope'));
+
   if (value.profile !== SIGNAL_PROOF_PROFILE) {
     errors.push(`Unsupported Signal profile: '${String(value.profile)}'`);
   }
@@ -230,6 +260,7 @@ export function validateSignalProofEnvelope(value: unknown): string[] {
   if (!isRecord(value.observer)) {
     errors.push('observer must be an object');
   } else {
+    errors.push(...unknownFieldErrors(value.observer, OBSERVER_FIELDS, 'observer'));
     if (!ALLOWED_OBSERVER_KINDS.has(String(value.observer.kind))) {
       errors.push(`Unsupported observer kind: '${String(value.observer.kind)}'`);
     }
@@ -248,6 +279,7 @@ export function validateSignalProofEnvelope(value: unknown): string[] {
     if (!isRecord(value.evaluator)) {
       errors.push('evaluator must be an object when present');
     } else {
+      errors.push(...unknownFieldErrors(value.evaluator, EVALUATOR_FIELDS, 'evaluator'));
       if (!isNonEmptyString(value.evaluator.id)) errors.push('evaluator.id must be non-empty');
       if (!isNonEmptyString(value.evaluator.version)) {
         errors.push('evaluator.version must be non-empty');
@@ -263,6 +295,7 @@ export function validateSignalProofEnvelope(value: unknown): string[] {
         errors.push(`evidence[${index}] must be an object`);
         return;
       }
+      errors.push(...unknownFieldErrors(item, EVIDENCE_FIELDS, `evidence[${index}]`));
       if (!isNonEmptyString(item.ref)) errors.push(`evidence[${index}].ref must be non-empty`);
       if (!ALLOWED_PRIVACY.has(String(item.privacy))) {
         errors.push(`evidence[${index}].privacy is unsupported`);
@@ -464,7 +497,7 @@ export async function verifySignalProofBundle(
     core.merkleValid &&
     core.artifactsValid &&
     core.errors.length === 0;
-  const valid = structurallyValid && signatureChecked && core.signatureValid;
+  const valid = Boolean(structurallyValid && signatureChecked && core.signatureValid);
   const authoritativeEnvelope = normalizedEnvelope;
 
   return {

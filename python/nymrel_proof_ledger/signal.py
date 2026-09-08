@@ -29,9 +29,20 @@ SIGNAL_ATTESTED_SCOPES = (
 )
 
 _DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+_ISO_TIMESTAMP_PATTERN = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$"
+)
 _ALLOWED_SCOPES = set(SIGNAL_ATTESTED_SCOPES)
 _ALLOWED_OBSERVER_KINDS = {"self", "system", "independent"}
 _ALLOWED_PRIVACY = {"public", "private", "restricted"}
+_ENVELOPE_FIELDS = {
+    "profile", "profileVersion", "signalReceiptId", "needDropId", "challengeId",
+    "claimSnapshotDigest", "disclosureSnapshotDigest", "attestedScopes", "observer",
+    "evaluator", "evidence", "limitations",
+}
+_OBSERVER_FIELDS = {"kind", "id", "observedAt", "method"}
+_EVALUATOR_FIELDS = {"id", "version"}
+_EVIDENCE_FIELDS = {"ref", "privacy", "digest"}
 
 
 def _is_record(value: Any) -> bool:
@@ -43,17 +54,38 @@ def _non_empty(value: Any) -> bool:
 
 
 def _is_digest(value: Any) -> bool:
-    return isinstance(value, str) and bool(_DIGEST_PATTERN.fullmatch(value.lower()))
+    return isinstance(value, str) and bool(_DIGEST_PATTERN.fullmatch(value))
 
 
 def _is_iso_timestamp(value: Any) -> bool:
     if not isinstance(value, str):
         return False
+    match = _ISO_TIMESTAMP_PATTERN.fullmatch(value)
+    if match is None:
+        return False
+    year, month, day, hour, minute, second = (int(part) for part in match.groups()[:6])
+    if not (
+        year >= 1
+        and 1 <= month <= 12
+        and 0 <= hour <= 23
+        and 0 <= minute <= 59
+        and 0 <= second <= 59
+    ):
+        return False
+    offset = match.group(7)
+    if offset != "Z":
+        offset_hour, offset_minute = (int(part) for part in offset[1:].split(":"))
+        if offset_hour > 23 or offset_minute > 59:
+            return False
     try:
-        datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return "T" in value
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed.tzinfo is not None and parsed.utcoffset() is not None
     except ValueError:
         return False
+
+
+def _unknown_field_errors(value: Dict[str, Any], allowed: set[str], label: str) -> List[str]:
+    return [f"Unknown {label} field: '{key}'" for key in value if key not in allowed]
 
 
 def _normalize_artifact_path(value: str) -> str:
@@ -112,6 +144,8 @@ def validate_signal_proof_envelope(value: Any) -> List[str]:
     if not _is_record(value):
         return ["Signal proof envelope must be an object"]
 
+    errors.extend(_unknown_field_errors(value, _ENVELOPE_FIELDS, "Signal envelope"))
+
     if value.get("profile") != SIGNAL_PROOF_PROFILE:
         errors.append(f"Unsupported Signal profile: '{value.get('profile')}'")
     if value.get("profileVersion") != SIGNAL_PROOF_PROFILE_VERSION:
@@ -137,13 +171,16 @@ def validate_signal_proof_envelope(value: Any) -> List[str]:
                 errors.append(f"Unsupported attested scope: '{scope}'")
             elif scope in seen:
                 errors.append(f"Duplicate attested scope: '{scope}'")
-            seen.add(scope)
+            if isinstance(scope, str):
+                seen.add(scope)
 
     observer = value.get("observer")
     if not _is_record(observer):
         errors.append("observer must be an object")
     else:
-        if observer.get("kind") not in _ALLOWED_OBSERVER_KINDS:
+        errors.extend(_unknown_field_errors(observer, _OBSERVER_FIELDS, "observer"))
+        kind = observer.get("kind")
+        if not isinstance(kind, str) or kind not in _ALLOWED_OBSERVER_KINDS:
             errors.append(f"Unsupported observer kind: '{observer.get('kind')}'")
         if not _non_empty(observer.get("id")):
             errors.append("observer.id must be a non-empty string")
@@ -157,6 +194,7 @@ def validate_signal_proof_envelope(value: Any) -> List[str]:
         if not _is_record(evaluator):
             errors.append("evaluator must be an object when present")
         else:
+            errors.extend(_unknown_field_errors(evaluator, _EVALUATOR_FIELDS, "evaluator"))
             if not _non_empty(evaluator.get("id")):
                 errors.append("evaluator.id must be non-empty")
             if not _non_empty(evaluator.get("version")):
@@ -170,9 +208,11 @@ def validate_signal_proof_envelope(value: Any) -> List[str]:
             if not _is_record(item):
                 errors.append(f"evidence[{index}] must be an object")
                 continue
+            errors.extend(_unknown_field_errors(item, _EVIDENCE_FIELDS, f"evidence[{index}]"))
             if not _non_empty(item.get("ref")):
                 errors.append(f"evidence[{index}].ref must be non-empty")
-            if item.get("privacy") not in _ALLOWED_PRIVACY:
+            privacy = item.get("privacy")
+            if not isinstance(privacy, str) or privacy not in _ALLOWED_PRIVACY:
                 errors.append(f"evidence[{index}].privacy is unsupported")
             if "digest" in item and not _is_digest(item.get("digest")):
                 errors.append(f"evidence[{index}].digest must use sha256:<64 lowercase hex> form")

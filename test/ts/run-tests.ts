@@ -12,6 +12,10 @@ if (testFiles.length === 0) {
   console.error('No compiled TypeScript test files were discovered.');
   process.exitCode = 1;
 } else {
+  if (!testFiles.includes('signal.test.js')) {
+    console.error('The compiled Signal profile test was not discovered.');
+    process.exitCode = 1;
+  }
   console.log(`Discovered ${testFiles.length} compiled TypeScript test files.`);
 
   const result = spawnSync(

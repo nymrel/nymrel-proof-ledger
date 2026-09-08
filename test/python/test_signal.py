@@ -136,7 +136,7 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertFalse(result["envelopeBound"])
         self.assertTrue(any("digest does not match" in error for error in result["errors"]))
 
-    def test_unbound_metadata_mirror_disagreement_is_detected(self):
+    def test_signed_metadata_mirror_disagreement_is_detected(self):
         secret = ProofSigner.generate_secret_key()
         original = create_signal_proof_bundle(
             envelope=fixture_envelope(),
@@ -148,9 +148,10 @@ class TestSignalProofProfile(unittest.TestCase):
         tampered["receipt"]["metadata"]["signalProfile"]["signalReceiptId"] = "metadata-only-tamper"
 
         result = verify_signal_proof_bundle(tampered, public_key_or_secret=secret)
-        self.assertTrue(result["core"]["valid"])
+        self.assertFalse(result["core"]["valid"])
         self.assertFalse(result["valid"])
         self.assertTrue(result["envelopeBound"])
+        self.assertTrue(any("signature verification failed" in error for error in result["core"]["errors"]))
         self.assertTrue(any("disagrees" in error for error in result["errors"]))
 
     def test_unknown_version_and_reserved_path_fail_closed(self):
@@ -166,6 +167,55 @@ class TestSignalProofProfile(unittest.TestCase):
                 signing_key=ProofSigner.generate_secret_key(),
                 signer_identity="signal-internal-verifier",
             )
+
+    def test_validator_rejects_uppercase_digests_and_unknown_nested_fields(self):
+        envelope = fixture_envelope()
+        envelope["claimSnapshotDigest"] = "sha256:" + "A" * 64
+        envelope["unreviewedClaim"] = {"claim": "must not be dropped"}
+        envelope["observer"]["unreviewedObserverClaim"] = True
+        envelope["evaluator"]["unreviewedEvaluatorClaim"] = True
+        envelope["evidence"][0]["unreviewedEvidenceClaim"] = True
+
+        errors = validate_signal_proof_envelope(envelope)
+
+        self.assertIn("claimSnapshotDigest must use sha256:<64 lowercase hex> form", errors)
+        self.assertEqual(
+            [error for error in errors if error.startswith("Unknown")],
+            [
+                "Unknown Signal envelope field: 'unreviewedClaim'",
+                "Unknown observer field: 'unreviewedObserverClaim'",
+                "Unknown evaluator field: 'unreviewedEvaluatorClaim'",
+                "Unknown evidence[0] field: 'unreviewedEvidenceClaim'",
+            ],
+        )
+
+    def test_validator_never_raises_for_unhashable_scope_kind_or_privacy(self):
+        envelope = fixture_envelope()
+        envelope["attestedScopes"] = [["execution_observed"]]
+        envelope["observer"]["kind"] = []
+        envelope["evidence"][0]["privacy"] = {}
+
+        errors = validate_signal_proof_envelope(envelope)
+
+        self.assertTrue(any(error.startswith("Unsupported attested scope") for error in errors))
+        self.assertTrue(any(error.startswith("Unsupported observer kind") for error in errors))
+        self.assertIn("evidence[0].privacy is unsupported", errors)
+
+    def test_timestamp_requires_a_real_calendar_date_and_offset(self):
+        for timestamp in ["2026-08-21T22:00:00", "2026-02-30T22:00:00Z"]:
+            envelope = fixture_envelope()
+            envelope["observer"]["observedAt"] = timestamp
+            self.assertIn(
+                "observer.observedAt must be an ISO-8601 timestamp",
+                validate_signal_proof_envelope(envelope),
+            )
+
+        valid_offset = fixture_envelope()
+        valid_offset["observer"]["observedAt"] = "2026-02-28T22:00:00.123+05:30"
+        self.assertNotIn(
+            "observer.observedAt must be an ISO-8601 timestamp",
+            validate_signal_proof_envelope(valid_offset),
+        )
 
 
 if __name__ == "__main__":
