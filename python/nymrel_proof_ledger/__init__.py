@@ -23,6 +23,20 @@ from .qr import generate_qr_matrix, generate_qr_svg_path
 from .receipt import create_receipt, get_git_context, hash_artifact, verify_receipt
 from .signer import ProofSigner
 
+from .signal import (
+    SIGNAL_PROOF_PROFILE,
+    SIGNAL_PROOF_PROFILE_VERSION,
+    SIGNAL_PROOF_BUNDLE_PROFILE,
+    SIGNAL_PROOF_BUNDLE_VERSION,
+    SIGNAL_PROOF_ENVELOPE_PATH,
+    SIGNAL_ATTESTED_SCOPES,
+    validate_signal_proof_envelope,
+    canonicalize_signal_proof_envelope,
+    digest_signal_proof_envelope,
+    create_signal_proof_bundle,
+    verify_signal_proof_bundle,
+)
+
 attest_execution = create_receipt
 verify_proof = verify_receipt
 generate_badge = generate_svg_badge
@@ -53,4 +67,15 @@ __all__ = [
     "validate_receipt_envelope",
     "verify_proof",
     "verify_receipt",
+    "SIGNAL_PROOF_PROFILE",
+    "SIGNAL_PROOF_PROFILE_VERSION",
+    "SIGNAL_PROOF_BUNDLE_PROFILE",
+    "SIGNAL_PROOF_BUNDLE_VERSION",
+    "SIGNAL_PROOF_ENVELOPE_PATH",
+    "SIGNAL_ATTESTED_SCOPES",
+    "validate_signal_proof_envelope",
+    "canonicalize_signal_proof_envelope",
+    "digest_signal_proof_envelope",
+    "create_signal_proof_bundle",
+    "verify_signal_proof_bundle",
 ]

@@ -1,0 +1,200 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
+import {
+  SIGNAL_PROOF_PROFILE,
+  SIGNAL_PROOF_PROFILE_VERSION,
+  canonicalizeSignalProofEnvelope,
+  createSignalProofBundle,
+  digestSignalProofEnvelope,
+  validateSignalProofEnvelope,
+  verifySignalProofBundle,
+  type SignalProofBundleV1,
+  type SignalProofEnvelopeV1,
+} from '../../src/profiles/signal.js';
+import { ProofSigner } from '../../src/core/signer.js';
+
+const EXPECTED_FIXTURE_DIGEST =
+  'sha256:dbad113cf71570d27242476d5d9fc9f21328d21d3ce5082f98d1fe7ce5436dcb';
+
+function fixtureEnvelope(): SignalProofEnvelopeV1 {
+  return {
+    profile: SIGNAL_PROOF_PROFILE,
+    profileVersion: SIGNAL_PROOF_PROFILE_VERSION,
+    signalReceiptId: 'receipt-demo-001',
+    needDropId: 'need-demo-001',
+    challengeId: 'challenge-demo-001',
+    claimSnapshotDigest: `sha256:${'a'.repeat(64)}`,
+    disclosureSnapshotDigest: `sha256:${'b'.repeat(64)}`,
+    attestedScopes: ['execution_observed', 'artifact_integrity'],
+    observer: {
+      kind: 'system',
+      id: 'signal-evaluator',
+      observedAt: '2026-08-21T22:00:00Z',
+      method: 'screen-recorded run',
+    },
+    evaluator: {
+      id: 'rubric-v1',
+      version: '1.0.0',
+    },
+    evidence: [
+      {
+        ref: 'artifact://output',
+        privacy: 'public',
+        digest: `sha256:${'c'.repeat(64)}`,
+      },
+      {
+        ref: 'artifact://private-input',
+        privacy: 'private',
+        digest: `sha256:${'d'.repeat(64)}`,
+      },
+    ],
+    limitations: ['Fictional demonstration — not a customer result'],
+  };
+}
+
+function cloneBundle(bundle: SignalProofBundleV1): SignalProofBundleV1 {
+  return JSON.parse(JSON.stringify(bundle)) as SignalProofBundleV1;
+}
+
+describe('Nymrel Signal proof profile', () => {
+  it('canonicalizes deterministically with the cross-language fixture digest', () => {
+    const canonical = canonicalizeSignalProofEnvelope(fixtureEnvelope());
+
+    assert.match(canonical, /^\{/);
+    assert.strictEqual(digestSignalProofEnvelope(fixtureEnvelope()), EXPECTED_FIXTURE_DIGEST);
+  });
+
+  it('creates and verifies a bound HMAC Signal bundle without publishing private evidence', async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const bundle = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: {
+        name: 'Signal fictional challenge fixture',
+        status: 'ATTESTED',
+      },
+      artifacts: [{ path: 'output.txt', data: 'fictional output' }],
+      signingKey: secret,
+      signerIdentity: 'signal-internal-verifier',
+      algorithm: 'HMAC-SHA256',
+    });
+
+    assert.strictEqual(bundle.receipt.artifacts[0].path, 'signal-proof-envelope.json');
+
+    const result = await verifySignalProofBundle(bundle, {
+      publicKeyOrSecret: secret,
+    });
+
+    assert.strictEqual(result.valid, true);
+    assert.strictEqual(result.structurallyValid, true);
+    assert.strictEqual(result.envelopeBound, true);
+    assert.strictEqual(result.signatureChecked, true);
+    assert.strictEqual(result.signatureMode, 'shared_secret_integrity');
+    assert.strictEqual(result.signerIdentityTrust, 'unresolved');
+    assert.deepStrictEqual(result.authoritative.publicEvidenceRefs, ['artifact://output']);
+    assert.strictEqual(result.authoritative.nonPublicEvidenceCount, 1);
+    assert.ok(
+      result.doesNotProve.includes(
+        'signer identity or authority without an external trusted-key resolution policy'
+      )
+    );
+  });
+
+  it('does not call an unchecked signature a valid Signal proof', async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const bundle = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: { name: 'Unchecked signature fixture' },
+      signingKey: secret,
+      signerIdentity: 'signal-internal-verifier',
+    });
+
+    const result = await verifySignalProofBundle(bundle);
+
+    assert.strictEqual(result.valid, false);
+    assert.strictEqual(result.structurallyValid, true);
+    assert.strictEqual(result.signatureChecked, false);
+    assert.strictEqual(result.signatureMode, 'not_checked');
+    assert.ok(result.warnings.some((warning) => warning.includes('no verification key')));
+  });
+
+  it('supports asymmetric verification without claiming signer authority', async () => {
+    const keypair = ProofSigner.generateKeyPair();
+    const bundle = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: { name: 'Public verification fixture' },
+      signingKey: keypair.privateKey,
+      signerIdentity: 'declared-signal-verifier',
+      algorithm: 'Ed25519',
+    });
+
+    const result = await verifySignalProofBundle(bundle, {
+      publicKeyOrSecret: keypair.publicKey,
+    });
+
+    assert.strictEqual(result.valid, true);
+    assert.strictEqual(result.signatureMode, 'asymmetric_signature');
+    assert.strictEqual(result.signerIdentityTrust, 'unresolved');
+  });
+
+  it('rejects portable-envelope tampering even when the core receipt remains unchanged', async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const original = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: { name: 'Envelope tamper fixture' },
+      signingKey: secret,
+      signerIdentity: 'signal-internal-verifier',
+    });
+    const tampered = cloneBundle(original);
+    tampered.envelope.signalReceiptId = 'receipt-tampered';
+
+    const result = await verifySignalProofBundle(tampered, {
+      publicKeyOrSecret: secret,
+    });
+
+    assert.strictEqual(result.core.valid, true);
+    assert.strictEqual(result.valid, false);
+    assert.strictEqual(result.envelopeBound, false);
+    assert.ok(result.errors.some((error) => error.includes('digest does not match')));
+  });
+
+  it('rejects an unbound metadata mirror that disagrees with the envelope', async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const original = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: { name: 'Metadata mirror fixture' },
+      signingKey: secret,
+      signerIdentity: 'signal-internal-verifier',
+    });
+    const tampered = cloneBundle(original);
+    const mirror = tampered.receipt.metadata.signalProfile as Record<string, unknown>;
+    mirror.signalReceiptId = 'metadata-only-tamper';
+
+    const result = await verifySignalProofBundle(tampered, {
+      publicKeyOrSecret: secret,
+    });
+
+    assert.strictEqual(result.core.valid, true);
+    assert.strictEqual(result.valid, false);
+    assert.strictEqual(result.envelopeBound, true);
+    assert.ok(result.errors.some((error) => error.includes('disagrees')));
+  });
+
+  it('fails closed on unsupported versions and reserved artifact-path collisions', async () => {
+    const unsupported: unknown = {
+      ...fixtureEnvelope(),
+      profileVersion: '2.0.0',
+    };
+    assert.ok(validateSignalProofEnvelope(unsupported).some((error) => error.includes('version')));
+
+    await assert.rejects(
+      createSignalProofBundle({
+        envelope: fixtureEnvelope(),
+        task: { name: 'Reserved artifact fixture' },
+        artifacts: [{ path: './signal-proof-envelope.json', data: '{}' }],
+        signingKey: ProofSigner.generateSecretKey(),
+        signerIdentity: 'signal-internal-verifier',
+      }),
+      /reserved/
+    );
+  });
+});
