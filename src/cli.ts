@@ -76,23 +76,16 @@ function getFlag(parsed: ParsedArgs, ...names: string[]): string | undefined {
  *   - HMAC-SHA256: { "algorithm": "HMAC-SHA256", "secretKey": "<hex>" }
  *   - Ed25519:     { "algorithm": "Ed25519", "privateKey": "...", "publicKey": "..." }
  */
-async function loadKeyMaterial(keyFile: string, role: 'sign' | 'verify'): Promise<string> {
+async function loadKeyMaterial(keyFile: string, role: 'sign' | 'verify', algorithm: string | undefined): Promise<string> {
   const raw = (await fs.readFile(path.resolve(keyFile), 'utf8')).trim();
   if (raw.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const secretKey = parsed.secretKey;
-      const privateKey = parsed.privateKey;
-      const publicKey = parsed.publicKey;
-      if (typeof secretKey === 'string' && secretKey.length > 0) return secretKey;
-      if (role === 'sign' && typeof privateKey === 'string' && privateKey.length > 0) return privateKey;
-      if (role === 'verify') {
-        if (typeof publicKey === 'string' && publicKey.length > 0) return publicKey;
-        if (typeof privateKey === 'string' && privateKey.length > 0) return privateKey;
-      }
-    } catch {
-      // Not valid JSON — treat the file as raw key material below.
-    }
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!['HMAC-SHA256', 'Ed25519'].includes(algorithm ?? '') ||
+        ('algorithm' in parsed && parsed.algorithm !== algorithm)) throw new Error('Key file algorithm conflicts with configured algorithm');
+    const field = algorithm === 'HMAC-SHA256' ? 'secretKey' : role === 'sign' ? 'privateKey' : 'publicKey';
+    const material = parsed[field];
+    if (typeof material !== 'string' || material.length === 0) throw new Error('Key file lacks material for configured algorithm and role');
+    return material;
   }
   return raw;
 }
@@ -182,7 +175,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       const keyFile = getFlag(parsed, 'key-file', 'keyFile');
 
       if (!key && keyFile) {
-        key = await loadKeyMaterial(keyFile, 'sign');
+        key = await loadKeyMaterial(keyFile, 'sign', algo);
       }
       if (!key) {
         key = ProofSigner.generateSecretKey();
@@ -242,8 +235,11 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
       const key = parsed.flags.key as string | undefined;
       const keyFile = getFlag(parsed, 'key-file', 'keyFile');
       let signingKey = key;
+      const expectedAlgorithm = getFlag(parsed, 'algo', 'algorithm');
+      let keyFileInvalid = false;
       if (!signingKey && keyFile) {
-        signingKey = await loadKeyMaterial(keyFile, 'verify');
+        try { signingKey = await loadKeyMaterial(keyFile, 'verify', expectedAlgorithm); }
+        catch { signingKey = ''; keyFileInvalid = true; }
       }
 
       const checkFiles = Boolean(parsed.flags.checkFiles || parsed.flags['check-files']);
@@ -253,9 +249,10 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
 
       const result = await verifyReceipt(receipt, {
         publicKeyOrSecret: signingKey,
-        expectedAlgorithm: getFlag(parsed, 'algo', 'algorithm'),
+        expectedAlgorithm,
         checkFilesOnDisk: checkFiles,
       } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
+      if (keyFileInvalid) result.errors = ['Invalid verification key file or algorithm context'];
 
       if (parsed.flags.json) {
         console.log(JSON.stringify(result, null, 2));

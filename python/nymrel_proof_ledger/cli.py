@@ -11,7 +11,7 @@ from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
 
 
-def _load_key_material(key_file, role):
+def _load_key_material(key_file, role, algorithm):
     """
     Loads signing key material from a file.
 
@@ -24,23 +24,14 @@ def _load_key_material(key_file, role):
         raw = f.read().strip()
 
     if raw.startswith("{"):
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return raw
-        if isinstance(data, dict):
-            secret_key = data.get("secretKey")
-            private_key = data.get("privateKey")
-            public_key = data.get("publicKey")
-            if isinstance(secret_key, str) and secret_key:
-                return secret_key
-            if role == "sign" and isinstance(private_key, str) and private_key:
-                return private_key
-            if role == "verify":
-                if isinstance(public_key, str) and public_key:
-                    return public_key
-                if isinstance(private_key, str) and private_key:
-                    return private_key
+        data = json.loads(raw)
+        if algorithm not in ('HMAC-SHA256', 'Ed25519') or ('algorithm' in data and data['algorithm'] != algorithm):
+            raise ValueError('Key file algorithm conflicts with configured algorithm')
+        field = 'secretKey' if algorithm == 'HMAC-SHA256' else 'privateKey' if role == 'sign' else 'publicKey'
+        material = data.get(field)
+        if not isinstance(material, str) or not material:
+            raise ValueError('Key file lacks material for configured algorithm and role')
+        return material
     return raw
 
 
@@ -173,7 +164,7 @@ def main(argv=None):
     if args.command == "attest":
         key = args.key
         if not key and args.key_file:
-            key = _load_key_material(args.key_file, "sign")
+            key = _load_key_material(args.key_file, "sign", args.algo)
         if not key:
             key = ProofSigner.generate_secret_key()
             print(
@@ -229,8 +220,13 @@ def main(argv=None):
             receipt = json.load(f)
 
         key = args.key
+        key_file_invalid = False
         if not key and args.key_file:
-            key = _load_key_material(args.key_file, "verify")
+            try:
+                key = _load_key_material(args.key_file, "verify", args.algo)
+            except (OSError, ValueError, TypeError):
+                key = ''
+                key_file_invalid = True
 
         result = verify_receipt(
             receipt,
@@ -238,12 +234,19 @@ def main(argv=None):
             expected_algorithm=args.algo,
             check_files_on_disk=args.check_files,
         )
+        if key_file_invalid:
+            result['errors'] = ['Invalid verification key file or algorithm context']
 
         if args.json:
             print(json.dumps(result, indent=2))
             sys.exit(0 if result["valid"] else 1)
 
         print("\n--- PROOF VERIFICATION REPORT ---")
+        if result['receipt'] is None:
+            for error in result['errors']:
+                print(f'  * {error}')
+            print('\nOverall: FAILED (UNVERIFIED)\n')
+            sys.exit(1)
         print(f"Proof ID:    {receipt.get('proofId')}")
         print(f"Task:        {receipt.get('task', {}).get('name')}")
         print(f"Merkle Root: {receipt.get('merkle', {}).get('root')}")

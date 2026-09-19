@@ -606,5 +606,84 @@
         "value": "\ufeff"
       }
     ]
+  },
+  {
+    "name": "legacy artifact relabel remains limited authentication",
+    "vector": "legacyV1",
+    "options": {
+      "publicKeyOrSecret": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "valid": true,
+    "trusted": true,
+    "warning": "Legacy v1 authenticates artifact digests only, not artifact path/size/mimeType or artifact count, metadata, or signature identity fields",
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "path"
+        ],
+        "value": "release.bin"
+      },
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": 999
+      },
+      {
+        "path": [
+          "artifacts",
+          0,
+          "mimeType"
+        ],
+        "value": "application/octet-stream"
+      }
+    ]
+  },
+  {
+    "name": "legacy duplicate artifact remains limited authentication",
+    "vector": "legacyV1",
+    "options": {
+      "publicKeyOrSecret": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "valid": true,
+    "trusted": true,
+    "warning": "Legacy v1 authenticates artifact digests only, not artifact path/size/mimeType or artifact count, metadata, or signature identity fields",
+    "operations": [
+      {
+        "path": [
+          "artifacts"
+        ],
+        "value": [
+          {
+            "path": "artifact.txt",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "sizeBytes": 12
+          },
+          {
+            "path": "duplicate.bin",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "sizeBytes": 12
+          }
+        ]
+      },
+      {
+        "path": [
+          "merkle",
+          "leaves"
+        ],
+        "value": [
+          "b79530ea7c273dea4d745f106dddc200a9c990963ef88c260db0bd0172e607ef",
+          "ecc6ce34d34b85abae1495749b99f6d47965b38ee52e3aac40e9039183eb661c",
+          "4635e1fa62a599a7880a8d14a56f720a1d40f6e5448ab5a5e39bedc8bd87fa8e",
+          "4635e1fa62a599a7880a8d14a56f720a1d40f6e5448ab5a5e39bedc8bd87fa8e"
+        ]
+      }
+    ]
   }
 ]

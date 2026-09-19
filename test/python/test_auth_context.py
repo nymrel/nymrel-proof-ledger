@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -42,6 +43,8 @@ class TestAuthenticationContext(unittest.TestCase):
                 result = verify_receipt(input_for(row), **options_for(row.get('options', {})))
                 self.assertEqual(result['valid'], row['valid'], result['errors'])
                 self.assertEqual(result['trusted'], row['trusted'])
+                if row.get('warning'):
+                    self.assertIn(row['warning'], result['warnings'])
 
     def test_forged_hmac_under_public_key(self):
         public = VECTORS['ed25519']['publicKey']
@@ -83,6 +86,36 @@ class TestAuthenticationContext(unittest.TestCase):
             result = verify_receipt(receipt)
             self.assertFalse(result['valid'])
             self.assertFalse(result['trusted'])
+
+    def test_cli_key_file_algorithm_conflict(self):
+        public = VECTORS['ed25519']['publicKey']
+        forged = create_receipt(task={'name': 'fixture forgery'}, signing_key=public, signer_identity='fixture')
+        env = {**os.environ, 'PYTHONPATH': str(ROOT / 'python')}
+        with tempfile.TemporaryDirectory() as directory:
+            proof = Path(directory) / 'receipt.json'
+            key_file = Path(directory) / 'key.json'
+            proof.write_text(json.dumps(forged))
+            for key in ({'algorithm': 'Ed25519', 'publicKey': public}, {'publicKey': public}, {'algorithm': 'HMAC-SHA256', 'publicKey': public}):
+                key_file.write_text(json.dumps(key))
+                run = subprocess.run([sys.executable, '-m', 'nymrel_proof_ledger.cli', 'verify', str(proof), '--key-file', str(key_file), '--algo', 'HMAC-SHA256', '--json'], capture_output=True, text=True, env=env, cwd=ROOT)
+                self.assertEqual(run.returncode, 1, run.stderr)
+                self.assertFalse(json.loads(run.stdout)['trusted'])
+            valid = create_receipt(task={'name': 'Ed fixture'}, signing_key=VECTORS['ed25519']['secretKey'], signer_identity='fixture', algorithm='Ed25519')
+            proof.write_text(json.dumps(valid))
+            key_file.write_text(json.dumps({'algorithm': 'Ed25519', 'publicKey': public}))
+            run = subprocess.run([sys.executable, '-m', 'nymrel_proof_ledger.cli', 'verify', str(proof), '--key-file', str(key_file), '--algo', 'Ed25519', '--json'], capture_output=True, text=True, env=env, cwd=ROOT)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertTrue(json.loads(run.stdout)['trusted'])
+
+    def test_network_and_escaping_paths_do_not_resolve(self):
+        with patch('nymrel_proof_ledger.receipt.os.path.realpath', side_effect=AssertionError('No filesystem lookup allowed')) as realpath:
+            for value in ('//attacker.invalid/share/x', '\\\\attacker.invalid\\share\\x', 'C:\\outside\\file', 'C:relative', '../outside', '..\\outside'):
+                receipt = copy.deepcopy(VECTORS['protocolV2']['receipt'])
+                receipt['artifacts'][0]['path'] = value
+                result = verify_receipt(receipt, check_files_on_disk=True)
+                self.assertFalse(result['valid'])
+                self.assertEqual(result['checkedArtifacts'], 0)
+            realpath.assert_not_called()
 
 
 if __name__ == '__main__':

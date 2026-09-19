@@ -47,7 +47,8 @@ Compatibility:
 - New receipts are always v2.
 - v1 receipts are verification-only through frozen legacy canonicalization and
   duplicated-odd Merkle profiles.
-- v1 signatures do not authenticate metadata or signature identity fields.
+- v1 authenticates artifact digests only, not artifact path/size/mimeType or
+  artifact count, metadata, or signature identity fields.
 - Git collection is off by default; includeGitContext/include_git_context or
   attest --include-git-context opts into Git execution only in trusted directories.
 - MerkleTree.verifyProof/verify_proof checks a supplied hash path against a root;

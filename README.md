@@ -196,7 +196,8 @@ Receipts with version 1.0.0 remain verification-compatible. Their frozen legacy
 serializer and duplicated-odd Merkle profile are selected only by the v1 version
 gate. New receipts are always v2.
 
-The v1 signature does not authenticate metadata or signature identity fields.
+The v1 signature authenticates artifact digests only, not artifact path, size,
+MIME type or artifact count, metadata, or signature identity fields.
 Successful v1 signature verification is limited to the legacy signed payload;
 it emits a warning and must not be interpreted as authenticating the whole envelope.
 

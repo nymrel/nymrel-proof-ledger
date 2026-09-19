@@ -32,14 +32,24 @@ their positions. TypeScript rejects incomplete pairs at compile time and both
 runtimes reject them at runtime. Public aliases and Signal bundle verification
 use the same core check. CLI callers must include `--algo Ed25519` or
 `--algo HMAC-SHA256`, even when a key file contains an algorithm field.
+That declared algorithm must match the flag. JSON HMAC files must contain
+`secretKey`; Ed25519 signing uses `privateKey` and verification uses `publicKey`.
+Contradictory or missing role-specific material fails closed, never falls back to
+another algorithm's key field or to treating the JSON document as a secret.
 
 Omit both key and algorithm for integrity-only checking: a consistent receipt can
 return `valid: true` with `trusted: false`. `trusted: true` requires a valid
 signature under the configured pair, not proof that a task occurred or that a
 signer identity is independently registered. Legacy v1 verification preserves the
-frozen signed payload and warns that metadata and signature identity fields are
-not authenticated. New receipts remain protocol v2; no wire-version change is
+frozen signed payload and authenticates artifact digests only, not artifact path,
+size, MIME type or artifact count, metadata, or signature identity fields. Relabelled
+or duplicate legacy artifacts can retain the original signature; the warning
+must not be ignored in release gates. New receipts remain protocol v2; no wire-version change is
 needed for this verifier API correction.
+
+Unknown top-level, signature and Merkle extension fields are not signed claims.
+They may appear in the returned receipt; consumers must not promote them into
+authenticated assertions. Authentication covers the documented versioned payload.
 
 Both runtimes reject malformed signature hex even without a verification key,
 newline-suffixed hashes/timestamps, and timestamps containing non-ASCII digits.

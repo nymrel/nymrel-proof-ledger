@@ -296,9 +296,14 @@ export async function createReceipt(options: CreateReceiptOptions): Promise<Proo
 }
 
 async function artifactPathWithin(cwd: string, artifactPath: string): Promise<string | undefined> {
+  // Reject network/drive paths and lexical escapes before any filesystem lookup.
+  if (path.posix.isAbsolute(artifactPath) || path.win32.isAbsolute(artifactPath) || /^[A-Za-z]:/.test(artifactPath)) return undefined;
   const unresolvedRoot = path.resolve(cwd);
+  const portablePath = artifactPath.replace(/\\/g, '/');
+  const lexicalRelative = path.relative(unresolvedRoot, path.resolve(unresolvedRoot, portablePath));
+  if (lexicalRelative === '..' || lexicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(lexicalRelative)) return undefined;
   const root = await fs.realpath(unresolvedRoot).catch(() => unresolvedRoot);
-  const unresolvedCandidate = path.resolve(root, artifactPath);
+  const unresolvedCandidate = path.resolve(root, portablePath);
   const candidate = await fs.realpath(unresolvedCandidate).catch(() => unresolvedCandidate);
   const relative = path.relative(root, candidate);
   if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) return candidate;
@@ -422,7 +427,7 @@ export async function verifyReceipt(
   }
 
   if (receipt.version === LEGACY_RECEIPT_VERSION) {
-    warnings.push('Legacy v1 signatures do not authenticate metadata or signature identity fields');
+    warnings.push('Legacy v1 authenticates artifact digests only, not artifact path/size/mimeType or artifact count, metadata, or signature identity fields');
   }
 
   const valid = errors.length === 0;

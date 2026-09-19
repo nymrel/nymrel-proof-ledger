@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, promises as fs } from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { test } from 'node:test';
 import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
@@ -25,6 +27,7 @@ for (const row of cases) {
     const result = await verifyReceipt(inputFor(row), row.options ?? {});
     assert.equal(result.valid, row.valid, result.errors.join('; '));
     assert.equal(result.trusted, row.trusted);
+    if (row.warning) assert(result.warnings.includes(row.warning));
   });
 }
 
@@ -88,4 +91,46 @@ test('unsupported metadata returns an invalid verdict', async () => {
     assert.equal(result.valid, false);
     assert.equal(result.trusted, false);
   }
+});
+
+test('CLI refuses a key file whose algorithm conflicts with the flag', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'proof-auth-context-'));
+  const original = console.log;
+  let output: string[] = [];
+  console.log = (...values: unknown[]) => { output.push(values.join(' ')); };
+  try {
+    const publicKey = vectors.ed25519.publicKey;
+    const forged = await createReceipt({ task: { name: 'fixture forgery' }, signingKey: publicKey, signerIdentity: 'fixture' });
+    const receiptFile = path.join(dir, 'receipt.json');
+    const keyFile = path.join(dir, 'key.json');
+    await fs.writeFile(receiptFile, JSON.stringify(forged));
+    for (const key of [{ algorithm: 'Ed25519', publicKey }, { publicKey }, { algorithm: 'HMAC-SHA256', publicKey }]) {
+      await fs.writeFile(keyFile, JSON.stringify(key));
+      output = [];
+      assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'HMAC-SHA256', '--json']), 1);
+      assert.equal(JSON.parse(output.join('')).trusted, false);
+    }
+    const valid = await createReceipt({ task: { name: 'Ed fixture' }, signingKey: vectors.ed25519.secretKey, signerIdentity: 'fixture', algorithm: 'Ed25519' });
+    await fs.writeFile(receiptFile, JSON.stringify(valid));
+    await fs.writeFile(keyFile, JSON.stringify({ algorithm: 'Ed25519', publicKey }));
+    output = [];
+    assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'Ed25519', '--json']), 0);
+    assert.equal(JSON.parse(output.join('')).trusted, true);
+  } finally { console.log = original; await fs.rm(dir, { recursive: true, force: true }); }
+});
+
+test('network, drive and escaping artifact paths fail before filesystem resolution', async () => {
+  const original = fs.realpath;
+  let calls = 0;
+  fs.realpath = (async () => { calls++; throw new Error('No filesystem lookup allowed'); }) as typeof original;
+  try {
+    for (const value of ['//attacker.invalid/share/x', '\\\\attacker.invalid\\share\\x', 'C:\\outside\\file', 'C:relative', '../outside', '..\\outside']) {
+      const receipt = structuredClone(vectors.protocolV2.receipt);
+      receipt.artifacts[0].path = value;
+      const result = await verifyReceipt(receipt, { checkFilesOnDisk: true });
+      assert.equal(result.valid, false);
+      assert.equal(result.checkedArtifacts, 0);
+    }
+    assert.equal(calls, 0);
+  } finally { fs.realpath = original; }
 });

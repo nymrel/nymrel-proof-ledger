@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import ntpath
 import os
 import platform
 import re
@@ -262,8 +263,19 @@ def create_receipt(
 
 
 def _artifact_path_within(cwd: str, artifact_path: str) -> str | None:
-    root = os.path.realpath(os.path.abspath(cwd))
-    candidate = os.path.realpath(os.path.abspath(os.path.join(root, artifact_path)))
+    # Reject network/drive paths and lexical escapes before filesystem lookup.
+    if os.path.isabs(artifact_path) or ntpath.isabs(artifact_path) or ntpath.splitdrive(artifact_path)[0]:
+        return None
+    unresolved_root = os.path.abspath(cwd)
+    portable_path = artifact_path.replace('\\', '/')
+    unresolved_candidate = os.path.abspath(os.path.join(unresolved_root, portable_path))
+    try:
+        if os.path.commonpath((unresolved_root, unresolved_candidate)) != unresolved_root:
+            return None
+    except ValueError:
+        return None
+    root = os.path.realpath(unresolved_root)
+    candidate = os.path.realpath(os.path.abspath(os.path.join(root, portable_path)))
     try:
         return candidate if os.path.commonpath((root, candidate)) == root else None
     except ValueError:
@@ -389,7 +401,7 @@ def verify_receipt(
         )
 
     if receipt['version'] == LEGACY_RECEIPT_VERSION:
-        warnings.append('Legacy v1 signatures do not authenticate metadata or signature identity fields')
+        warnings.append('Legacy v1 authenticates artifact digests only, not artifact path/size/mimeType or artifact count, metadata, or signature identity fields')
 
     valid = not errors
     return {
