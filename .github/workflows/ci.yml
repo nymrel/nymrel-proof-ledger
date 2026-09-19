@@ -120,7 +120,7 @@ jobs:
         run: uvx ruff@0.16.5 check --select E4,E7,E9,F python test/python
 
       - name: Audit GitHub Actions definitions
-        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054  # v0.6.2
+        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99  # v0.6.3
         with:
           advanced-security: false
           annotations: true
