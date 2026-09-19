@@ -50,7 +50,7 @@ def _is_record(value: Any) -> bool:
 
 
 def _non_empty(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip())
+    return isinstance(value, str) and bool(re.search(r'[^\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]', value))
 
 
 def _is_digest(value: Any) -> bool:
@@ -348,6 +348,8 @@ def verify_signal_proof_bundle(
     public_key_or_secret: Optional[str] = None,
     check_files_on_disk: bool = False,
     cwd: Optional[str] = None,
+    *,
+    expected_algorithm: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Verifies core Proof Ledger integrity and the Signal-specific envelope binding."""
     if not _is_record(bundle):
@@ -370,6 +372,7 @@ def verify_signal_proof_bundle(
         public_key_or_secret=public_key_or_secret,
         check_files_on_disk=check_files_on_disk,
         cwd=cwd,
+        expected_algorithm=expected_algorithm,
     )
     errors.extend("Proof Ledger: " + item for item in core.get("errors", []))
     warnings.extend("Proof Ledger: " + item for item in core.get("warnings", []))
@@ -404,7 +407,7 @@ def verify_signal_proof_bundle(
                 )
         errors.extend(_compare_mirror(bundle.get("receipt", {}), normalized))
 
-    signature_checked = _non_empty(public_key_or_secret)
+    signature_checked = core.get('signatureChecked', False)
     if not signature_checked:
         warnings.append("Signal validity is not established because no verification key was supplied")
 

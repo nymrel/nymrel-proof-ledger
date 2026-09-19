@@ -12,7 +12,7 @@ const HASH_B = 'b'.repeat(64);
 const HASH_C = 'c'.repeat(64);
 const HASH_D = 'd'.repeat(64);
 const HASH_E = 'e'.repeat(64);
-const SIG_HEX = 'f'.repeat(128);
+const SIG_HEX = 'f'.repeat(64);
 
 /** Portable valid envelope vector, mirrored in test/python/test_envelope.py. */
 function buildValidEnvelope(): Record<string, unknown> {

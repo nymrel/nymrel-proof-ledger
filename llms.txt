@@ -32,7 +32,11 @@ Protocol v2:
 - Disk verification is confined to a real-path-checked root.
 
 Verification result:
-- trusted true requires a supplied key and a valid signature.
+- trusted true requires an independently configured key and expected algorithm,
+  a matching receipt algorithm, and a valid signature.
+- Key-only verification now fails closed. Pass expectedAlgorithm in TypeScript,
+  expected_algorithm in Python, or --algo in either CLI, including key-file use.
+- Never derive the expected algorithm from receipt-controlled fields.
 - valid true with trusted false means integrity only; signature was not checked.
 - badges and certificates are presentation artifacts, not independent proof.
 - visual output defaults to unverified and never derives trust from task status.
@@ -43,6 +47,12 @@ Compatibility:
 - New receipts are always v2.
 - v1 receipts are verification-only through frozen legacy canonicalization and
   duplicated-odd Merkle profiles.
+- v1 authenticates artifact digests only, not artifact path/size/mimeType or
+  artifact count, metadata, or signature identity fields.
+- Git collection is off by default; includeGitContext/include_git_context or
+  attest --include-git-context opts into Git execution only in trusted directories.
+- MerkleTree.verifyProof/verify_proof checks a supplied hash path against a root;
+  it does not authenticate a leaf's data, index, tree size, or root provenance.
 - Shared TypeScript/Python vectors cover RFC 8785, RFC 6962, RFC 8032, a v2
   receipt, and a v1 receipt.
 

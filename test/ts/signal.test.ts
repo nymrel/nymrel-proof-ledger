@@ -56,6 +56,24 @@ function cloneBundle(bundle: SignalProofBundleV1): SignalProofBundleV1 {
   return JSON.parse(JSON.stringify(bundle)) as SignalProofBundleV1;
 }
 
+it('Signal verification binds the configured algorithm and rejects missing context', async () => {
+  const publicKey = ProofSigner.generateKeyPair().publicKey;
+  const forged = await createSignalProofBundle({ envelope: fixtureEnvelope(), task: { name: 'forged' }, signingKey: publicKey, signerIdentity: 'victim', algorithm: 'HMAC-SHA256' });
+  for (const options of [{ publicKeyOrSecret: publicKey, expectedAlgorithm: 'Ed25519' }, { publicKeyOrSecret: publicKey }]) {
+    const result = await verifySignalProofBundle(forged, options as any);
+    assert.equal(result.valid, false);
+    assert.equal(result.signatureChecked, false);
+  }
+});
+
+it('Signal blank fields use a shared Unicode whitespace definition', () => {
+  for (const value of ['\u001f', '\u0085', '\ufeff', '\u00a0']) {
+    const envelope = fixtureEnvelope();
+    envelope.signalReceiptId = value;
+    assert(validateSignalProofEnvelope(envelope).length > 0);
+  }
+});
+
 function envelopeRecord(): Record<string, unknown> {
   return JSON.parse(JSON.stringify(fixtureEnvelope())) as Record<string, unknown>;
 }
@@ -85,7 +103,7 @@ describe('Nymrel Signal proof profile', () => {
     assert.strictEqual(bundle.receipt.artifacts[0].path, 'signal-proof-envelope.json');
 
     const result = await verifySignalProofBundle(bundle, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     assert.strictEqual(result.valid, true);
@@ -132,7 +150,7 @@ describe('Nymrel Signal proof profile', () => {
     });
 
     const result = await verifySignalProofBundle(bundle, {
-      publicKeyOrSecret: keypair.publicKey,
+      expectedAlgorithm: 'Ed25519', publicKeyOrSecret: keypair.publicKey,
     });
 
     assert.strictEqual(result.valid, true);
@@ -152,7 +170,7 @@ describe('Nymrel Signal proof profile', () => {
     tampered.envelope.signalReceiptId = 'receipt-tampered';
 
     const result = await verifySignalProofBundle(tampered, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     assert.strictEqual(result.core.valid, true);
@@ -174,7 +192,7 @@ describe('Nymrel Signal proof profile', () => {
     mirror.signalReceiptId = 'metadata-only-tamper';
 
     const result = await verifySignalProofBundle(tampered, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     assert.strictEqual(result.core.valid, false);

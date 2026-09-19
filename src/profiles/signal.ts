@@ -132,7 +132,7 @@ function normalizeArtifactPath(value: string): string {
 }
 
 function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
+  return typeof value === 'string' && /[^\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/u.test(value);
 }
 
 function isDigest(value: unknown): value is string {
@@ -476,7 +476,7 @@ export async function verifySignalProofBundle(
     errors.push(...compareMirror(bundle.receipt, normalizedEnvelope));
   }
 
-  const signatureChecked = isNonEmptyString(options.publicKeyOrSecret);
+  const signatureChecked = core.signatureChecked;
   if (!signatureChecked) {
     warnings.push('Signal validity is not established because no verification key was supplied');
   }

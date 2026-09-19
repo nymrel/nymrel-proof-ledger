@@ -1,0 +1,689 @@
+[
+  {
+    "name": "integrity only",
+    "valid": true,
+    "trusted": false,
+    "options": {},
+    "operations": []
+  },
+  {
+    "name": "authenticated HMAC",
+    "valid": true,
+    "trusted": true,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": []
+  },
+  {
+    "name": "missing expected algorithm",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    "operations": []
+  },
+  {
+    "name": "missing verification key",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": []
+  },
+  {
+    "name": "wrong expected algorithm",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "Ed25519"
+    },
+    "operations": []
+  },
+  {
+    "name": "wrong key",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "wrong",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": []
+  },
+  {
+    "name": "empty key",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": []
+  },
+  {
+    "name": "numeric key",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": 32,
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": []
+  },
+  {
+    "name": "unknown algorithm",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "none"
+    },
+    "operations": []
+  },
+  {
+    "name": "empty algorithm",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": ""
+    },
+    "operations": []
+  },
+  {
+    "name": "null key with algorithm",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": null,
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": []
+  },
+  {
+    "name": "null algorithm with key",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": null
+    },
+    "operations": []
+  },
+  {
+    "name": "null context means omitted",
+    "valid": true,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": null,
+      "expectedAlgorithm": null
+    },
+    "operations": []
+  },
+  {
+    "name": "null receipt",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [],
+    "receipt": null
+  },
+  {
+    "name": "legacy integrity",
+    "valid": true,
+    "trusted": false,
+    "options": {},
+    "operations": [],
+    "vector": "legacyV1"
+  },
+  {
+    "name": "legacy authenticated",
+    "valid": true,
+    "trusted": true,
+    "options": {
+      "publicKeyOrSecret": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [],
+    "vector": "legacyV1"
+  },
+  {
+    "name": "legacy missing expected algorithm",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "operations": [],
+    "vector": "legacyV1"
+  },
+  {
+    "name": "signature.value suffix '\\n'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature",
+          "value"
+        ],
+        "value": "b9df34e2dab65318387da101efedada5b09c3f6ea7df66b2e1a3ccb2b5781c41\n"
+      }
+    ]
+  },
+  {
+    "name": "signature.value suffix '\\r'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature",
+          "value"
+        ],
+        "value": "b9df34e2dab65318387da101efedada5b09c3f6ea7df66b2e1a3ccb2b5781c41\r"
+      }
+    ]
+  },
+  {
+    "name": "signature.value suffix 'g'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature",
+          "value"
+        ],
+        "value": "b9df34e2dab65318387da101efedada5b09c3f6ea7df66b2e1a3ccb2b5781c41g"
+      }
+    ]
+  },
+  {
+    "name": "merkle.root suffix '\\n'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "merkle",
+          "root"
+        ],
+        "value": "f9ed68e106ba758515c91d511214ffeac3bc97ca3832edf10bf4feddd7747ae2\n"
+      }
+    ]
+  },
+  {
+    "name": "merkle.root suffix '\\r'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "merkle",
+          "root"
+        ],
+        "value": "f9ed68e106ba758515c91d511214ffeac3bc97ca3832edf10bf4feddd7747ae2\r"
+      }
+    ]
+  },
+  {
+    "name": "merkle.root suffix 'g'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "merkle",
+          "root"
+        ],
+        "value": "f9ed68e106ba758515c91d511214ffeac3bc97ca3832edf10bf4feddd7747ae2g"
+      }
+    ]
+  },
+  {
+    "name": "artifacts.0.sha256 suffix '\\n'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sha256"
+        ],
+        "value": "2222222222222222222222222222222222222222222222222222222222222222\n"
+      }
+    ]
+  },
+  {
+    "name": "artifacts.0.sha256 suffix '\\r'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sha256"
+        ],
+        "value": "2222222222222222222222222222222222222222222222222222222222222222\r"
+      }
+    ]
+  },
+  {
+    "name": "artifacts.0.sha256 suffix 'g'",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sha256"
+        ],
+        "value": "2222222222222222222222222222222222222222222222222222222222222222g"
+      }
+    ]
+  },
+  {
+    "name": "short signature",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature",
+          "value"
+        ],
+        "value": "aa"
+      }
+    ]
+  },
+  {
+    "name": "oversized HMAC signature",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature",
+          "value"
+        ],
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  {
+    "name": "invalid signature hex",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature",
+          "value"
+        ],
+        "value": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+      }
+    ]
+  },
+  {
+    "name": "timestamp newline",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "timestamp"
+        ],
+        "value": "2026-08-29T12:34:56.000Z\n"
+      }
+    ]
+  },
+  {
+    "name": "timestamp Unicode digits",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "timestamp"
+        ],
+        "value": "\u0662\u0660\u0662\u0666-08-29T12:34:56.000Z"
+      }
+    ]
+  },
+  {
+    "name": "metadata tampering authenticated",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "metadata",
+          "fixture"
+        ],
+        "value": false
+      }
+    ]
+  },
+  {
+    "name": "metadata change integrity only",
+    "valid": true,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "metadata",
+          "fixture"
+        ],
+        "value": false
+      }
+    ]
+  },
+  {
+    "name": "missing signature",
+    "valid": false,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "signature"
+        ],
+        "remove": true
+      }
+    ]
+  },
+  {
+    "name": "artifact size 7.0",
+    "valid": true,
+    "trusted": true,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": 7.0
+      }
+    ]
+  },
+  {
+    "name": "artifact size 7.5",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": 7.5
+      }
+    ]
+  },
+  {
+    "name": "artifact size True",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": true
+      }
+    ]
+  },
+  {
+    "name": "artifact size -1",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": -1
+      }
+    ]
+  },
+  {
+    "name": "artifact size 9007199254740992",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": 9007199254740992
+      }
+    ]
+  },
+  {
+    "name": "nonempty Unicode proof identifier '\\x1f'",
+    "valid": true,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "proofId"
+        ],
+        "value": "\u001f"
+      }
+    ]
+  },
+  {
+    "name": "Unicode identifier signed mismatch '\\x1f'",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "proofId"
+        ],
+        "value": "\u001f"
+      }
+    ]
+  },
+  {
+    "name": "nonempty Unicode proof identifier '\\x85'",
+    "valid": true,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "proofId"
+        ],
+        "value": "\u0085"
+      }
+    ]
+  },
+  {
+    "name": "Unicode identifier signed mismatch '\\x85'",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "proofId"
+        ],
+        "value": "\u0085"
+      }
+    ]
+  },
+  {
+    "name": "nonempty Unicode proof identifier '\\ufeff'",
+    "valid": true,
+    "trusted": false,
+    "options": {},
+    "operations": [
+      {
+        "path": [
+          "proofId"
+        ],
+        "value": "\ufeff"
+      }
+    ]
+  },
+  {
+    "name": "Unicode identifier signed mismatch '\\ufeff'",
+    "valid": false,
+    "trusted": false,
+    "options": {
+      "publicKeyOrSecret": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "operations": [
+      {
+        "path": [
+          "proofId"
+        ],
+        "value": "\ufeff"
+      }
+    ]
+  },
+  {
+    "name": "legacy artifact relabel remains limited authentication",
+    "vector": "legacyV1",
+    "options": {
+      "publicKeyOrSecret": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "valid": true,
+    "trusted": true,
+    "warning": "Legacy v1 authenticates artifact digests only, not artifact path/size/mimeType or artifact count, metadata, or signature identity fields",
+    "operations": [
+      {
+        "path": [
+          "artifacts",
+          0,
+          "path"
+        ],
+        "value": "release.bin"
+      },
+      {
+        "path": [
+          "artifacts",
+          0,
+          "sizeBytes"
+        ],
+        "value": 999
+      },
+      {
+        "path": [
+          "artifacts",
+          0,
+          "mimeType"
+        ],
+        "value": "application/octet-stream"
+      }
+    ]
+  },
+  {
+    "name": "legacy duplicate artifact remains limited authentication",
+    "vector": "legacyV1",
+    "options": {
+      "publicKeyOrSecret": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expectedAlgorithm": "HMAC-SHA256"
+    },
+    "valid": true,
+    "trusted": true,
+    "warning": "Legacy v1 authenticates artifact digests only, not artifact path/size/mimeType or artifact count, metadata, or signature identity fields",
+    "operations": [
+      {
+        "path": [
+          "artifacts"
+        ],
+        "value": [
+          {
+            "path": "artifact.txt",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "sizeBytes": 12
+          },
+          {
+            "path": "duplicate.bin",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "sizeBytes": 12
+          }
+        ]
+      },
+      {
+        "path": [
+          "merkle",
+          "leaves"
+        ],
+        "value": [
+          "b79530ea7c273dea4d745f106dddc200a9c990963ef88c260db0bd0172e607ef",
+          "ecc6ce34d34b85abae1495749b99f6d47965b38ee52e3aac40e9039183eb661c",
+          "4635e1fa62a599a7880a8d14a56f720a1d40f6e5448ab5a5e39bedc8bd87fa8e",
+          "4635e1fa62a599a7880a8d14a56f720a1d40f6e5448ab5a5e39bedc8bd87fa8e"
+        ]
+      }
+    ]
+  }
+]
