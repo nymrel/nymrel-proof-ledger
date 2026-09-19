@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { promises as fs } from 'node:fs';
+import { promises as fs, realpathSync } from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import childProcess from 'node:child_process';
@@ -73,6 +73,13 @@ test('Signal rejects a genuinely valid legacy receipt with an envelope artifact'
       const rejected = await verifySignalProofBundle(invalid, { ...auth, checkFilesOnDisk: true });
       assert.equal(rejected.valid, false);
       assert.equal(rejected.core.artifactsValid, false);
+      assert.equal(rejected.core.checkedArtifacts, 0);
+      assert.equal(calls, 0);
+    }
+    // Core and Signal both require literal true; truthy config values cannot enable I/O.
+    for (const truthy of [1, 'true']) {
+      const rejected = await verifySignalProofBundle(input, { ...auth, checkFilesOnDisk: truthy } as any);
+      assert.equal(rejected.valid, false);
       assert.equal(rejected.core.checkedArtifacts, 0);
       assert.equal(calls, 0);
     }
@@ -182,7 +189,7 @@ test('Git rejects real cwd executables and linked or case aliases, and allows an
     process.env.PATH = trusted;
     assert(getGitContext(cwd));
     assert.equal(calls.length, 4);
-    const resolvedExecutable = await fs.realpath(path.join(trusted, filename));
+    const resolvedExecutable = realpathSync(path.join(trusted, filename));
     assert(calls.every(call => path.isAbsolute(call.file) && call.file === resolvedExecutable && call.options.shell === false));
     calls.length = 0;
     for (const entry of ['.', 'relative', cwd, alias, ...(process.platform === 'win32' ? [cwd.toUpperCase()] : [])]) {

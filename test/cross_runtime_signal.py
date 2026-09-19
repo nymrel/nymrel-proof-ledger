@@ -44,4 +44,18 @@ for algorithm in ('HMAC-SHA256', 'Ed25519'):
             assert verdict(ts) == verdict(py), (algorithm, verdict(ts), verdict(py))
             assert ts['valid'] is valid
             checks += 1
+        wrong_options = dict(publicKeyOrSecret='wrong', expectedAlgorithm=algorithm)
+        actual_wrong = node([{'bundle': good, 'options': wrong_options}])[0]
+        expected_wrong = verify_signal_proof_bundle(good, public_key_or_secret='wrong', expected_algorithm=algorithm)
+        assert verdict(actual_wrong) == verdict(expected_wrong)
+        assert not actual_wrong['envelopeBound'] and not actual_wrong['authoritative']['attestedScopes']
+        checks += 1
+        rejected = copy.deepcopy(good)
+        rejected['profile'] = 'invalid'
+        actual_disk = node([{'bundle': rejected, 'options': {**ts_options, 'checkFilesOnDisk': True}}])[0]
+        expected_disk = verify_signal_proof_bundle(rejected, public_key_or_secret=public, expected_algorithm=algorithm, check_files_on_disk=True)
+        assert verdict(actual_disk) == verdict(expected_disk)
+        assert not actual_disk['core']['valid'] and not actual_disk['core']['artifactsValid']
+        assert actual_disk['core']['checkedArtifacts'] == expected_disk['core']['checkedArtifacts'] == 0
+        checks += 1
 print(json.dumps({'signal_cross_runtime_cases': checks, 'status': 'PASS'}))

@@ -164,6 +164,8 @@ The portable bundle verifier validates the in-memory envelope against the bound 
 
 Signal first verifies core cryptography and profile/envelope binding with disk I/O disabled. It performs requested disk checks only after those checks pass. Failed admission reports zero checked artifacts. `authoritative` fields are populated only for structurally valid bundles; consumers must still require `valid` for authenticated acceptance. Unkeyed structural inspection never establishes signer identity or authority.
 
+When requested disk checks cannot run because admission failed, `core.valid`, `core.trusted` and `core.artifactsValid` are false. Any core failure, including a disk mismatch, makes the Signal `envelopeBound` admission flag false; use the core errors to distinguish cryptographic and disk failures. TypeScript disk checks require the literal boolean `true`, matching its core API.
+
 ## Versioning and release boundary
 
 - Unknown Signal profile and bundle major versions fail closed.
