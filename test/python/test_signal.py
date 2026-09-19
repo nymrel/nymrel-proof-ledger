@@ -56,6 +56,16 @@ def fixture_envelope():
     }
 
 
+def assert_no_authoritative_signal_data(test_case, result):
+    test_case.assertIsNone(result["authoritative"]["signalReceiptId"])
+    test_case.assertIsNone(result["authoritative"]["needDropId"])
+    test_case.assertIsNone(result["authoritative"]["challengeId"])
+    test_case.assertEqual(result["authoritative"]["attestedScopes"], [])
+    test_case.assertEqual(result["authoritative"]["publicEvidenceRefs"], [])
+    test_case.assertEqual(result["authoritative"]["nonPublicEvidenceCount"], 0)
+    test_case.assertIn("that the described execution occurred", result["doesNotProve"])
+
+
 class TestSignalProofProfile(unittest.TestCase):
     def test_cross_language_fixture_digest(self):
         canonical = canonicalize_signal_proof_envelope(fixture_envelope())
@@ -103,6 +113,7 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertFalse(result["signatureChecked"])
         self.assertEqual(result["signatureMode"], "not_checked")
         self.assertTrue(any("no verification key" in warning for warning in result["warnings"]))
+        assert_no_authoritative_signal_data(self, result)
 
     def test_asymmetric_verification_does_not_resolve_identity(self):
         keypair = ProofSigner.generate_key_pair()
@@ -135,6 +146,7 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertFalse(result["envelopeBound"])
         self.assertTrue(any("digest does not match" in error for error in result["errors"]))
+        assert_no_authoritative_signal_data(self, result)
 
     def test_signed_metadata_mirror_disagreement_is_detected(self):
         secret = ProofSigner.generate_secret_key()
@@ -153,6 +165,45 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertTrue(result["envelopeBound"])
         self.assertTrue(any("signature verification failed" in error for error in result["core"]["errors"]))
         self.assertTrue(any("disagrees" in error for error in result["errors"]))
+        assert_no_authoritative_signal_data(self, result)
+
+    def test_verifier_is_total_and_empty_for_arbitrary_malformed_bundles(self):
+        malformed_bundles = [
+            None,
+            [],
+            "not-a-bundle",
+            {},
+            {
+                "profile": "nymrel-signal-proof-bundle",
+                "bundleVersion": "1.0.0",
+                "envelope": fixture_envelope(),
+                "receipt": {"artifacts": "not-an-array"},
+            },
+        ]
+
+        for malformed in malformed_bundles:
+            result = verify_signal_proof_bundle(
+                malformed,
+                public_key_or_secret="not-a-valid-key",
+            )
+            self.assertFalse(result["valid"])
+            self.assertFalse(result["structurallyValid"])
+            assert_no_authoritative_signal_data(self, result)
+
+    def test_unchecked_noncanonical_metadata_mirror_fails_closed(self):
+        bundle = create_signal_proof_bundle(
+            envelope=fixture_envelope(),
+            task={"name": "Non-canonical mirror fixture"},
+            signing_key=ProofSigner.generate_secret_key(),
+            signer_identity="signal-internal-verifier",
+        )
+        bundle["receipt"]["metadata"]["signalProfile"]["invalid"] = {"not-json"}
+
+        result = verify_signal_proof_bundle(bundle)
+
+        self.assertFalse(result["valid"])
+        self.assertTrue(any("could not be canonicalized" in error for error in result["errors"]))
+        assert_no_authoritative_signal_data(self, result)
 
     def test_unknown_version_and_reserved_path_fail_closed(self):
         unsupported = fixture_envelope()

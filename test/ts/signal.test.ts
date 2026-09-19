@@ -60,6 +60,18 @@ function envelopeRecord(): Record<string, unknown> {
   return JSON.parse(JSON.stringify(fixtureEnvelope())) as Record<string, unknown>;
 }
 
+function assertNoAuthoritativeSignalData(
+  result: Awaited<ReturnType<typeof verifySignalProofBundle>>
+): void {
+  assert.strictEqual(result.authoritative.signalReceiptId, undefined);
+  assert.strictEqual(result.authoritative.needDropId, undefined);
+  assert.strictEqual(result.authoritative.challengeId, undefined);
+  assert.deepStrictEqual(result.authoritative.attestedScopes, []);
+  assert.deepStrictEqual(result.authoritative.publicEvidenceRefs, []);
+  assert.strictEqual(result.authoritative.nonPublicEvidenceCount, 0);
+  assert.ok(result.doesNotProve.includes('that the described execution occurred'));
+}
+
 describe('Nymrel Signal proof profile', () => {
   it('canonicalizes deterministically with the cross-language fixture digest', () => {
     const canonical = canonicalizeSignalProofEnvelope(fixtureEnvelope());
@@ -119,6 +131,7 @@ describe('Nymrel Signal proof profile', () => {
     assert.strictEqual(result.signatureChecked, false);
     assert.strictEqual(result.signatureMode, 'not_checked');
     assert.ok(result.warnings.some((warning) => warning.includes('no verification key')));
+    assertNoAuthoritativeSignalData(result);
   });
 
   it('supports asymmetric verification without claiming signer authority', async () => {
@@ -159,6 +172,7 @@ describe('Nymrel Signal proof profile', () => {
     assert.strictEqual(result.valid, false);
     assert.strictEqual(result.envelopeBound, false);
     assert.ok(result.errors.some((error) => error.includes('digest does not match')));
+    assertNoAuthoritativeSignalData(result);
   });
 
   it('rejects a signed metadata mirror that disagrees with the envelope', async () => {
@@ -182,6 +196,47 @@ describe('Nymrel Signal proof profile', () => {
     assert.strictEqual(result.envelopeBound, true);
     assert.ok(result.core.errors.some((error) => error.includes('signature verification failed')));
     assert.ok(result.errors.some((error) => error.includes('disagrees')));
+    assertNoAuthoritativeSignalData(result);
+  });
+
+  it('is total and exposes no authoritative data for arbitrary malformed bundles', async () => {
+    const malformedBundles: unknown[] = [
+      null,
+      [],
+      'not-a-bundle',
+      {},
+      {
+        profile: 'nymrel-signal-proof-bundle',
+        bundleVersion: '1.0.0',
+        envelope: fixtureEnvelope(),
+        receipt: { artifacts: 'not-an-array' },
+      },
+    ];
+
+    for (const malformed of malformedBundles) {
+      const result = await verifySignalProofBundle(malformed, {
+        publicKeyOrSecret: 'not-a-valid-key',
+      });
+      assert.strictEqual(result.valid, false);
+      assert.strictEqual(result.structurallyValid, false);
+      assertNoAuthoritativeSignalData(result);
+    }
+  });
+
+  it('fails closed when an unchecked metadata mirror cannot be canonicalized', async () => {
+    const bundle = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: { name: 'Non-canonical mirror fixture' },
+      signingKey: ProofSigner.generateSecretKey(),
+      signerIdentity: 'signal-internal-verifier',
+    });
+    (bundle.receipt.metadata.signalProfile as Record<string, unknown>).invalid = 1n;
+
+    const result = await verifySignalProofBundle(bundle);
+
+    assert.strictEqual(result.valid, false);
+    assert.ok(result.errors.some((error) => error.includes('could not be canonicalized')));
+    assertNoAuthoritativeSignalData(result);
   });
 
   it('fails closed on unsupported versions and reserved artifact-path collisions', async () => {
