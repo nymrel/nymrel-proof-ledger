@@ -12,6 +12,7 @@ import {
   type SignalProofEnvelopeV1,
 } from '../../src/profiles/signal.js';
 import { ProofSigner } from '../../src/core/signer.js';
+import { createReceipt } from '../../src/core/receipt.js';
 
 const EXPECTED_FIXTURE_DIGEST =
   'sha256:dbad113cf71570d27242476d5d9fc9f21328d21d3ce5082f98d1fe7ce5436dcb';
@@ -56,6 +57,24 @@ function cloneBundle(bundle: SignalProofBundleV1): SignalProofBundleV1 {
   return JSON.parse(JSON.stringify(bundle)) as SignalProofBundleV1;
 }
 
+it('Signal verification binds the configured algorithm and rejects missing context', async () => {
+  const publicKey = ProofSigner.generateKeyPair().publicKey;
+  const forged = await createSignalProofBundle({ envelope: fixtureEnvelope(), task: { name: 'forged' }, signingKey: publicKey, signerIdentity: 'victim', algorithm: 'HMAC-SHA256' });
+  for (const options of [{ publicKeyOrSecret: publicKey, expectedAlgorithm: 'Ed25519' }, { publicKeyOrSecret: publicKey }]) {
+    const result = await verifySignalProofBundle(forged, options as any);
+    assert.equal(result.valid, false);
+    assert.equal(result.signatureChecked, false);
+  }
+});
+
+it('Signal blank fields use a shared Unicode whitespace definition', () => {
+  for (const value of ['\u001f', '\u0085', '\ufeff', '\u00a0']) {
+    const envelope = fixtureEnvelope();
+    envelope.signalReceiptId = value;
+    assert(validateSignalProofEnvelope(envelope).length > 0);
+  }
+});
+
 function envelopeRecord(): Record<string, unknown> {
   return JSON.parse(JSON.stringify(fixtureEnvelope())) as Record<string, unknown>;
 }
@@ -97,7 +116,7 @@ describe('Nymrel Signal proof profile', () => {
     assert.strictEqual(bundle.receipt.artifacts[0].path, 'signal-proof-envelope.json');
 
     const result = await verifySignalProofBundle(bundle, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     assert.strictEqual(result.valid, true);
@@ -145,7 +164,7 @@ describe('Nymrel Signal proof profile', () => {
     });
 
     const result = await verifySignalProofBundle(bundle, {
-      publicKeyOrSecret: keypair.publicKey,
+      expectedAlgorithm: 'Ed25519', publicKeyOrSecret: keypair.publicKey,
     });
 
     assert.strictEqual(result.valid, true);
@@ -165,7 +184,7 @@ describe('Nymrel Signal proof profile', () => {
     tampered.envelope.signalReceiptId = 'receipt-tampered';
 
     const result = await verifySignalProofBundle(tampered, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     assert.strictEqual(result.core.valid, true);
@@ -188,15 +207,36 @@ describe('Nymrel Signal proof profile', () => {
     mirror.signalReceiptId = 'metadata-only-tamper';
 
     const result = await verifySignalProofBundle(tampered, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     assert.strictEqual(result.core.valid, false);
     assert.strictEqual(result.valid, false);
-    assert.strictEqual(result.envelopeBound, true);
+    assert.strictEqual(result.envelopeBound, false);
     assert.ok(result.core.errors.some((error) => error.includes('signature verification failed')));
-    assert.ok(result.errors.some((error) => error.includes('disagrees')));
     assertNoAuthoritativeSignalData(result);
+
+    tampered.receipt = await createReceipt({
+      task: original.receipt.task,
+      signingKey: secret,
+      signerIdentity: 'fixture',
+      metadata: tampered.receipt.metadata,
+      artifacts: [
+        {
+          path: 'signal-proof-envelope.json',
+          data: canonicalizeSignalProofEnvelope(tampered.envelope),
+          mimeType: 'application/json',
+        },
+      ],
+    });
+    const resigned = await verifySignalProofBundle(tampered, {
+      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256',
+    });
+    assert.strictEqual(resigned.core.trusted, true);
+    assert.strictEqual(resigned.valid, false);
+    assert.ok(resigned.errors.some((error) => error.includes('disagrees')));
+    assertNoAuthoritativeSignalData(resigned);
   });
 
   it('is total and exposes no authoritative data for arbitrary malformed bundles', async () => {
@@ -216,6 +256,7 @@ describe('Nymrel Signal proof profile', () => {
     for (const malformed of malformedBundles) {
       const result = await verifySignalProofBundle(malformed, {
         publicKeyOrSecret: 'not-a-valid-key',
+        expectedAlgorithm: 'HMAC-SHA256',
       });
       assert.strictEqual(result.valid, false);
       assert.strictEqual(result.structurallyValid, false);
@@ -249,7 +290,7 @@ describe('Nymrel Signal proof profile', () => {
     }
   });
 
-  it('fails closed when an unchecked metadata mirror cannot be canonicalized', async () => {
+  it('fails closed when an unchecked metadata mirror is outside canonical JSON', async () => {
     const bundle = await createSignalProofBundle({
       envelope: fixtureEnvelope(),
       task: { name: 'Non-canonical mirror fixture' },
@@ -261,7 +302,7 @@ describe('Nymrel Signal proof profile', () => {
     const result = await verifySignalProofBundle(bundle);
 
     assert.strictEqual(result.valid, false);
-    assert.ok(result.errors.some((error) => error.includes('could not be canonicalized')));
+    assert.ok(result.errors.some((error) => error.includes('outside its canonical JSON profile')));
     assertNoAuthoritativeSignalData(result);
   });
 

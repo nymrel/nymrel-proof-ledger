@@ -4,6 +4,7 @@ CLI Driver for Python nymrel_proof_ledger package.
 
 import argparse
 import json
+import re
 import sys
 
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
@@ -11,7 +12,20 @@ from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
 
 
-def _load_key_material(key_file, role):
+def _display_copy(value, markdown=False):
+    """Escape untrusted display strings without changing receipt/signature bytes."""
+    if isinstance(value, str):
+        safe = re.sub(r'[\x00-\x1f\x7f-\x9f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ud800-\udfff\ufeff]',
+                      lambda match: '\\u' + format(ord(match[0]), '04x'), value)
+        return re.sub(r'[\\`*_{}\[\]()|<>~&]', lambda match: '\\' + match[0], safe) if markdown else safe
+    if isinstance(value, dict):
+        return {key: _display_copy(item, markdown) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_display_copy(item, markdown) for item in value]
+    return value
+
+
+def _load_key_material(key_file, role, algorithm):
     """
     Loads signing key material from a file.
 
@@ -20,27 +34,23 @@ def _load_key_material(key_file, role):
       - HMAC-SHA256: {"algorithm": "HMAC-SHA256", "secretKey": "<hex>"}
       - Ed25519:     {"algorithm": "Ed25519", "privateKey": "...", "publicKey": "..."}
     """
-    with open(key_file, "r", encoding="utf-8") as f:
-        raw = f.read().strip()
+    with open(key_file, "r", encoding="utf-8-sig", newline='') as f:
+        decoded = f.read()
+    raw = re.sub(r'^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$', '', decoded)
+    if '\x00' in raw or '\ufffd' in raw:
+        raise ValueError('Key files require valid UTF-8 text')
 
     if raw.startswith("{"):
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return raw
-        if isinstance(data, dict):
-            secret_key = data.get("secretKey")
-            private_key = data.get("privateKey")
-            public_key = data.get("publicKey")
-            if isinstance(secret_key, str) and secret_key:
-                return secret_key
-            if role == "sign" and isinstance(private_key, str) and private_key:
-                return private_key
-            if role == "verify":
-                if isinstance(public_key, str) and public_key:
-                    return public_key
-                if isinstance(private_key, str) and private_key:
-                    return private_key
+        data = json.loads(raw)
+        if algorithm not in ('HMAC-SHA256', 'Ed25519') or ('algorithm' in data and data['algorithm'] != algorithm):
+            raise ValueError('Key file algorithm conflicts with configured algorithm')
+        field = 'secretKey' if algorithm == 'HMAC-SHA256' else 'privateKey' if role == 'sign' else 'publicKey'
+        material = data.get(field)
+        if not isinstance(material, str) or not material:
+            raise ValueError('Key file lacks material for configured algorithm and role')
+        return material
+    if re.search(r'[{}\[\]]', raw):
+        raise ValueError('Raw key files cannot contain JSON delimiters; use a JSON key envelope')
     return raw
 
 
@@ -70,6 +80,7 @@ def main(argv=None):
     attest_parser.add_argument("--files", help="Comma-separated file paths")
     attest_parser.add_argument("--key", help="Signing key or secret")
     attest_parser.add_argument("--key-file", help="Path to file containing signing key")
+    attest_parser.add_argument('--include-git-context', action='store_true', help='Collect Git context only from a trusted working directory and Git installation')
     attest_parser.add_argument(
         "--signer", default="nymrel-agent", help="Signer identity"
     )
@@ -98,6 +109,7 @@ def main(argv=None):
     )
     verify_parser.add_argument("--key", help="Public key or secret")
     verify_parser.add_argument("--key-file", help="Path to file containing key")
+    verify_parser.add_argument('--algo', choices=['HMAC-SHA256', 'Ed25519'], help='Required with a key; independently configured expected algorithm, never taken from the receipt')
     verify_parser.add_argument(
         "--check-files", action="store_true", help="Verify disk file hashes"
     )
@@ -171,7 +183,7 @@ def main(argv=None):
     if args.command == "attest":
         key = args.key
         if not key and args.key_file:
-            key = _load_key_material(args.key_file, "sign")
+            key = _load_key_material(args.key_file, "sign", args.algo)
         if not key:
             key = ProofSigner.generate_secret_key()
             print(
@@ -196,6 +208,7 @@ def main(argv=None):
         receipt = create_receipt(
             task=task_data,
             signing_key=key,
+            include_git_context=args.include_git_context,
             signer_identity=args.signer,
             artifacts=file_list,
             algorithm=args.algo,
@@ -226,20 +239,36 @@ def main(argv=None):
             receipt = json.load(f)
 
         key = args.key
+        key_file_invalid = False
         if not key and args.key_file:
-            key = _load_key_material(args.key_file, "verify")
+            try:
+                key = _load_key_material(args.key_file, "verify", args.algo)
+            except (OSError, ValueError, TypeError, RecursionError):
+                key = ''
+                key_file_invalid = True
 
         result = verify_receipt(
             receipt,
             public_key_or_secret=key,
+            expected_algorithm=args.algo,
             check_files_on_disk=args.check_files,
         )
+        if key_file_invalid:
+            result['errors'] = ['Invalid verification key file or algorithm context']
 
         if args.json:
             print(json.dumps(result, indent=2))
             sys.exit(0 if result["valid"] else 1)
 
+        result = _display_copy(result)
+        receipt = result['receipt']
+
         print("\n--- PROOF VERIFICATION REPORT ---")
+        if result['receipt'] is None:
+            for error in result['errors']:
+                print(f'  * {error}')
+            print('\nOverall: FAILED (UNVERIFIED)\n')
+            sys.exit(1)
         print(f"Proof ID:    {receipt.get('proofId')}")
         print(f"Task:        {receipt.get('task', {}).get('name')}")
         print(f"Merkle Root: {receipt.get('merkle', {}).get('root')}")
@@ -291,7 +320,7 @@ def main(argv=None):
 
     if args.command == "inspect":
         with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+            receipt = _display_copy(json.load(f))
 
         print("\n=== NYMREL PROOF LEDGER AUDIT INSPECTOR ===")
         print(f"Protocol:    {receipt.get('protocol')} v{receipt.get('version')}")
@@ -336,7 +365,8 @@ def main(argv=None):
                 indent=2,
             )
         else:
-            out_str = f"# Attestation Report: {receipt.get('task', {}).get('name')}\n\n- Proof ID: `{receipt.get('proofId')}`\n- Merkle Root: `{receipt.get('merkle', {}).get('root')}`\n"
+            receipt = _display_copy(receipt, markdown=True)
+            out_str = f"# Attestation Report: {receipt.get('task', {}).get('name')}\n\n- Proof ID: {receipt.get('proofId')}\n- Merkle Root: {receipt.get('merkle', {}).get('root')}\n"
 
         if args.out:
             with open(args.out, "w", encoding="utf-8") as f:

@@ -42,7 +42,7 @@ describe('CLI Driver End-to-End', () => {
 
       // 3. verify (with key and file check)
       const verifyCode = await runCli([
-        'verify',
+        'verify', '--algo', 'HMAC-SHA256',
         proofFile,
         '--key', 'super-secret-key-12345',
         '--check-files',
@@ -95,7 +95,7 @@ describe('CLI Driver End-to-End', () => {
       assert.strictEqual(keyedAttestCode, 0);
 
       const keyedVerifyCode = await runCli([
-        'verify',
+        'verify', '--algo', 'HMAC-SHA256',
         keyedProofFile,
         '--key-file', keyFile,
       ]);
@@ -104,7 +104,7 @@ describe('CLI Driver End-to-End', () => {
       // The receipt must NOT have been signed with an ephemeral key: verifying
       // with a deliberately wrong secret has to fail signature validation.
       const wrongKeyVerifyCode = await runCli([
-        'verify',
+        'verify', '--algo', 'HMAC-SHA256',
         keyedProofFile,
         '--key', 'definitely-not-the-signing-key',
       ]);

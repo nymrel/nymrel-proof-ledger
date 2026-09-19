@@ -117,13 +117,16 @@ class MerkleTree:
 
     @staticmethod
     def verify_proof(
-        leaf_hash: str, proof: list[dict[str, str]], expected_root: str
+        leaf_hash: str, proof: list[dict[str, str] | MerkleProofStep], expected_root: str
     ) -> bool:
+        """Check a supplied hash path, not leaf data, index, size or root provenance."""
         try:
             _require_hash(leaf_hash, "Leaf hash")
             _require_hash(expected_root, "Expected root")
             current = leaf_hash.lower()
             for step in proof:
+                if isinstance(step, MerkleProofStep):
+                    step = step.to_dict()
                 position = step.get("position")
                 step_hash = step.get("hash")
                 if position not in ("left", "right"):
@@ -138,7 +141,7 @@ class MerkleTree:
         except (TypeError, ValueError, AttributeError):
             return False
 
-    def verify(self, leaf_hash: str, proof: list[dict[str, str]]) -> bool:
+    def verify(self, leaf_hash: str, proof: list[dict[str, str] | MerkleProofStep]) -> bool:
         return self.verify_proof(leaf_hash, proof, self.get_root())
 
     def to_dict(self) -> dict[str, object]:

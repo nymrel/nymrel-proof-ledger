@@ -35,7 +35,7 @@ class TestReceipt(unittest.TestCase):
         self.assertEqual(receipt["version"], "2.0.0")
         self.assertEqual(receipt["parentOrganization"], "Nymrel")
         self.assertEqual(receipt["merkle"]["algorithm"], "RFC6962-SHA256")
-        result = verify_receipt(receipt, public_key_or_secret=secret)
+        result = verify_receipt(receipt, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertTrue(result["valid"])
         self.assertTrue(result["trusted"])
         self.assertTrue(result["merkleValid"])
@@ -65,25 +65,25 @@ class TestReceipt(unittest.TestCase):
         )
         tampered = json.loads(json.dumps(receipt))
         tampered["artifacts"][0]["path"] = "renamed.csv"
-        result = verify_receipt(tampered, public_key_or_secret=secret)
+        result = verify_receipt(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertFalse(result["valid"])
         self.assertFalse(result["merkleValid"])
 
         metadata_tamper = json.loads(json.dumps(receipt))
         metadata_tamper["metadata"]["claim"] = "rewritten"
-        metadata_result = verify_receipt(metadata_tamper, public_key_or_secret=secret)
+        metadata_result = verify_receipt(metadata_tamper, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertTrue(metadata_result["merkleValid"])
         self.assertFalse(metadata_result["signatureValid"])
 
         identity_tamper = json.loads(json.dumps(receipt))
         identity_tamper["signature"]["signerIdentity"] = "impostor"
-        identity_result = verify_receipt(identity_tamper, public_key_or_secret=secret)
+        identity_result = verify_receipt(identity_tamper, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertFalse(identity_result["signatureValid"])
 
     def test_legacy_v1_vector_verifies(self):
         vector = VECTORS["legacyV1"]
         result = verify_receipt(
-            vector["receipt"], public_key_or_secret=vector["secret"]
+            vector["receipt"], expected_algorithm='HMAC-SHA256', public_key_or_secret=vector["secret"]
         )
         self.assertTrue(result["valid"], result["errors"])
         self.assertTrue(result["trusted"])
@@ -93,7 +93,7 @@ class TestReceipt(unittest.TestCase):
     def test_shared_cross_runtime_v2_vector_verifies(self):
         vector = VECTORS["protocolV2"]
         result = verify_receipt(
-            vector["receipt"], public_key_or_secret=vector["secret"]
+            vector["receipt"], expected_algorithm='HMAC-SHA256', public_key_or_secret=vector["secret"]
         )
         self.assertTrue(result["trusted"], result["errors"])
         self.assertTrue(result["merkleValid"])
@@ -107,7 +107,7 @@ class TestReceipt(unittest.TestCase):
             signer_identity="governance",
             algorithm="Ed25519",
         )
-        result = verify_receipt(receipt, public_key_or_secret=keypair["publicKey"])
+        result = verify_receipt(receipt, expected_algorithm='Ed25519', public_key_or_secret=keypair["publicKey"])
         self.assertTrue(result["trusted"])
 
     def test_remote_sanitization_and_artifact_traversal(self):
@@ -128,7 +128,7 @@ class TestReceipt(unittest.TestCase):
         )
         result = verify_receipt(
             receipt,
-            public_key_or_secret=secret,
+            expected_algorithm='HMAC-SHA256', public_key_or_secret=secret,
             check_files_on_disk=True,
         )
         self.assertTrue(result["merkleValid"])

@@ -15,6 +15,7 @@ from nymrel_proof_ledger.signal import (
     verify_signal_proof_bundle,
 )
 from nymrel_proof_ledger.signer import ProofSigner
+from nymrel_proof_ledger.receipt import create_receipt
 
 
 EXPECTED_FIXTURE_DIGEST = "sha256:dbad113cf71570d27242476d5d9fc9f21328d21d3ce5082f98d1fe7ce5436dcb"
@@ -67,6 +68,23 @@ def assert_no_authoritative_signal_data(test_case, result):
 
 
 class TestSignalProofProfile(unittest.TestCase):
+    def test_algorithm_context_cannot_be_chosen_by_bundle(self):
+        public = ProofSigner.generate_key_pair()['publicKey']
+        bundle = create_signal_proof_bundle(
+            envelope=fixture_envelope(), task={'name': 'forged'},
+            signing_key=public, signer_identity='victim', algorithm='HMAC-SHA256',
+        )
+        for options in ({'public_key_or_secret': public, 'expected_algorithm': 'Ed25519'}, {'public_key_or_secret': public}):
+            result = verify_signal_proof_bundle(bundle, **options)
+            self.assertFalse(result['valid'])
+            self.assertFalse(result['signatureChecked'])
+
+    def test_shared_unicode_whitespace(self):
+        for value in ('\u001f', '\u0085', '\ufeff', '\u00a0'):
+            envelope = fixture_envelope()
+            envelope['signalReceiptId'] = value
+            self.assertTrue(validate_signal_proof_envelope(envelope))
+
     def test_cross_language_fixture_digest(self):
         canonical = canonicalize_signal_proof_envelope(fixture_envelope())
         self.assertTrue(canonical.startswith("{"))
@@ -84,7 +102,7 @@ class TestSignalProofProfile(unittest.TestCase):
         )
 
         self.assertEqual(bundle["receipt"]["artifacts"][0]["path"], "signal-proof-envelope.json")
-        result = verify_signal_proof_bundle(bundle, public_key_or_secret=secret)
+        result = verify_signal_proof_bundle(bundle, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
 
         self.assertTrue(result["valid"])
         self.assertTrue(result["structurallyValid"])
@@ -125,7 +143,7 @@ class TestSignalProofProfile(unittest.TestCase):
             algorithm="Ed25519",
         )
 
-        result = verify_signal_proof_bundle(bundle, public_key_or_secret=keypair["publicKey"])
+        result = verify_signal_proof_bundle(bundle, expected_algorithm='Ed25519', public_key_or_secret=keypair["publicKey"])
         self.assertTrue(result["valid"])
         self.assertEqual(result["signatureMode"], "asymmetric_signature")
         self.assertEqual(result["signerIdentityTrust"], "unresolved")
@@ -141,7 +159,7 @@ class TestSignalProofProfile(unittest.TestCase):
         tampered = copy.deepcopy(original)
         tampered["envelope"]["signalReceiptId"] = "receipt-tampered"
 
-        result = verify_signal_proof_bundle(tampered, public_key_or_secret=secret)
+        result = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertTrue(result["core"]["valid"])
         self.assertFalse(result["valid"])
         self.assertFalse(result["envelopeBound"])
@@ -159,13 +177,33 @@ class TestSignalProofProfile(unittest.TestCase):
         tampered = copy.deepcopy(original)
         tampered["receipt"]["metadata"]["signalProfile"]["signalReceiptId"] = "metadata-only-tamper"
 
-        result = verify_signal_proof_bundle(tampered, public_key_or_secret=secret)
+        result = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertFalse(result["core"]["valid"])
         self.assertFalse(result["valid"])
-        self.assertTrue(result["envelopeBound"])
+        self.assertFalse(result["envelopeBound"])
         self.assertTrue(any("signature verification failed" in error for error in result["core"]["errors"]))
-        self.assertTrue(any("disagrees" in error for error in result["errors"]))
         assert_no_authoritative_signal_data(self, result)
+
+        tampered['receipt'] = create_receipt(
+            task=original['receipt']['task'],
+            signing_key=secret,
+            signer_identity='fixture',
+            metadata=tampered['receipt']['metadata'],
+            artifacts=[{
+                'path': 'signal-proof-envelope.json',
+                'data': canonicalize_signal_proof_envelope(tampered['envelope']),
+                'mimeType': 'application/json',
+            }],
+        )
+        resigned = verify_signal_proof_bundle(
+            tampered,
+            expected_algorithm='HMAC-SHA256',
+            public_key_or_secret=secret,
+        )
+        self.assertTrue(resigned['core']['trusted'])
+        self.assertFalse(resigned['valid'])
+        self.assertTrue(any('disagrees' in error for error in resigned['errors']))
+        assert_no_authoritative_signal_data(self, resigned)
 
     def test_verifier_is_total_and_empty_for_arbitrary_malformed_bundles(self):
         malformed_bundles = [
@@ -185,6 +223,7 @@ class TestSignalProofProfile(unittest.TestCase):
             result = verify_signal_proof_bundle(
                 malformed,
                 public_key_or_secret="not-a-valid-key",
+                expected_algorithm="HMAC-SHA256",
             )
             self.assertFalse(result["valid"])
             self.assertFalse(result["structurallyValid"])
@@ -214,7 +253,9 @@ class TestSignalProofProfile(unittest.TestCase):
         result = verify_signal_proof_bundle(bundle)
 
         self.assertFalse(result["valid"])
-        self.assertTrue(any("could not be canonicalized" in error for error in result["errors"]))
+        self.assertTrue(
+            any("outside its canonical JSON profile" in error for error in result["errors"])
+        )
         assert_no_authoritative_signal_data(self, result)
 
     def test_unknown_version_and_reserved_path_fail_closed(self):

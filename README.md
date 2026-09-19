@@ -92,7 +92,7 @@ const receipt = await attestExecution({
 });
 
 const result = await verifyProof(receipt, {
-  publicKeyOrSecret: secret,
+  expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
   checkFilesOnDisk: true,
 });
 
@@ -118,7 +118,7 @@ receipt = create_receipt(
 
 result = verify_receipt(
     receipt,
-    public_key_or_secret=secret,
+    expected_algorithm='HMAC-SHA256', public_key_or_secret=secret,
     check_files_on_disk=True,
 )
 
@@ -136,7 +136,7 @@ node bin/proof-ledger.js keygen --algo Ed25519 --out signer.key
 node bin/proof-ledger.js attest --task "Build and test" --files "dist/index.js,README.md" --key-file signer.key --algo Ed25519 --out proof.json
 
 # Authenticated verification.
-node bin/proof-ledger.js verify proof.json --key-file signer.key --check-files
+node bin/proof-ledger.js verify proof.json --key-file signer.key --algo Ed25519 --check-files
 
 # Integrity-only verification is explicit and is never labeled trusted.
 node bin/proof-ledger.js verify proof.json
@@ -144,6 +144,20 @@ node bin/proof-ledger.js verify proof.json
 
 The Python entry point is proof-ledger-py after package installation.
 --key-file accepts raw text or the JSON envelope produced by keygen.
+
+Authenticated verification requires an independently configured algorithm together
+with the key: `expectedAlgorithm` in TypeScript, keyword-only `expected_algorithm`
+in Python, and `--algo` in either CLI (including with `--key-file`). Configure the
+algorithm alongside your trusted key; never copy it from an untrusted receipt.
+A missing or mismatched pair returns an invalid, untrusted result. Existing
+key-only callers must migrate. Omitting both retains integrity-only verification.
+This applies to the public aliases, `ProofLedger.verify`, and Signal bundle APIs.
+
+Git collection is disabled by default. Set `includeGitContext: true`,
+`include_git_context=True`, or `attest --include-git-context` only for a trusted
+working directory and Git installation; this opt-in executes Git commands.
+Signal bundles retain the safe default. See [verification migration and trust
+boundaries](docs/VERIFICATION_SECURITY.md) for the complete contract.
 
 Disk checks are confined to the verification working directory after real-path
 resolution. Receipts cannot use parent traversal, absolute external paths, or
@@ -181,6 +195,11 @@ fail closed.
 Receipts with version 1.0.0 remain verification-compatible. Their frozen legacy
 serializer and duplicated-odd Merkle profile are selected only by the v1 version
 gate. New receipts are always v2.
+
+The v1 signature authenticates artifact digests only, not artifact path, size,
+MIME type or artifact count, metadata, or signature identity fields.
+Successful v1 signature verification is limited to the legacy signed payload;
+it emits a warning and must not be interpreted as authenticating the whole envelope.
 
 The shared fixture at test/fixtures/protocol-v2-vectors.json contains:
 

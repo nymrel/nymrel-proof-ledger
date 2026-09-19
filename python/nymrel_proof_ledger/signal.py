@@ -2,7 +2,7 @@
 
 The profile binds Signal identifiers, disclosure/claim snapshots, evidence
 references, and explicit attestation scopes as a normal Proof Ledger artifact.
-It does not change Proof Ledger v1 Merkle or signature semantics.
+It requires Proof Ledger v2 binding; legacy v1 core semantics remain unchanged.
 """
 
 from datetime import datetime
@@ -50,7 +50,7 @@ def _is_record(value: Any) -> bool:
 
 
 def _non_empty(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip())
+    return isinstance(value, str) and bool(re.search(r'[^\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]', value))
 
 
 def _is_digest(value: Any) -> bool:
@@ -190,7 +190,7 @@ def validate_signal_proof_envelope(value: Any) -> List[str]:
             errors.append("observer.method must be a non-empty string when present")
 
     evaluator = value.get("evaluator")
-    if evaluator is not None:
+    if "evaluator" in value:
         if not _is_record(evaluator):
             errors.append("evaluator must be an object when present")
         else:
@@ -218,7 +218,7 @@ def validate_signal_proof_envelope(value: Any) -> List[str]:
                 errors.append(f"evidence[{index}].digest must use sha256:<64 lowercase hex> form")
 
     limitations = value.get("limitations")
-    if limitations is not None:
+    if "limitations" in value:
         if not isinstance(limitations, list):
             errors.append("limitations must be an array when present")
         else:
@@ -267,6 +267,7 @@ def create_signal_proof_bundle(
     metadata: Optional[Dict[str, Any]] = None,
     cwd: Optional[str] = None,
     include_hostname: bool = False,
+    include_git_context: bool = False,
 ) -> Dict[str, Any]:
     """Creates a portable bundle with the Signal envelope bound as an artifact."""
     errors = validate_signal_proof_envelope(envelope)
@@ -300,6 +301,7 @@ def create_signal_proof_bundle(
         metadata=receipt_metadata,
         cwd=cwd,
         include_hostname=include_hostname,
+        include_git_context=include_git_context,
     )
 
     return {
@@ -390,6 +392,8 @@ def _verify_signal_proof_bundle(
     public_key_or_secret: Optional[str] = None,
     check_files_on_disk: bool = False,
     cwd: Optional[str] = None,
+    *,
+    expected_algorithm: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Verifies core Proof Ledger integrity and the Signal-specific envelope binding."""
     errors: List[str] = []
@@ -411,54 +415,79 @@ def _verify_signal_proof_bundle(
         core = verify_receipt(
             bundle_record.get("receipt"),
             public_key_or_secret=public_key_or_secret,
-            check_files_on_disk=check_files_on_disk,
+            check_files_on_disk=False,
             cwd=cwd,
+            expected_algorithm=expected_algorithm,
         )
     except Exception:  # Public profile verification is total and fail-closed.
         core = _failed_core_verification()
     errors.extend("Proof Ledger: " + item for item in core.get("errors", []))
     warnings.extend("Proof Ledger: " + item for item in core.get("warnings", []))
+    receipt = core['receipt']
+    if receipt is not None and receipt['version'] != '2.0.0':
+        errors.append('Signal requires Proof Ledger receipt version 2.0.0')
 
     envelope_bound = False
     normalized = None
-    accepted_receipt = core.get("receipt")
-    if not envelope_errors and _is_record(accepted_receipt):
-        normalized = _normalize_envelope(envelope)
-        canonical_envelope = canonicalize(normalized)
-        expected_hash = hashlib.sha256(canonical_envelope.encode("utf-8")).hexdigest()
-        expected_size = len(canonical_envelope.encode("utf-8"))
-        envelope_artifacts = [
-            item
-            for item in accepted_receipt.get("artifacts", [])
-            if _normalize_artifact_path(item.get("path", "")) == SIGNAL_PROOF_ENVELOPE_PATH
-        ]
-        if len(envelope_artifacts) != 1:
-            errors.append(
-                f"Signal bundle must bind exactly one '{SIGNAL_PROOF_ENVELOPE_PATH}' artifact; found {len(envelope_artifacts)}"
-            )
-        else:
-            artifact = envelope_artifacts[0]
-            if artifact.get("sha256", "").lower() != expected_hash:
-                errors.append("Bound Signal envelope digest does not match the portable envelope payload")
-            elif artifact.get("sizeBytes") != expected_size:
-                errors.append("Bound Signal envelope size does not match the portable envelope payload")
-            else:
-                envelope_bound = True
-            if artifact.get("mimeType") and artifact.get("mimeType") != "application/json":
+    if profile_valid_before_binding and core['valid'] and core['merkleValid'] and receipt is not None and receipt['version'] == '2.0.0':
+        try:
+            normalized = _normalize_envelope(envelope)
+            canonical_envelope = canonicalize(normalized)
+            expected_hash = hashlib.sha256(canonical_envelope.encode("utf-8")).hexdigest()
+            expected_size = len(canonical_envelope.encode("utf-8"))
+            envelope_artifacts = [
+                item
+                for item in receipt['artifacts']
+                if _normalize_artifact_path(item.get("path", "")) == SIGNAL_PROOF_ENVELOPE_PATH
+            ]
+            if len(envelope_artifacts) != 1:
                 errors.append(
-                    f"Signal envelope artifact has unexpected mimeType '{artifact.get('mimeType')}'"
+                    f"Signal bundle must bind exactly one '{SIGNAL_PROOF_ENVELOPE_PATH}' artifact; found {len(envelope_artifacts)}"
                 )
-        errors.extend(_compare_mirror(accepted_receipt, normalized))
+            else:
+                artifact = envelope_artifacts[0]
+                if artifact.get("sha256", "").lower() != expected_hash:
+                    errors.append("Bound Signal envelope digest does not match the portable envelope payload")
+                elif artifact.get("sizeBytes") != expected_size:
+                    errors.append("Bound Signal envelope size does not match the portable envelope payload")
+                else:
+                    envelope_bound = True
+                if artifact.get("mimeType") and artifact.get("mimeType") != "application/json":
+                    errors.append(
+                        f"Signal envelope artifact has unexpected mimeType '{artifact.get('mimeType')}'"
+                    )
+            errors.extend(_compare_mirror(receipt, normalized))
+        except (TypeError, ValueError, OverflowError, RecursionError, UnicodeError):
+            normalized = None
+            envelope_bound = False
+            errors.append('Signal envelope or metadata mirror contains values outside canonical JSON')
 
-    signature_checked = bool(core.get("signatureChecked"))
+    if check_files_on_disk:
+        if not errors and envelope_bound and core['valid']:
+            core = verify_receipt(receipt, public_key_or_secret=public_key_or_secret,
+                                  expected_algorithm=expected_algorithm, check_files_on_disk=True, cwd=cwd)
+            errors.extend('Proof Ledger: ' + item for item in core['errors'])
+        else:
+            message = 'Artifact disk checks skipped because Signal admission failed'
+            core.update(artifactsValid=False, checkedArtifacts=0, valid=False, trusted=False)
+            core['errors'].append(message)
+            errors.append('Proof Ledger: ' + message)
+
+    if core['errors']:
+        envelope_bound = False
+    signature_checked = core.get('signatureChecked', False)
     if not signature_checked:
-        warnings.append("Signal validity is not established because no verification key was supplied")
+        warnings.append(
+            'Signal validity is not established because no verification key was supplied'
+            if public_key_or_secret is None and expected_algorithm is None
+            else 'Signal validity is not established because verification context or receipt validation prevented signature checking'
+        )
 
     signature_mode = "not_checked"
-    if signature_checked and core.get("signatureValid") and _is_record(accepted_receipt):
+    if signature_checked and core.get("signatureValid") and _is_record(receipt):
         signature_mode = (
             "asymmetric_signature"
-            if accepted_receipt.get("signature", {}).get("algorithm") == "Ed25519"
+            if receipt.get("signature", {}).get("algorithm") == "Ed25519"
             else "shared_secret_integrity"
         )
 
@@ -504,6 +533,8 @@ def verify_signal_proof_bundle(
     public_key_or_secret: Optional[str] = None,
     check_files_on_disk: bool = False,
     cwd: Optional[str] = None,
+    *,
+    expected_algorithm: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Verifies a Signal bundle without raising for adversarial public input."""
     try:
@@ -512,6 +543,7 @@ def verify_signal_proof_bundle(
             public_key_or_secret=public_key_or_secret,
             check_files_on_disk=check_files_on_disk,
             cwd=cwd,
+            expected_algorithm=expected_algorithm,
         )
     except Exception:
         return _failed_signal_proof_verification()

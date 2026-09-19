@@ -44,7 +44,7 @@ describe("Visual Badge & Certificate Generation", () => {
       signerIdentity: "ci",
     });
     const verification = await verifyReceipt(receipt, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
 
     const shield = generateShieldSvg(receipt, { verification });
@@ -72,7 +72,7 @@ describe("Visual Badge & Certificate Generation", () => {
       signingKey: secret,
       signerIdentity: "audit-runner",
     });
-    const trusted = await verifyReceipt(receipt, { publicKeyOrSecret: secret });
+    const trusted = await verifyReceipt(receipt, { expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret });
     const integrityOnly = await verifyReceipt(receipt);
 
     assert.ok(

@@ -117,10 +117,15 @@ jobs:
         run: uvx pip-audit@2.10.1 .
 
       - name: Check Python correctness rules
-        run: uvx ruff@0.16.5 check --select E4,E7,E9,F python test/python
+        run: uvx ruff@0.16.5 check --select E4,E7,E9,F python test
+
+      - name: Verify authentication across actual Node and Python runtimes
+        run: |
+          npm run build
+          uv run --no-project --with "cryptography>=50.0.1,<51" --with "rfc8785==0.1.4" python test/cross_runtime_auth.py
 
       - name: Audit GitHub Actions definitions
-        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054  # v0.6.2
+        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99  # v0.6.3
         with:
           advanced-security: false
           annotations: true

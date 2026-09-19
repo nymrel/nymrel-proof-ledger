@@ -2,8 +2,8 @@
  * Nymrel Signal customer-facing ProofReceipt attestation profile.
  *
  * The profile binds Signal identifiers, disclosure/claim snapshots and explicit
- * attestation scopes as a normal Proof Ledger artifact. It deliberately does
- * not change Proof Ledger v1 Merkle or signature semantics.
+ * attestation scopes as a normal Proof Ledger artifact. It
+ * uses Proof Ledger v2 binding; legacy v1 core semantics remain unchanged.
  */
 
 import { createHash } from 'node:crypto';
@@ -132,7 +132,7 @@ function normalizeArtifactPath(value: string): string {
 }
 
 function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
+  return typeof value === 'string' && /[^\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/u.test(value);
 }
 
 function isDigest(value: unknown): value is string {
@@ -485,51 +485,83 @@ async function verifySignalProofBundleInternal(
   const profileValidBeforeBinding = errors.length === 0;
 
   let core: VerificationResult;
+  const diskRequested = options?.checkFilesOnDisk === true;
   try {
-    core = await verifyReceipt(bundleRecord?.receipt, options);
+    core = await verifyReceipt(
+      bundleRecord?.receipt,
+      diskRequested ? { ...options, checkFilesOnDisk: false } : options
+    );
   } catch {
     core = failedCoreVerification();
   }
   errors.push(...core.errors.map((item) => `Proof Ledger: ${item}`));
   warnings.push(...core.warnings.map((item) => `Proof Ledger: ${item}`));
+  if (core.receipt && core.receipt.version !== '2.0.0') {
+    errors.push('Signal requires Proof Ledger receipt version 2.0.0');
+  }
 
   let envelopeBound = false;
   let normalizedEnvelope: SignalProofEnvelopeV1 | undefined;
-  if (envelopeErrors.length === 0 && core.receipt !== null) {
-    normalizedEnvelope = cloneAndNormalizeEnvelope(
-      bundleRecord?.envelope as SignalProofEnvelopeV1
-    );
-    const canonicalEnvelope = canonicalize(normalizedEnvelope);
-    const expectedHash = createHash('sha256').update(canonicalEnvelope, 'utf8').digest('hex');
-    const expectedSize = Buffer.byteLength(canonicalEnvelope, 'utf8');
-    const envelopeArtifacts = core.receipt.artifacts.filter(
-      (item) => normalizeArtifactPath(item.path) === SIGNAL_PROOF_ENVELOPE_PATH
-    );
-
-    if (envelopeArtifacts.length !== 1) {
-      errors.push(
-        `Signal bundle must bind exactly one '${SIGNAL_PROOF_ENVELOPE_PATH}' artifact; found ${envelopeArtifacts.length}`
+  if (profileValidBeforeBinding && core.valid && core.merkleValid && core.receipt?.version === '2.0.0') {
+    try {
+      normalizedEnvelope = cloneAndNormalizeEnvelope(
+        bundleRecord?.envelope as SignalProofEnvelopeV1
       );
-    } else {
-      const artifact = envelopeArtifacts[0];
-      if (artifact.sha256.toLowerCase() !== expectedHash) {
-        errors.push('Bound Signal envelope digest does not match the portable envelope payload');
-      } else if (artifact.sizeBytes !== expectedSize) {
-        errors.push('Bound Signal envelope size does not match the portable envelope payload');
-      } else {
-        envelopeBound = true;
-      }
-      if (artifact.mimeType && artifact.mimeType !== 'application/json') {
-        errors.push(`Signal envelope artifact has unexpected mimeType '${artifact.mimeType}'`);
-      }
-    }
+      const canonicalEnvelope = canonicalize(normalizedEnvelope);
+      const expectedHash = createHash('sha256').update(canonicalEnvelope, 'utf8').digest('hex');
+      const expectedSize = Buffer.byteLength(canonicalEnvelope, 'utf8');
+      const envelopeArtifacts = core.receipt.artifacts.filter(
+        (item) => normalizeArtifactPath(item.path) === SIGNAL_PROOF_ENVELOPE_PATH
+      );
 
-    errors.push(...compareMirror(core.receipt, normalizedEnvelope));
+      if (envelopeArtifacts.length !== 1) {
+        errors.push(
+          `Signal bundle must bind exactly one '${SIGNAL_PROOF_ENVELOPE_PATH}' artifact; found ${envelopeArtifacts.length}`
+        );
+      } else {
+        const artifact = envelopeArtifacts[0];
+        if (artifact.sha256.toLowerCase() !== expectedHash) {
+          errors.push('Bound Signal envelope digest does not match the portable envelope payload');
+        } else if (artifact.sizeBytes !== expectedSize) {
+          errors.push('Bound Signal envelope size does not match the portable envelope payload');
+        } else {
+          envelopeBound = true;
+        }
+        if (artifact.mimeType && artifact.mimeType !== 'application/json') {
+          errors.push(`Signal envelope artifact has unexpected mimeType '${artifact.mimeType}'`);
+        }
+      }
+
+      errors.push(...compareMirror(core.receipt, normalizedEnvelope));
+    } catch {
+      normalizedEnvelope = undefined;
+      envelopeBound = false;
+      errors.push('Signal envelope or metadata mirror contains values outside canonical JSON');
+    }
   }
 
+  if (diskRequested) {
+    if (errors.length === 0 && envelopeBound && core.valid) {
+      const diskResult = await verifyReceipt(core.receipt, options);
+      Object.assign(core, diskResult);
+      errors.push(...diskResult.errors.map(item => `Proof Ledger: ${item}`));
+    } else {
+      const message = 'Artifact disk checks skipped because Signal admission failed';
+      core.artifactsValid = false;
+      core.checkedArtifacts = 0;
+      core.valid = false;
+      core.trusted = false;
+      core.errors.push(message);
+      errors.push(`Proof Ledger: ${message}`);
+    }
+  }
+
+  if (core.errors.length > 0) envelopeBound = false;
   const signatureChecked = core.signatureChecked;
   if (!signatureChecked) {
-    warnings.push('Signal validity is not established because no verification key was supplied');
+    warnings.push(options && options.publicKeyOrSecret == null && options.expectedAlgorithm == null
+      ? 'Signal validity is not established because no verification key was supplied'
+      : 'Signal validity is not established because verification context or receipt validation prevented signature checking');
   }
 
   let signatureMode: SignalSignatureMode = 'not_checked';
