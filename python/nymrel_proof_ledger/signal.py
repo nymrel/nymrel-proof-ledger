@@ -372,7 +372,7 @@ def verify_signal_proof_bundle(
     core = verify_receipt(
         bundle.get("receipt", {}),
         public_key_or_secret=public_key_or_secret,
-        check_files_on_disk=check_files_on_disk,
+        check_files_on_disk=False,
         cwd=cwd,
         expected_algorithm=expected_algorithm,
     )
@@ -384,7 +384,7 @@ def verify_signal_proof_bundle(
 
     envelope_bound = False
     normalized = None
-    if not envelope_errors and receipt is not None and receipt['version'] == '2.0.0':
+    if profile_valid_before_binding and core['valid'] and core['merkleValid'] and receipt is not None and receipt['version'] == '2.0.0':
         try:
             normalized = _normalize_envelope(envelope)
             canonical_envelope = canonicalize(normalized)
@@ -417,6 +417,19 @@ def verify_signal_proof_bundle(
             envelope_bound = False
             errors.append('Signal envelope or metadata mirror contains values outside canonical JSON')
 
+    if check_files_on_disk:
+        if not errors and envelope_bound and core['valid']:
+            core = verify_receipt(receipt, public_key_or_secret=public_key_or_secret,
+                                  expected_algorithm=expected_algorithm, check_files_on_disk=True, cwd=cwd)
+            errors.extend('Proof Ledger: ' + item for item in core['errors'])
+        else:
+            message = 'Artifact disk checks skipped because Signal admission failed'
+            core.update(artifactsValid=False, checkedArtifacts=0, valid=False, trusted=False)
+            core['errors'].append(message)
+            errors.append('Proof Ledger: ' + message)
+
+    if core['errors']:
+        envelope_bound = False
     signature_checked = core.get('signatureChecked', False)
     if not signature_checked:
         warnings.append(
@@ -444,7 +457,7 @@ def verify_signal_proof_bundle(
     )
     valid = bool(structurally_valid and signature_checked and core.get("signatureValid"))
 
-    normalized = normalized if envelope_bound else None
+    normalized = normalized if structurally_valid else None
     evidence = normalized.get("evidence", []) if normalized else []
     scopes = normalized.get("attestedScopes", []) if normalized else []
     return {

@@ -16,7 +16,7 @@ def node(rows):
     return json.loads(run.stdout)
 
 def verdict(result):
-    return {key: result[key] for key in ('valid', 'structurallyValid', 'profileValid', 'envelopeBound', 'signatureChecked', 'signatureMode', 'signerIdentityTrust')}
+    return {**{key: result[key] for key in ('valid', 'structurallyValid', 'profileValid', 'envelopeBound', 'signatureChecked', 'signatureMode', 'signerIdentityTrust', 'doesNotProve')}, 'authoritative': {key: value for key, value in result['authoritative'].items() if value is not None}}
 
 checks = 0
 for algorithm in ('HMAC-SHA256', 'Ed25519'):

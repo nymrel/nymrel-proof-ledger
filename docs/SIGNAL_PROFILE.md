@@ -162,6 +162,8 @@ Consumers must never use metadata-only Signal IDs or scopes as verified values.
 
 The portable bundle verifier validates the in-memory envelope against the bound artifact digest. The core `checkFilesOnDisk` option still checks every receipt artifact by path. Enable it only when the reserved envelope and all other artifacts have been materialized in the chosen `cwd`; otherwise use portable envelope validation plus separate application-controlled artifact retrieval.
 
+Signal first verifies core cryptography and profile/envelope binding with disk I/O disabled. It performs requested disk checks only after those checks pass. Failed admission reports zero checked artifacts. `authoritative` fields are populated only for structurally valid bundles; consumers must still require `valid` for authenticated acceptance. Unkeyed structural inspection never establishes signer identity or authority.
+
 ## Versioning and release boundary
 
 - Unknown Signal profile and bundle major versions fail closed.

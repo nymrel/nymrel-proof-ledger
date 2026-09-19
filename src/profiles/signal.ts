@@ -2,7 +2,7 @@
  * Nymrel Signal customer-facing ProofReceipt attestation profile.
  *
  * The profile binds Signal identifiers, disclosure/claim snapshots and explicit
- * attestation scopes as a normal Proof Ledger artifact. It deliberately does
+ * attestation scopes as a normal Proof Ledger artifact. It
  * uses Proof Ledger v2 binding; legacy v1 core semantics remain unchanged.
  */
 
@@ -439,7 +439,8 @@ export async function verifySignalProofBundle(
   errors.push(...envelopeErrors);
   const profileValidBeforeBinding = errors.length === 0;
 
-  const core = await verifyReceipt(bundle.receipt, options);
+  const diskRequested = options?.checkFilesOnDisk === true;
+  const core = await verifyReceipt(bundle.receipt, diskRequested ? { ...options, checkFilesOnDisk: false } : options);
   errors.push(...core.errors.map((item) => `Proof Ledger: ${item}`));
   warnings.push(...core.warnings.map((item) => `Proof Ledger: ${item}`));
   if (core.receipt && core.receipt.version !== '2.0.0') {
@@ -448,7 +449,7 @@ export async function verifySignalProofBundle(
 
   let envelopeBound = false;
   let normalizedEnvelope: SignalProofEnvelopeV1 | undefined;
-  if (envelopeErrors.length === 0 && core.receipt?.version === '2.0.0') {
+  if (profileValidBeforeBinding && core.valid && core.merkleValid && core.receipt?.version === '2.0.0') {
     try {
       normalizedEnvelope = cloneAndNormalizeEnvelope(bundle.envelope as SignalProofEnvelopeV1);
       const canonicalEnvelope = canonicalize(normalizedEnvelope);
@@ -484,6 +485,23 @@ export async function verifySignalProofBundle(
     }
   }
 
+  if (diskRequested) {
+    if (errors.length === 0 && envelopeBound && core.valid) {
+      const diskResult = await verifyReceipt(core.receipt, options);
+      Object.assign(core, diskResult);
+      errors.push(...diskResult.errors.map(item => `Proof Ledger: ${item}`));
+    } else {
+      const message = 'Artifact disk checks skipped because Signal admission failed';
+      core.artifactsValid = false;
+      core.checkedArtifacts = 0;
+      core.valid = false;
+      core.trusted = false;
+      core.errors.push(message);
+      errors.push(`Proof Ledger: ${message}`);
+    }
+  }
+
+  if (core.errors.length > 0) envelopeBound = false;
   const signatureChecked = core.signatureChecked;
   if (!signatureChecked) {
     warnings.push(options && options.publicKeyOrSecret == null && options.expectedAlgorithm == null
@@ -508,7 +526,7 @@ export async function verifySignalProofBundle(
     core.artifactsValid &&
     core.errors.length === 0;
   const valid = Boolean(structurallyValid && signatureChecked && core.signatureValid);
-  const authoritativeEnvelope = envelopeBound ? normalizedEnvelope : undefined;
+  const authoritativeEnvelope = structurallyValid ? normalizedEnvelope : undefined;
 
   return {
     valid,

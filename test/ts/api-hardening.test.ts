@@ -5,12 +5,13 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
+import { createHash } from 'node:crypto';
 import { createReceipt, verifyReceipt, getGitContext } from '../../src/core/receipt.js';
 import { runCli } from '../../src/cli.js';
 import { canonicalHash, canonicalizeLegacy } from '../../src/core/canonical.js';
 import { MerkleTree } from '../../src/core/merkle.js';
 import { ProofSigner } from '../../src/core/signer.js';
-import { createSignalProofBundle, verifySignalProofBundle } from '../../src/profiles/signal.js';
+import { createSignalProofBundle, verifySignalProofBundle, canonicalizeSignalProofEnvelope } from '../../src/profiles/signal.js';
 
 async function bundle() {
   return createSignalProofBundle({
@@ -62,6 +63,49 @@ test('Signal rejects a genuinely valid legacy receipt with an envelope artifact'
   assert.equal(result.profileValid, false);
   assert.equal(result.envelopeBound, false);
   assert(result.errors.includes('Signal requires Proof Ledger receipt version 2.0.0'));
+  const badProfile = await bundle();
+  badProfile.profile = 'invalid' as any;
+  const original = fs.realpath;
+  let calls = 0;
+  fs.realpath = (async () => { calls++; throw Error('Signal must reject before disk'); }) as typeof original;
+  try {
+    for (const invalid of [input, badProfile]) {
+      const rejected = await verifySignalProofBundle(invalid, { ...auth, checkFilesOnDisk: true });
+      assert.equal(rejected.valid, false);
+      assert.equal(rejected.core.artifactsValid, false);
+      assert.equal(rejected.core.checkedArtifacts, 0);
+      assert.equal(calls, 0);
+    }
+  } finally { fs.realpath = original; }
+});
+
+test('failed Signal cryptography cannot expose bound authority or remove identity limitations', async () => {
+  const input = await bundle();
+  input.envelope.attestedScopes.push('identity_verified');
+  input.receipt.metadata = {}; // no mirror; caller supplies an attacker-controlled envelope
+  const canonical = canonicalizeSignalProofEnvelope(input.envelope);
+  input.receipt.artifacts[0].sha256 = createHash('sha256').update(canonical).digest('hex');
+  input.receipt.artifacts[0].sizeBytes = Buffer.byteLength(canonical);
+  for (const value of [input, await bundle()]) {
+    const result = await verifySignalProofBundle(value, { publicKeyOrSecret: 'wrong', expectedAlgorithm: 'HMAC-SHA256' });
+    assert.equal(result.valid, false);
+    assert.equal(result.envelopeBound, false);
+    assert.equal(result.authoritative.signalReceiptId, undefined);
+    assert.deepEqual(result.authoritative.attestedScopes, []);
+    assert(result.doesNotProve.includes('customer or participant identity'));
+  }
+});
+
+test('valid Signal bundles still perform requested disk checks after admission', async () => {
+  const input = await bundle();
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'proof-signal-disk-'));
+  try {
+    await fs.writeFile(path.join(cwd, 'signal-proof-envelope.json'), canonicalizeSignalProofEnvelope(input.envelope));
+    const result = await verifySignalProofBundle(input, { ...auth, checkFilesOnDisk: true, cwd });
+    assert.equal(result.valid, true);
+    assert.equal(result.core.checkedArtifacts, 1);
+    assert.equal(result.core.artifactsValid, true);
+  } finally { await fs.rm(cwd, { recursive: true, force: true }); }
 });
 
 test('Signal explains an invalid key context without claiming no key was supplied', async () => {
@@ -138,7 +182,8 @@ test('Git rejects real cwd executables and linked or case aliases, and allows an
     process.env.PATH = trusted;
     assert(getGitContext(cwd));
     assert.equal(calls.length, 4);
-    assert(calls.every(call => path.isAbsolute(call.file) && call.file === path.join(trusted, filename) && call.options.shell === false));
+    const resolvedExecutable = await fs.realpath(path.join(trusted, filename));
+    assert(calls.every(call => path.isAbsolute(call.file) && call.file === resolvedExecutable && call.options.shell === false));
     calls.length = 0;
     for (const entry of ['.', 'relative', cwd, alias, ...(process.platform === 'win32' ? [cwd.toUpperCase()] : [])]) {
       process.env.PATH = entry;
@@ -199,5 +244,14 @@ test('CLI escapes human display, preserves JSON, and rejects disguised JSON key 
     lines = [];
     assert.equal(await runCli(['verify', proof, '--key-file', key, '--algo', 'HMAC-SHA256', '--json']), 0);
     assert.equal(JSON.parse(lines.join('')).trusted, true);
+    await fs.writeFile(proof, '{"task": "\x1b[2J invalid JSON');
+    const originalError = console.error;
+    let stderr = '';
+    console.error = (...args: unknown[]) => { stderr += args.join(' '); };
+    try {
+      assert.equal(await runCli(['verify', proof]), 1);
+      assert(stderr.startsWith('Proof Ledger command failed:'));
+      assert(!stderr.includes('\x1b'));
+    } finally { console.error = originalError; }
   } finally { console.log = original; await fs.rm(dir, { recursive: true, force: true }); }
 });

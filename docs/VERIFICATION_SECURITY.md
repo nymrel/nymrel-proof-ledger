@@ -125,6 +125,10 @@ Raw key files reject JSON delimiters so invisible prefixes cannot turn a public
 JSON envelope into an HMAC secret. Secrets containing those delimiters remain
 supported as the `secretKey` field of an explicit algorithm-bound JSON envelope.
 Existing strict UTF-8, role/algorithm selection and edge-whitespace rules still apply.
+Raw key files carry no algorithm declaration: a bare hex or PEM public key cannot
+be distinguished from a caller-configured HMAC secret. Use an algorithm-bound
+JSON envelope when carrying key-role metadata; the caller's algorithm is trusted
+configuration, never selected from the receipt.
 
 Legacy serializers are intentionally frozen: integral floating-point values and
 lone surrogates can have different historical representations in Python and JS.

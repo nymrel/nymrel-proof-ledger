@@ -140,7 +140,7 @@ function parseArgs(args: string[]): ParsedArgs {
   return result;
 }
 
-export async function runCli(argv: string[] = process.argv.slice(2)): Promise<number> {
+async function runCliUnchecked(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv);
 
   if (parsed.flags.help || parsed.flags.h || !parsed.command) {
@@ -450,6 +450,14 @@ ${receipt.artifacts.map((a) => `| ${a.path} | ${a.sha256} | ${a.sizeBytes} |`).j
       console.error(`\x1b[31mUnknown command: ${parsed.command}\x1b[0m`);
       printHelp();
       return 1;
+  }
+}
+
+export async function runCli(argv: string[] = process.argv.slice(2)): Promise<number> {
+  try { return await runCliUnchecked(argv); }
+  catch (error) {
+    console.error(`Proof Ledger command failed: ${displayCopy(error instanceof Error ? error.message : String(error))}`);
+    return 1;
   }
 }
 

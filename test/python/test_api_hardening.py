@@ -1,6 +1,7 @@
 import copy
 import contextlib
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,7 +16,7 @@ from nymrel_proof_ledger.merkle import MerkleTree, MerkleProofStep
 from nymrel_proof_ledger.receipt import create_receipt, verify_receipt, get_git_context
 from nymrel_proof_ledger.cli import main
 from nymrel_proof_ledger.signer import ProofSigner
-from nymrel_proof_ledger.signal import create_signal_proof_bundle, verify_signal_proof_bundle
+from nymrel_proof_ledger.signal import create_signal_proof_bundle, verify_signal_proof_bundle, canonicalize_signal_proof_envelope
 
 AUTH = dict(public_key_or_secret='fixture-secret', expected_algorithm='HMAC-SHA256')
 
@@ -61,6 +62,38 @@ class ApiHardeningTests(unittest.TestCase):
         self.assertFalse(result['profileValid'])
         self.assertFalse(result['envelopeBound'])
         self.assertIn('Signal requires Proof Ledger receipt version 2.0.0', result['errors'])
+        bad_profile = bundle()
+        bad_profile['profile'] = 'invalid'
+        with patch('nymrel_proof_ledger.receipt.os.path.realpath', side_effect=AssertionError('Signal must reject before disk')) as resolve:
+            for invalid in (value, bad_profile):
+                result = verify_signal_proof_bundle(invalid, **AUTH, check_files_on_disk=True)
+                self.assertFalse(result['valid'])
+                self.assertFalse(result['core']['artifactsValid'])
+                self.assertEqual(result['core']['checkedArtifacts'], 0)
+                resolve.assert_not_called()
+
+    def test_failed_signal_crypto_cannot_expose_authority(self):
+        value = bundle()
+        value['envelope']['attestedScopes'].append('identity_verified')
+        value['receipt']['metadata'] = {}
+        canonical = canonicalize_signal_proof_envelope(value['envelope']).encode('utf-8')
+        value['receipt']['artifacts'][0].update(sha256=hashlib.sha256(canonical).hexdigest(), sizeBytes=len(canonical))
+        for invalid in (value, bundle()):
+            result = verify_signal_proof_bundle(invalid, public_key_or_secret='wrong', expected_algorithm='HMAC-SHA256')
+            self.assertFalse(result['valid'])
+            self.assertFalse(result['envelopeBound'])
+            self.assertIsNone(result['authoritative']['signalReceiptId'])
+            self.assertEqual(result['authoritative']['attestedScopes'], [])
+            self.assertIn('customer or participant identity', result['doesNotProve'])
+
+    def test_valid_signal_performs_requested_disk_checks(self):
+        value = bundle()
+        with tempfile.TemporaryDirectory() as cwd:
+            (Path(cwd) / 'signal-proof-envelope.json').write_text(canonicalize_signal_proof_envelope(value['envelope']), encoding='utf-8', newline='')
+            result = verify_signal_proof_bundle(value, **AUTH, check_files_on_disk=True, cwd=cwd)
+            self.assertTrue(result['valid'])
+            self.assertEqual(result['core']['checkedArtifacts'], 1)
+            self.assertTrue(result['core']['artifactsValid'])
 
     def test_context_warning_is_not_missing_key(self):
         result = verify_signal_proof_bundle(bundle(), public_key_or_secret='fixture-secret')
@@ -122,7 +155,7 @@ class ApiHardeningTests(unittest.TestCase):
                 with patch.dict(os.environ, {'PATH': str(trusted)}):
                     self.assertIsNotNone(get_git_context(str(cwd)))
                     self.assertEqual(execute.call_count, 4)
-                    self.assertTrue(all(call.args[0][0] == str(trusted / filename) and not call.kwargs.get('shell') for call in execute.call_args_list))
+                    self.assertTrue(all(call.args[0][0] == os.path.realpath(trusted / filename) and not call.kwargs.get('shell') for call in execute.call_args_list))
                 execute.reset_mock()
                 entries = ['.', 'relative', str(cwd), str(alias)] + ([str(cwd).upper()] if os.name == 'nt' else [])
                 for entry in entries:
