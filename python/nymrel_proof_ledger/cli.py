@@ -21,7 +21,7 @@ def _load_key_material(key_file, role, algorithm):
       - HMAC-SHA256: {"algorithm": "HMAC-SHA256", "secretKey": "<hex>"}
       - Ed25519:     {"algorithm": "Ed25519", "privateKey": "...", "publicKey": "..."}
     """
-    with open(key_file, "r", encoding="utf-8-sig") as f:
+    with open(key_file, "r", encoding="utf-8-sig", newline='') as f:
         decoded = f.read()
     raw = re.sub(r'^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$', '', decoded)
     if '\x00' in raw or '\ufffd' in raw:

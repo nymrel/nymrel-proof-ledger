@@ -108,7 +108,7 @@ class TestAuthenticationContext(unittest.TestCase):
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertTrue(json.loads(run.stdout)['trusted'])
             json_key = json.dumps({'algorithm': 'Ed25519', 'publicKey': public})
-            for encoded in [('\ufeff' + json_key).encode('utf-8'), ('\ufeff' + json_key).encode('utf-16-le'), (' \ufeff\u0085' + json_key).encode('utf-8')]:
+            for encoded in [('\ufeff' + json_key).encode('utf-8'), ('\ufeff' + json_key).encode('utf-16-le'), (' \ufeff\u0085' + json_key).encode('utf-8'), json_key.encode('utf-16-le'), json_key.encode('utf-16-be'), ('\ufffd' + json_key).encode('utf-8')]:
                 old_raw = encoded.decode('utf-8', errors='replace').strip()
                 encoded_forgery = create_receipt(task={'name': 'encoded JSON forgery'}, signing_key=old_raw, signer_identity='fixture')
                 proof.write_text(json.dumps(encoded_forgery))

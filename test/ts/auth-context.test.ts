@@ -74,6 +74,12 @@ test('verification CLI requires trusted algorithm configuration', async () => {
   } finally { console.log = original; }
 });
 
+test('the shipped CLI entry point resolves its built module', () => {
+  const run = childProcess.spawnSync(process.execPath, ['bin/proof-ledger.js', 'verify', 'test/fixtures/auth-context-cli-receipt.json', '--key', vectors.protocolV2.secret, '--algo', 'HMAC-SHA256', '--json'], { encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(JSON.parse(run.stdout).trusted, true);
+});
+
 test('envelope preserves non-empty Unicode labels and accepts integral JSON floats', () => {
   for (const label of ['\u001f', '\u0085', '\ufeff']) {
     const receipt = structuredClone(vectors.protocolV2.receipt);
@@ -118,8 +124,8 @@ test('CLI refuses a key file whose algorithm conflicts with the flag', async () 
     assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'Ed25519', '--json']), 0);
     assert.equal(JSON.parse(output.join('')).trusted, true);
     const jsonKey = JSON.stringify({ algorithm: 'Ed25519', publicKey });
-    for (const encoded of [Buffer.from('\ufeff' + jsonKey), Buffer.from('\ufeff' + jsonKey, 'utf16le'), Buffer.from(' \ufeff\u0085' + jsonKey)]) {
-      const oldRaw = encoded.toString('utf8').replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '');
+    for (const encoded of [Buffer.from('\ufeff' + jsonKey), Buffer.from('\ufeff' + jsonKey, 'utf16le'), Buffer.from(' \ufeff\u0085' + jsonKey), Buffer.from(jsonKey, 'utf16le'), Buffer.from(jsonKey, 'utf16le').swap16(), Buffer.from('\ufffd' + jsonKey)]) {
+      const oldRaw = encoded.toString('utf8').trim();
       const encodedForgery = await createReceipt({ task: { name: 'encoded JSON forgery' }, signingKey: oldRaw, signerIdentity: 'fixture' });
       await fs.writeFile(receiptFile, JSON.stringify(encodedForgery));
       await fs.writeFile(keyFile, encoded);

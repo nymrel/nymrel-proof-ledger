@@ -39,6 +39,9 @@ another algorithm's key field or to treating the JSON document as a secret.
 Key files must use valid UTF-8; a leading UTF-8 BOM is supported. UTF-16,
 NUL-containing or replacement-character text is rejected. Both runtimes strip
 the same surrounding whitespace/BOM characters before detecting JSON key envelopes.
+This includes edge U+001C–U+001F, U+0085 and U+FEFF; raw files relying on the
+previous runtime-specific edge stripping must migrate. Internal line endings
+remain unchanged. Direct API key strings are never trimmed.
 
 Omit both key and algorithm for integrity-only checking: a consistent receipt can
 return `valid: true` with `trusted: false`. `trusted: true` requires a valid
