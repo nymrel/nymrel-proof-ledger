@@ -15,7 +15,7 @@
 
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { createReceipt, verifyReceipt, type ProofReceipt } from './core/receipt.js';
+import { createReceipt, verifyReceipt, type ProofReceipt, type VerifyReceiptOptions } from './core/receipt.js';
 import { generateSvgBadge, generateShieldSvg, generateHtmlCertificate } from './visual/badge.js';
 import { ProofSigner, type SignatureAlgorithm } from './core/signer.js';
 
@@ -43,7 +43,7 @@ Parent Organization: Nymrel
 \x1b[1mEXAMPLES:\x1b[0m
   $ proof-ledger keygen --algo HMAC-SHA256
   $ proof-ledger attest --task "Build and Test" --files "dist/index.js,README.md" --key "secret123" --out proof.json --badge badge.svg
-  $ proof-ledger verify proof.json --key "secret123" --check-files
+  $ proof-ledger verify proof.json --key "secret123" --algo HMAC-SHA256 --check-files
   $ proof-ledger inspect proof.json
   $ proof-ledger badge proof.json --format svg --out badge.svg
   $ proof-ledger export proof.json --format markdown --out AUDIT_REPORT.md
@@ -211,6 +211,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
         },
         artifacts,
         signingKey: key,
+        includeGitContext: parsed.flags['include-git-context'] === true,
         signerIdentity: signer,
         algorithm: algo,
       });
@@ -252,8 +253,9 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
 
       const result = await verifyReceipt(receipt, {
         publicKeyOrSecret: signingKey,
+        expectedAlgorithm: getFlag(parsed, 'algo', 'algorithm'),
         checkFilesOnDisk: checkFiles,
-      });
+      } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
 
       if (parsed.flags.json) {
         console.log(JSON.stringify(result, null, 2));

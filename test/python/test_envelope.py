@@ -18,7 +18,7 @@ HASH_B = "b" * 64
 HASH_C = "c" * 64
 HASH_D = "d" * 64
 HASH_E = "e" * 64
-SIG_HEX = "f" * 128
+SIG_HEX = "f" * 64
 
 
 def build_valid_envelope():

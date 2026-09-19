@@ -38,7 +38,7 @@ describe('Proof Receipt Engine', () => {
     assert.strictEqual(receipt.parentOrganization, 'Nymrel');
     assert.strictEqual(receipt.merkle.algorithm, 'RFC6962-SHA256');
 
-    const result = await verifyReceipt(receipt, { publicKeyOrSecret: secret });
+    const result = await verifyReceipt(receipt, { expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret });
     assert.strictEqual(result.valid, true);
     assert.strictEqual(result.trusted, true);
     assert.strictEqual(result.merkleValid, true);
@@ -72,21 +72,21 @@ describe('Proof Receipt Engine', () => {
     const taskTamper = structuredClone(receipt);
     taskTamper.task.name = 'Changed';
     assert.strictEqual(
-      (await verifyReceipt(taskTamper, { publicKeyOrSecret: secret })).valid,
+      (await verifyReceipt(taskTamper, { expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret })).valid,
       false
     );
 
     const pathTamper = structuredClone(receipt);
     pathTamper.artifacts[0].path = 'renamed.log';
     assert.strictEqual(
-      (await verifyReceipt(pathTamper, { publicKeyOrSecret: secret })).merkleValid,
+      (await verifyReceipt(pathTamper, { expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret })).merkleValid,
       false
     );
 
     const signatureTamper = structuredClone(receipt);
     signatureTamper.signature.value = 'ff'.repeat(32);
     const signatureResult = await verifyReceipt(signatureTamper, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
     assert.strictEqual(signatureResult.valid, false);
     assert.strictEqual(signatureResult.signatureValid, false);
@@ -94,7 +94,7 @@ describe('Proof Receipt Engine', () => {
     const metadataTamper = structuredClone(receipt);
     metadataTamper.metadata['claim'] = 'rewritten';
     const metadataResult = await verifyReceipt(metadataTamper, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
     });
     assert.strictEqual(metadataResult.merkleValid, true);
     assert.strictEqual(metadataResult.signatureValid, false);
@@ -102,14 +102,14 @@ describe('Proof Receipt Engine', () => {
     const identityTamper = structuredClone(receipt);
     identityTamper.signature.signerIdentity = 'impostor';
     assert.strictEqual(
-      (await verifyReceipt(identityTamper, { publicKeyOrSecret: secret })).signatureValid,
+      (await verifyReceipt(identityTamper, { expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret })).signatureValid,
       false
     );
   });
 
   it('verifies the frozen protocol v1 compatibility vector', async () => {
     const result = await verifyReceipt(vectors.legacyV1.receipt, {
-      publicKeyOrSecret: vectors.legacyV1.secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: vectors.legacyV1.secret,
     });
     assert.strictEqual(result.valid, true);
     assert.strictEqual(result.trusted, true);
@@ -119,7 +119,7 @@ describe('Proof Receipt Engine', () => {
 
   it('verifies the shared cross-runtime protocol v2 receipt vector', async () => {
     const result = await verifyReceipt(vectors.protocolV2.receipt, {
-      publicKeyOrSecret: vectors.protocolV2.secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: vectors.protocolV2.secret,
     });
     assert.strictEqual(result.trusted, true);
     assert.strictEqual(result.merkleValid, true);
@@ -135,7 +135,7 @@ describe('Proof Receipt Engine', () => {
       algorithm: 'Ed25519',
     });
     const result = await verifyReceipt(receipt, {
-      publicKeyOrSecret: keypair.publicKey,
+      expectedAlgorithm: 'Ed25519', publicKeyOrSecret: keypair.publicKey,
     });
     assert.strictEqual(result.trusted, true);
   });
@@ -155,7 +155,7 @@ describe('Proof Receipt Engine', () => {
       signerIdentity: 'nymrel-ci',
     });
     const result = await verifyReceipt(receipt, {
-      publicKeyOrSecret: secret,
+      expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
       checkFilesOnDisk: true,
     });
     assert.strictEqual(result.merkleValid, true);

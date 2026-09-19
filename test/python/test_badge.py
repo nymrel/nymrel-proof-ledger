@@ -46,7 +46,7 @@ class TestBadge(unittest.TestCase):
             signing_key=secret,
             signer_identity="bot",
         )
-        trusted = verify_receipt(receipt, public_key_or_secret=secret)
+        trusted = verify_receipt(receipt, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         integrity_only = verify_receipt(receipt)
 
         shield = generate_shield_svg(receipt, trusted)
@@ -70,7 +70,7 @@ class TestBadge(unittest.TestCase):
             signing_key=secret,
             signer_identity="bot",
         )
-        trusted = verify_receipt(receipt, public_key_or_secret=secret)
+        trusted = verify_receipt(receipt, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
 
         svg = generate_svg_badge(receipt, verification_result=trusted)
         self.assertIn("TRUSTED RECEIPT", svg)

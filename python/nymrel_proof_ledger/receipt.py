@@ -181,6 +181,7 @@ def create_receipt(
     metadata: dict[str, Any] | None = None,
     cwd: str | None = None,
     include_hostname: bool = False,
+    include_git_context: bool = False,
 ) -> dict[str, Any]:
     cwd = cwd or os.getcwd()
     now = datetime.now(UTC)
@@ -200,7 +201,7 @@ def create_receipt(
     }
     if include_hostname:
         environment["hostname"] = platform.node()
-    git = get_git_context(cwd)
+    git = get_git_context(cwd) if include_git_context is True else None
     if git is not None:
         environment["git"] = git
 
@@ -274,7 +275,23 @@ def verify_receipt(
     public_key_or_secret: str | None = None,
     check_files_on_disk: bool = False,
     cwd: str | None = None,
+    *,
+    expected_algorithm: str | None = None,
 ) -> dict[str, Any]:
+    def invalid_context(message: str) -> dict[str, Any]:
+        return {
+            'valid': False, 'trusted': False, 'merkleValid': False,
+            'signatureChecked': False, 'signatureValid': None, 'artifactsValid': False,
+            'checkedArtifacts': 0, 'receipt': None, 'errors': [message], 'warnings': [],
+        }
+
+    has_key = public_key_or_secret is not None
+    has_algorithm = expected_algorithm is not None
+    if has_key != has_algorithm or (has_key and (
+        not isinstance(public_key_or_secret, str) or not public_key_or_secret
+        or expected_algorithm not in ('HMAC-SHA256', 'Ed25519')
+    )):
+        return invalid_context('A non-empty verification key and explicit expectedAlgorithm must be supplied together')
     envelope = validate_receipt_envelope(receipt)
     if not envelope["valid"]:
         return {
@@ -295,16 +312,20 @@ def verify_receipt(
             "receipt": None,
         }
 
+    if has_key and expected_algorithm != receipt['signature']['algorithm']:
+        return invalid_context('Receipt signature algorithm does not match expectedAlgorithm')
+
     errors: list[str] = []
     warnings: list[str] = []
     cwd = cwd or os.getcwd()
     canonical_profile, merkle_profile = _profiles(receipt["version"])
-    expected_raw_leaves = _receipt_leaves(
-        receipt["task"],
-        receipt["environment"],
-        receipt["artifacts"],
-        receipt["version"],
-    )
+    try:
+        canonical_hash(receipt['metadata'], profile=canonical_profile)
+        expected_raw_leaves = _receipt_leaves(
+            receipt['task'], receipt['environment'], receipt['artifacts'], receipt['version']
+        )
+    except (TypeError, ValueError, OverflowError, RecursionError, UnicodeError):
+        return invalid_context('Receipt contains values outside its canonical JSON profile')
     calculated_tree = MerkleTree(
         expected_raw_leaves, is_pre_hashed=True, profile=merkle_profile
     )
@@ -348,14 +369,14 @@ def verify_receipt(
                     f"Artifact missing on disk: '{artifact['path']}' ({error})"
                 )
 
-    signature_checked = public_key_or_secret is not None
+    signature_checked = has_key
     signature_valid: bool | None = None
     if signature_checked:
         signature_valid = ProofSigner.verify_signature(
             _signing_payload(receipt, receipt["signature"]),
             receipt["signature"]["value"],
             public_key_or_secret,
-            receipt["signature"]["algorithm"],
+            expected_algorithm,
             canonical_profile,
         )
         if not signature_valid:
@@ -366,6 +387,9 @@ def verify_receipt(
         warnings.append(
             "Signature was not cryptographically verified (no public key or secret provided)"
         )
+
+    if receipt['version'] == LEGACY_RECEIPT_VERSION:
+        warnings.append('Legacy v1 signatures do not authenticate metadata or signature identity fields')
 
     valid = not errors
     return {

@@ -1,0 +1,89 @@
+import copy
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'python'))
+from nymrel_proof_ledger import verify_proof
+from nymrel_proof_ledger.receipt import create_receipt, verify_receipt
+from nymrel_proof_ledger.envelope import validate_receipt_envelope
+
+ROOT = Path(__file__).resolve().parents[2]
+VECTORS = json.loads((ROOT / 'test/fixtures/protocol-v2-vectors.json').read_text(encoding='utf-8'))
+CASES = json.loads((ROOT / 'test/fixtures/auth-context-cases.json').read_text(encoding='utf-8'))
+
+
+def input_for(row):
+    receipt = None if 'receipt' in row and row['receipt'] is None else copy.deepcopy(VECTORS[row.get('vector', 'protocolV2')]['receipt'])
+    for operation in row.get('operations', []):
+        target = receipt
+        for part in operation['path'][:-1]:
+            target = target[part]
+        key = operation['path'][-1]
+        if operation.get('remove'):
+            del target[key]
+        else:
+            target[key] = operation['value']
+    return receipt
+
+
+def options_for(options):
+    return { {'publicKeyOrSecret': 'public_key_or_secret', 'expectedAlgorithm': 'expected_algorithm'}[key]: value for key, value in options.items() }
+
+
+class TestAuthenticationContext(unittest.TestCase):
+    def test_shared_cases(self):
+        for row in CASES:
+            with self.subTest(row=row['name']):
+                result = verify_receipt(input_for(row), **options_for(row.get('options', {})))
+                self.assertEqual(result['valid'], row['valid'], result['errors'])
+                self.assertEqual(result['trusted'], row['trusted'])
+
+    def test_forged_hmac_under_public_key(self):
+        public = VECTORS['ed25519']['publicKey']
+        forged = create_receipt(task={'name': 'attacker claim'}, signing_key=public, signer_identity='victim')
+        for verify in (verify_receipt, verify_proof):
+            for options in ({'public_key_or_secret': public, 'expected_algorithm': 'Ed25519'}, {'public_key_or_secret': public}):
+                result = verify(forged, **options)
+                self.assertFalse(result['valid'])
+                self.assertFalse(result['trusted'])
+
+    def test_git_context_opt_in(self):
+        with patch('nymrel_proof_ledger.receipt.get_git_context', return_value={'commit': 'test', 'branch': 'test', 'dirty': False}) as git:
+            args = dict(task={'name': 'no Git'}, signing_key='test-secret', signer_identity='test')
+            receipt = create_receipt(**args)
+            git.assert_not_called()
+            self.assertNotIn('git', receipt['environment'])
+            self.assertIn('git', create_receipt(**args, include_git_context=True)['environment'])
+            git.assert_called_once()
+
+    def test_cli_requires_algorithm(self):
+        env = {**os.environ, 'PYTHONPATH': str(ROOT / 'python')}
+        base = [sys.executable, '-m', 'nymrel_proof_ledger.cli', 'verify', 'test/fixtures/auth-context-cli-receipt.json', '--key', VECTORS['protocolV2']['secret'], '--json']
+        for suffix, expected in [([], 1), (['--algo', 'HMAC-SHA256'], 0), (['--algo', 'Ed25519'], 1)]:
+            run = subprocess.run(base + suffix, capture_output=True, text=True, cwd=ROOT, env=env)
+            self.assertEqual(run.returncode, expected, run.stderr)
+            self.assertEqual(json.loads(run.stdout)['trusted'], expected == 0)
+
+    def test_unicode_labels_and_integral_float(self):
+        for label in ('\u001f', '\u0085', '\ufeff'):
+            receipt = copy.deepcopy(VECTORS['protocolV2']['receipt'])
+            receipt['proofId'] = label
+            receipt['artifacts'][0]['sizeBytes'] = 7.0
+            self.assertTrue(validate_receipt_envelope(receipt)['valid'])
+
+    def test_unsupported_metadata_returns_invalid(self):
+        for value in (float('nan'), float('inf'), '\ud800', {1, 2}):
+            receipt = copy.deepcopy(VECTORS['protocolV2']['receipt'])
+            receipt['metadata']['unsupported'] = value
+            result = verify_receipt(receipt)
+            self.assertFalse(result['valid'])
+            self.assertFalse(result['trusted'])
+
+
+if __name__ == '__main__':
+    unittest.main()

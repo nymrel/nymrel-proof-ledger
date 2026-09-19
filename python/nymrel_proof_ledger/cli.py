@@ -70,6 +70,7 @@ def main(argv=None):
     attest_parser.add_argument("--files", help="Comma-separated file paths")
     attest_parser.add_argument("--key", help="Signing key or secret")
     attest_parser.add_argument("--key-file", help="Path to file containing signing key")
+    attest_parser.add_argument('--include-git-context', action='store_true', help='Collect Git context only from a trusted working directory and Git installation')
     attest_parser.add_argument(
         "--signer", default="nymrel-agent", help="Signer identity"
     )
@@ -98,6 +99,7 @@ def main(argv=None):
     )
     verify_parser.add_argument("--key", help="Public key or secret")
     verify_parser.add_argument("--key-file", help="Path to file containing key")
+    verify_parser.add_argument('--algo', choices=['HMAC-SHA256', 'Ed25519'], help='Required with a key; independently configured expected algorithm, never taken from the receipt')
     verify_parser.add_argument(
         "--check-files", action="store_true", help="Verify disk file hashes"
     )
@@ -196,6 +198,7 @@ def main(argv=None):
         receipt = create_receipt(
             task=task_data,
             signing_key=key,
+            include_git_context=args.include_git_context,
             signer_identity=args.signer,
             artifacts=file_list,
             algorithm=args.algo,
@@ -232,6 +235,7 @@ def main(argv=None):
         result = verify_receipt(
             receipt,
             public_key_or_secret=key,
+            expected_algorithm=args.algo,
             check_files_on_disk=args.check_files,
         )
 

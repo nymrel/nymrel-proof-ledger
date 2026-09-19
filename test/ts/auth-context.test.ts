@@ -1,0 +1,91 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import childProcess from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
+import { createReceipt, verifyReceipt } from '../../src/core/receipt.js';
+import { verifyProof, ProofLedger } from '../../src/index.js';
+import { validateReceiptEnvelope } from '../../src/core/envelope.js';
+import { runCli } from '../../src/cli.js';
+
+const vectors = JSON.parse(readFileSync('test/fixtures/protocol-v2-vectors.json', 'utf8'));
+const cases = JSON.parse(readFileSync('test/fixtures/auth-context-cases.json', 'utf8'));
+export function inputFor(row: any) {
+  const receipt: any = row.receipt === null ? null : structuredClone(vectors[row.vector ?? 'protocolV2'].receipt);
+  for (const operation of row.operations ?? []) {
+    let target = receipt;
+    for (const part of operation.path.slice(0, -1)) target = target[part];
+    const key = operation.path.at(-1);
+    if (operation.remove) delete target[key]; else target[key] = operation.value;
+  }
+  return receipt;
+}
+for (const row of cases) {
+  test(`authentication context: ${row.name}`, async () => {
+    const result = await verifyReceipt(inputFor(row), row.options ?? {});
+    assert.equal(result.valid, row.valid, result.errors.join('; '));
+    assert.equal(result.trusted, row.trusted);
+  });
+}
+
+test('public facades cannot authenticate a forged HMAC under an Ed25519 public key', async () => {
+  const publicKey = vectors.ed25519.publicKey;
+  const forged = await createReceipt({ task: { name: 'attacker claim' }, signingKey: publicKey, signerIdentity: 'victim', algorithm: 'HMAC-SHA256' });
+  for (const verify of [verifyReceipt, verifyProof, ProofLedger.verify]) {
+    const mismatch = await verify(forged, { publicKeyOrSecret: publicKey, expectedAlgorithm: 'Ed25519' });
+    assert.equal(mismatch.valid, false);
+    assert.equal(mismatch.trusted, false);
+    const missing = await verify(forged, { publicKeyOrSecret: publicKey } as any);
+    assert.equal(missing.valid, false);
+    assert.equal(missing.trusted, false);
+  }
+});
+
+test('Git context is disabled by default and requires explicit opt-in', async () => {
+  const original = childProcess.execSync;
+  let calls = 0;
+  childProcess.execSync = (() => { calls++; return Buffer.from('test-git-context'); }) as unknown as typeof original;
+  syncBuiltinESMExports();
+  try {
+    const options = { task: { name: 'no Git' }, signingKey: 'test-secret', signerIdentity: 'test' };
+    const receipt = await createReceipt(options);
+    assert.equal(calls, 0);
+    assert.equal(receipt.environment.git, undefined);
+    const opted = await createReceipt({ ...options, includeGitContext: true });
+    assert(calls > 0);
+    assert(opted.environment.git);
+  } finally { childProcess.execSync = original; syncBuiltinESMExports(); }
+});
+
+test('verification CLI requires trusted algorithm configuration', async () => {
+  const original = console.log;
+  let output: string[] = [];
+  console.log = (...values: unknown[]) => { output.push(values.join(' ')); };
+  try {
+    for (const [suffix, expected] of [[[], 1], [['--algo', 'HMAC-SHA256'], 0], [['--algo', 'Ed25519'], 1]] as Array<[string[], number]>) {
+      output = [];
+      const code = await runCli(['verify', 'test/fixtures/auth-context-cli-receipt.json', '--key', vectors.protocolV2.secret, '--json', ...suffix]);
+      assert.equal(code, expected);
+      assert.equal(JSON.parse(output.join('')).trusted, expected === 0);
+    }
+  } finally { console.log = original; }
+});
+
+test('envelope preserves non-empty Unicode labels and accepts integral JSON floats', () => {
+  for (const label of ['\u001f', '\u0085', '\ufeff']) {
+    const receipt = structuredClone(vectors.protocolV2.receipt);
+    receipt.proofId = label;
+    receipt.artifacts[0].sizeBytes = 7.0;
+    assert.equal(validateReceiptEnvelope(receipt).valid, true);
+  }
+});
+
+test('unsupported metadata returns an invalid verdict', async () => {
+  for (const value of [NaN, Infinity, '\ud800', new Set([1, 2])]) {
+    const receipt = structuredClone(vectors.protocolV2.receipt);
+    receipt.metadata.unsupported = value;
+    const result = await verifyReceipt(receipt);
+    assert.equal(result.valid, false);
+    assert.equal(result.trusted, false);
+  }
+});

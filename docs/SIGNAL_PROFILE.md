@@ -105,7 +105,7 @@ const bundle = await createSignalProofBundle({
 });
 
 const result = await verifySignalProofBundle(bundle, {
-  publicKeyOrSecret: keys.publicKey,
+  expectedAlgorithm: 'Ed25519', publicKeyOrSecret: keys.publicKey,
 });
 
 if (!result.valid) {
@@ -147,7 +147,7 @@ bundle = create_signal_proof_bundle(
 
 result = verify_signal_proof_bundle(
     bundle,
-    public_key_or_secret=keys["publicKey"],
+    expected_algorithm='Ed25519', public_key_or_secret=keys["publicKey"],
 )
 assert result["valid"]
 ```

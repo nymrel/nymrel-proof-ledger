@@ -57,6 +57,23 @@ def fixture_envelope():
 
 
 class TestSignalProofProfile(unittest.TestCase):
+    def test_algorithm_context_cannot_be_chosen_by_bundle(self):
+        public = ProofSigner.generate_key_pair()['publicKey']
+        bundle = create_signal_proof_bundle(
+            envelope=fixture_envelope(), task={'name': 'forged'},
+            signing_key=public, signer_identity='victim', algorithm='HMAC-SHA256',
+        )
+        for options in ({'public_key_or_secret': public, 'expected_algorithm': 'Ed25519'}, {'public_key_or_secret': public}):
+            result = verify_signal_proof_bundle(bundle, **options)
+            self.assertFalse(result['valid'])
+            self.assertFalse(result['signatureChecked'])
+
+    def test_shared_unicode_whitespace(self):
+        for value in ('\u001f', '\u0085', '\ufeff', '\u00a0'):
+            envelope = fixture_envelope()
+            envelope['signalReceiptId'] = value
+            self.assertTrue(validate_signal_proof_envelope(envelope))
+
     def test_cross_language_fixture_digest(self):
         canonical = canonicalize_signal_proof_envelope(fixture_envelope())
         self.assertTrue(canonical.startswith("{"))
@@ -74,7 +91,7 @@ class TestSignalProofProfile(unittest.TestCase):
         )
 
         self.assertEqual(bundle["receipt"]["artifacts"][0]["path"], "signal-proof-envelope.json")
-        result = verify_signal_proof_bundle(bundle, public_key_or_secret=secret)
+        result = verify_signal_proof_bundle(bundle, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
 
         self.assertTrue(result["valid"])
         self.assertTrue(result["structurallyValid"])
@@ -114,7 +131,7 @@ class TestSignalProofProfile(unittest.TestCase):
             algorithm="Ed25519",
         )
 
-        result = verify_signal_proof_bundle(bundle, public_key_or_secret=keypair["publicKey"])
+        result = verify_signal_proof_bundle(bundle, expected_algorithm='Ed25519', public_key_or_secret=keypair["publicKey"])
         self.assertTrue(result["valid"])
         self.assertEqual(result["signatureMode"], "asymmetric_signature")
         self.assertEqual(result["signerIdentityTrust"], "unresolved")
@@ -130,7 +147,7 @@ class TestSignalProofProfile(unittest.TestCase):
         tampered = copy.deepcopy(original)
         tampered["envelope"]["signalReceiptId"] = "receipt-tampered"
 
-        result = verify_signal_proof_bundle(tampered, public_key_or_secret=secret)
+        result = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertTrue(result["core"]["valid"])
         self.assertFalse(result["valid"])
         self.assertFalse(result["envelopeBound"])
@@ -147,7 +164,7 @@ class TestSignalProofProfile(unittest.TestCase):
         tampered = copy.deepcopy(original)
         tampered["receipt"]["metadata"]["signalProfile"]["signalReceiptId"] = "metadata-only-tamper"
 
-        result = verify_signal_proof_bundle(tampered, public_key_or_secret=secret)
+        result = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertFalse(result["core"]["valid"])
         self.assertFalse(result["valid"])
         self.assertTrue(result["envelopeBound"])
