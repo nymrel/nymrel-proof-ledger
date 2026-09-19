@@ -77,7 +77,10 @@ function getFlag(parsed: ParsedArgs, ...names: string[]): string | undefined {
  *   - Ed25519:     { "algorithm": "Ed25519", "privateKey": "...", "publicKey": "..." }
  */
 async function loadKeyMaterial(keyFile: string, role: 'sign' | 'verify', algorithm: string | undefined): Promise<string> {
-  const raw = (await fs.readFile(path.resolve(keyFile), 'utf8')).trim();
+  // Decode strictly: replacement characters/NULs must not turn encoded JSON into a raw secret.
+  const decoded = new TextDecoder('utf-8', { fatal: true }).decode(await fs.readFile(path.resolve(keyFile)));
+  const raw = decoded.replace(/^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$/gu, '');
+  if (/[\u0000\ufffd]/u.test(raw)) throw new Error('Key files require valid UTF-8 text');
   if (raw.startsWith('{')) {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (!['HMAC-SHA256', 'Ed25519'].includes(algorithm ?? '') ||

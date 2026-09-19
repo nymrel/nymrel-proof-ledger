@@ -4,6 +4,7 @@ CLI Driver for Python nymrel_proof_ledger package.
 
 import argparse
 import json
+import re
 import sys
 
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
@@ -20,8 +21,11 @@ def _load_key_material(key_file, role, algorithm):
       - HMAC-SHA256: {"algorithm": "HMAC-SHA256", "secretKey": "<hex>"}
       - Ed25519:     {"algorithm": "Ed25519", "privateKey": "...", "publicKey": "..."}
     """
-    with open(key_file, "r", encoding="utf-8") as f:
-        raw = f.read().strip()
+    with open(key_file, "r", encoding="utf-8-sig") as f:
+        decoded = f.read()
+    raw = re.sub(r'^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+$', '', decoded)
+    if '\x00' in raw or '\ufffd' in raw:
+        raise ValueError('Key files require valid UTF-8 text')
 
     if raw.startswith("{"):
         data = json.loads(raw)
@@ -224,7 +228,7 @@ def main(argv=None):
         if not key and args.key_file:
             try:
                 key = _load_key_material(args.key_file, "verify", args.algo)
-            except (OSError, ValueError, TypeError):
+            except (OSError, ValueError, TypeError, RecursionError):
                 key = ''
                 key_file_invalid = True
 

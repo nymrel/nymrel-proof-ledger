@@ -36,6 +36,9 @@ That declared algorithm must match the flag. JSON HMAC files must contain
 `secretKey`; Ed25519 signing uses `privateKey` and verification uses `publicKey`.
 Contradictory or missing role-specific material fails closed, never falls back to
 another algorithm's key field or to treating the JSON document as a secret.
+Key files must use valid UTF-8; a leading UTF-8 BOM is supported. UTF-16,
+NUL-containing or replacement-character text is rejected. Both runtimes strip
+the same surrounding whitespace/BOM characters before detecting JSON key envelopes.
 
 Omit both key and algorithm for integrity-only checking: a consistent receipt can
 return `valid: true` with `trusted: false`. `trusted: true` requires a valid

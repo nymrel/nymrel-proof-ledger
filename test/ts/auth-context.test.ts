@@ -109,10 +109,28 @@ test('CLI refuses a key file whose algorithm conflicts with the flag', async () 
       output = [];
       assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'HMAC-SHA256', '--json']), 1);
       assert.equal(JSON.parse(output.join('')).trusted, false);
+      assert.deepEqual(JSON.parse(output.join('')).errors, ['Invalid verification key file or algorithm context']);
     }
     const valid = await createReceipt({ task: { name: 'Ed fixture' }, signingKey: vectors.ed25519.secretKey, signerIdentity: 'fixture', algorithm: 'Ed25519' });
     await fs.writeFile(receiptFile, JSON.stringify(valid));
     await fs.writeFile(keyFile, JSON.stringify({ algorithm: 'Ed25519', publicKey }));
+    output = [];
+    assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'Ed25519', '--json']), 0);
+    assert.equal(JSON.parse(output.join('')).trusted, true);
+    const jsonKey = JSON.stringify({ algorithm: 'Ed25519', publicKey });
+    for (const encoded of [Buffer.from('\ufeff' + jsonKey), Buffer.from('\ufeff' + jsonKey, 'utf16le'), Buffer.from(' \ufeff\u0085' + jsonKey)]) {
+      const oldRaw = encoded.toString('utf8').replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, '');
+      const encodedForgery = await createReceipt({ task: { name: 'encoded JSON forgery' }, signingKey: oldRaw, signerIdentity: 'fixture' });
+      await fs.writeFile(receiptFile, JSON.stringify(encodedForgery));
+      await fs.writeFile(keyFile, encoded);
+      output = [];
+      assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'HMAC-SHA256', '--json']), 1);
+      const result = JSON.parse(output.join(''));
+      assert.equal(result.trusted, false);
+      assert.deepEqual(result.errors, ['Invalid verification key file or algorithm context']);
+    }
+    await fs.writeFile(receiptFile, JSON.stringify(valid));
+    await fs.writeFile(keyFile, '\ufeff' + jsonKey);
     output = [];
     assert.equal(await runCli(['verify', receiptFile, '--key-file', keyFile, '--algo', 'Ed25519', '--json']), 0);
     assert.equal(JSON.parse(output.join('')).trusted, true);
