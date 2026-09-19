@@ -190,6 +190,18 @@ class TestSignalProofProfile(unittest.TestCase):
             self.assertFalse(result["structurallyValid"])
             assert_no_authoritative_signal_data(self, result)
 
+    def test_verifier_is_total_for_hostile_dict_subclasses(self):
+        class HostileDict(dict):
+            def get(self, key, default=None):
+                raise RuntimeError("hostile dict getter")
+
+        result = verify_signal_proof_bundle(HostileDict())
+
+        self.assertFalse(result["valid"])
+        self.assertFalse(result["structurallyValid"])
+        self.assertIn("Signal verification could not be completed safely", result["errors"])
+        assert_no_authoritative_signal_data(self, result)
+
     def test_unchecked_noncanonical_metadata_mirror_fails_closed(self):
         bundle = create_signal_proof_bundle(
             envelope=fixture_envelope(),

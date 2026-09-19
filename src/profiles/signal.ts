@@ -433,12 +433,36 @@ function failedCoreVerification(): VerificationResult {
   };
 }
 
+function failedSignalProofVerification(): SignalProofVerificationResult {
+  return {
+    valid: false,
+    structurallyValid: false,
+    profileValid: false,
+    envelopeBound: false,
+    signatureChecked: false,
+    signatureMode: 'not_checked',
+    signerIdentityTrust: 'unresolved',
+    core: failedCoreVerification(),
+    errors: ['Signal verification could not be completed safely'],
+    warnings: [],
+    authoritative: {
+      signalReceiptId: undefined,
+      needDropId: undefined,
+      challengeId: undefined,
+      attestedScopes: [],
+      publicEvidenceRefs: [],
+      nonPublicEvidenceCount: 0,
+    },
+    doesNotProve: deriveDoesNotProve([]),
+  };
+}
+
 /**
  * Verifies the core Proof Ledger receipt and the Signal-specific binding.
  * `valid` requires a supplied verification key; structural integrity is exposed
  * separately so callers cannot mistake an unchecked signature for verification.
  */
-export async function verifySignalProofBundle(
+async function verifySignalProofBundleInternal(
   bundle: unknown,
   options: VerifyReceiptOptions = {}
 ): Promise<SignalProofVerificationResult> {
@@ -552,4 +576,15 @@ export async function verifySignalProofBundle(
     },
     doesNotProve: deriveDoesNotProve(authoritativeEnvelope?.attestedScopes ?? []),
   };
+}
+
+export async function verifySignalProofBundle(
+  bundle: unknown,
+  options: VerifyReceiptOptions = {}
+): Promise<SignalProofVerificationResult> {
+  try {
+    return await verifySignalProofBundleInternal(bundle, options);
+  } catch {
+    return failedSignalProofVerification();
+  }
 }

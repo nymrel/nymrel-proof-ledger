@@ -346,7 +346,46 @@ def _does_not_prove(scopes: List[str]) -> List[str]:
     return boundaries
 
 
-def verify_signal_proof_bundle(
+def _failed_core_verification() -> Dict[str, Any]:
+    return {
+        "valid": False,
+        "trusted": False,
+        "merkleValid": False,
+        "signatureChecked": False,
+        "signatureValid": None,
+        "artifactsValid": False,
+        "errors": ["Verification could not be completed safely"],
+        "warnings": [],
+        "checkedArtifacts": 0,
+        "receipt": None,
+    }
+
+
+def _failed_signal_proof_verification() -> Dict[str, Any]:
+    return {
+        "valid": False,
+        "structurallyValid": False,
+        "profileValid": False,
+        "envelopeBound": False,
+        "signatureChecked": False,
+        "signatureMode": "not_checked",
+        "signerIdentityTrust": "unresolved",
+        "core": _failed_core_verification(),
+        "errors": ["Signal verification could not be completed safely"],
+        "warnings": [],
+        "authoritative": {
+            "signalReceiptId": None,
+            "needDropId": None,
+            "challengeId": None,
+            "attestedScopes": [],
+            "publicEvidenceRefs": [],
+            "nonPublicEvidenceCount": 0,
+        },
+        "doesNotProve": _does_not_prove([]),
+    }
+
+
+def _verify_signal_proof_bundle(
     bundle: Any,
     public_key_or_secret: Optional[str] = None,
     check_files_on_disk: bool = False,
@@ -376,18 +415,7 @@ def verify_signal_proof_bundle(
             cwd=cwd,
         )
     except Exception:  # Public profile verification is total and fail-closed.
-        core = {
-            "valid": False,
-            "trusted": False,
-            "merkleValid": False,
-            "signatureChecked": False,
-            "signatureValid": None,
-            "artifactsValid": False,
-            "errors": ["Verification could not be completed safely"],
-            "warnings": [],
-            "checkedArtifacts": 0,
-            "receipt": None,
-        }
+        core = _failed_core_verification()
     errors.extend("Proof Ledger: " + item for item in core.get("errors", []))
     warnings.extend("Proof Ledger: " + item for item in core.get("warnings", []))
 
@@ -469,3 +497,21 @@ def verify_signal_proof_bundle(
         },
         "doesNotProve": _does_not_prove(scopes),
     }
+
+
+def verify_signal_proof_bundle(
+    bundle: Any,
+    public_key_or_secret: Optional[str] = None,
+    check_files_on_disk: bool = False,
+    cwd: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Verifies a Signal bundle without raising for adversarial public input."""
+    try:
+        return _verify_signal_proof_bundle(
+            bundle,
+            public_key_or_secret=public_key_or_secret,
+            check_files_on_disk=check_files_on_disk,
+            cwd=cwd,
+        )
+    except Exception:
+        return _failed_signal_proof_verification()

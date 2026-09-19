@@ -223,6 +223,32 @@ describe('Nymrel Signal proof profile', () => {
     }
   });
 
+  it('is total for hostile objects with throwing property access', async () => {
+    const hostileBundles: unknown[] = [
+      new Proxy(
+        {},
+        {
+          get() {
+            throw new Error('proxy getter trap');
+          },
+        }
+      ),
+      Object.defineProperty({}, 'profile', {
+        get() {
+          throw new Error('property getter trap');
+        },
+      }),
+    ];
+
+    for (const hostile of hostileBundles) {
+      const result = await verifySignalProofBundle(hostile);
+      assert.strictEqual(result.valid, false);
+      assert.strictEqual(result.structurallyValid, false);
+      assert.ok(result.errors.includes('Signal verification could not be completed safely'));
+      assertNoAuthoritativeSignalData(result);
+    }
+  });
+
   it('fails closed when an unchecked metadata mirror cannot be canonicalized', async () => {
     const bundle = await createSignalProofBundle({
       envelope: fixtureEnvelope(),
