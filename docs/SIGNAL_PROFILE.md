@@ -1,6 +1,6 @@
 # Nymrel Signal ProofReceipt profile
 
-The Signal profile adds a customer-facing evidence envelope to Proof Ledger without changing the v1 Merkle tree, signature payload, or receipt protocol.
+The Signal profile adds a customer-facing evidence envelope using the existing Proof Ledger v2 receipt protocol. Core legacy v1 wire behavior remains unchanged, but Signal does not accept v1 receipts.
 
 ## What is bound
 
@@ -154,7 +154,7 @@ assert result["valid"]
 
 ## Metadata is not authoritative
 
-Proof Ledger v1 does not include `receipt.metadata` in the Merkle tree or signature payload. The profile mirrors selected fields under `metadata.signalProfile` only for convenience. A mismatch between that mirror and the bound envelope is a profile validation error.
+Signal requires Proof Ledger v2 receipts. Legacy v1 cannot authenticate the artifact label or metadata mirror and is rejected even when its core signature is valid. The profile mirrors selected fields under `metadata.signalProfile` only for convenience; consumers derive Signal values from the bound envelope. A mismatch between that mirror and the bound envelope is a profile validation error.
 
 Consumers must never use metadata-only Signal IDs or scopes as verified values.
 
@@ -166,5 +166,6 @@ The portable bundle verifier validates the in-memory envelope against the bound 
 
 - Unknown Signal profile and bundle major versions fail closed.
 - The profile does not alter existing `ProofReceipt` v1 leaf or signature construction.
+- Malformed JSON-shaped bundles, receipts and noncanonical envelope values return structured invalid results. This does not promise safe execution of arbitrary JavaScript proxies/getters or arbitrary Python objects.
 - No package publication is implied by merging the source change. npm/PyPI publication and `v*` tags remain separate release decisions.
-- If structured metadata binding becomes a general Proof Ledger capability, it should be introduced through an explicitly versioned core protocol with TypeScript/Python parity fixtures.
+- V2 already binds metadata through its signed payload; Signal additionally validates the envelope artifact and convenience mirror. Both runtimes offer explicit Git-context opt-in on creation, disabled by default.

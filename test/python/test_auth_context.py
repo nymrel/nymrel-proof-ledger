@@ -126,7 +126,8 @@ class TestAuthenticationContext(unittest.TestCase):
     def test_network_and_escaping_paths_do_not_resolve(self):
         with patch('nymrel_proof_ledger.receipt.os.path.realpath', side_effect=AssertionError('No filesystem lookup allowed')) as realpath:
             for value in ('//attacker.invalid/share/x', '\\\\attacker.invalid\\share\\x', 'C:\\outside\\file', 'C:relative', '../outside', '..\\outside'):
-                receipt = copy.deepcopy(VECTORS['protocolV2']['receipt'])
+                # v1 labels are unsigned, so valid Merkle data reaches path preflight.
+                receipt = copy.deepcopy(VECTORS['legacyV1']['receipt'])
                 receipt['artifacts'][0]['path'] = value
                 result = verify_receipt(receipt, check_files_on_disk=True)
                 self.assertFalse(result['valid'])

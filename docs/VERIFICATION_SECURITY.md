@@ -93,9 +93,59 @@ Receipt verification does not use this standalone helper. It recomputes the
 entire ordered canonical leaf list and root from the receipt payload and checks
 the signature according to the receipt version and configured algorithm.
 
-## Regression evidence
+## API hardening and compatibility decisions
+
+Signal bundles require a v2 receipt even when legacy core verification succeeds.
+Malformed JSON-shaped inputs return invalid results instead of exceptions. The
+canonical core continues to accept frozen v1 receipts for compatibility; a caller
+that requires v2 must require `result.receipt.version === '2.0.0'` (Python:
+`result['receipt']['version'] == '2.0.0'`) after successful verification. Gate
+consumers must require `result.trusted`, not merely `valid` or CLI exit zero.
+No new optional version-policy or trusted-exit flags are introduced in this repair;
+the existing explicit result and version fields remain the policy boundary.
+
+Signature and Merkle failures now prevent artifact filesystem resolution and
+reads. `artifactsValid` is false when requested disk checks were skipped due to
+these failures, and `checkedArtifacts` remains zero. Unkeyed integrity-only disk
+checks remain an explicit caller capability. Portable disk paths reject Windows
+device names, alternate streams, trailing dots/spaces and reserved characters on
+all hosts, in addition to existing root confinement. A filename accepted for
+in-memory attestation can therefore be ineligible for portable disk verification.
+
+Git context still requires opt-in and a trusted directory/installation. It resolves
+an executable from absolute PATH directories, excluding the selected working
+directory and relative/empty entries, then invokes the absolute executable without
+a shell. PATH trust remains the caller's responsibility; this is not a Git sandbox.
+Python Signal creation now exposes the same explicit opt-in as the core.
+
+Human CLI receipt fields and errors escape terminal controls and directional
+formatting characters. Markdown additionally escapes markup delimiters. JSON
+results preserve the original values. Rendering a report does not establish trust.
+Raw key files reject JSON delimiters so invisible prefixes cannot turn a public
+JSON envelope into an HMAC secret. Secrets containing those delimiters remain
+supported as the `secretKey` field of an explicit algorithm-bound JSON envelope.
+Existing strict UTF-8, role/algorithm selection and edge-whitespace rules still apply.
+
+Legacy serializers are intentionally frozen: integral floating-point values and
+lone surrogates can have different historical representations in Python and JS.
+Do not manufacture new cross-runtime v1 receipts with these edge values. Use v2
+for portable new receipts; changing the v1 serializer would invalidate historical
+signatures. Unknown extra fields, including extra signature fields, are returned
+as input data but are not authenticated unless the versioned signed payload
+explicitly includes them. Consumers must not infer trust in all returned fields.
+
+Python's standalone Merkle path verifier now accepts its exported frozen
+`MerkleProofStep` dataclass as well as dictionaries. It still does not authenticate
+leaf data, an index, tree size or root provenance, and is distinct from receipt
+verification despite the similarly named convenience APIs.
+
+## Regression evidence (runtime checks)
 
 The shared cases in `test/fixtures/auth-context-cases.json` run in each runtime.
 `python test/cross_runtime_auth.py` additionally compares their actual results and
 cross-verifies newly generated HMAC and Ed25519 receipts in both directions after
 `npm run build`. Use a Python environment with this package's runtime dependencies.
+The same command also runs `test/cross_runtime_signal.py` against both actual
+runtimes. API-hardening suites cover malformed bundles, valid legacy rejection,
+zero disk I/O on invalid crypto, portable path preflight, direct Git execution,
+display escaping, disguised key files and the exported Python proof-step type.

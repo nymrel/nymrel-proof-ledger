@@ -45,9 +45,9 @@ test('public facades cannot authenticate a forged HMAC under an Ed25519 public k
 });
 
 test('Git context is disabled by default and requires explicit opt-in', async () => {
-  const original = childProcess.execSync;
+  const original = childProcess.execFileSync;
   let calls = 0;
-  childProcess.execSync = (() => { calls++; return Buffer.from('test-git-context'); }) as unknown as typeof original;
+  childProcess.execFileSync = (() => { calls++; return Buffer.from('test-git-context'); }) as unknown as typeof original;
   syncBuiltinESMExports();
   try {
     const options = { task: { name: 'no Git' }, signingKey: 'test-secret', signerIdentity: 'test' };
@@ -57,7 +57,7 @@ test('Git context is disabled by default and requires explicit opt-in', async ()
     const opted = await createReceipt({ ...options, includeGitContext: true });
     assert(calls > 0);
     assert(opted.environment.git);
-  } finally { childProcess.execSync = original; syncBuiltinESMExports(); }
+  } finally { childProcess.execFileSync = original; syncBuiltinESMExports(); }
 });
 
 test('verification CLI requires trusted algorithm configuration', async () => {
@@ -149,7 +149,8 @@ test('network, drive and escaping artifact paths fail before filesystem resoluti
   fs.realpath = (async () => { calls++; throw new Error('No filesystem lookup allowed'); }) as typeof original;
   try {
     for (const value of ['//attacker.invalid/share/x', '\\\\attacker.invalid\\share\\x', 'C:\\outside\\file', 'C:relative', '../outside', '..\\outside']) {
-      const receipt = structuredClone(vectors.protocolV2.receipt);
+      // v1 leaves labels unsigned, so these paths reach preflight with valid Merkle data.
+      const receipt = structuredClone(vectors.legacyV1.receipt);
       receipt.artifacts[0].path = value;
       const result = await verifyReceipt(receipt, { checkFilesOnDisk: true });
       assert.equal(result.valid, false);

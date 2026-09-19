@@ -12,6 +12,19 @@ from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
 
 
+def _display_copy(value, markdown=False):
+    """Escape untrusted display strings without changing receipt/signature bytes."""
+    if isinstance(value, str):
+        safe = re.sub(r'[\x00-\x1f\x7f-\x9f\u061c\u200b-\u200f\u2028-\u202e\u2060-\u206f\ud800-\udfff\ufeff]',
+                      lambda match: '\\u' + format(ord(match[0]), '04x'), value)
+        return re.sub(r'[\\`*_{}\[\]()|<>~&]', lambda match: '\\' + match[0], safe) if markdown else safe
+    if isinstance(value, dict):
+        return {key: _display_copy(item, markdown) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_display_copy(item, markdown) for item in value]
+    return value
+
+
 def _load_key_material(key_file, role, algorithm):
     """
     Loads signing key material from a file.
@@ -36,6 +49,8 @@ def _load_key_material(key_file, role, algorithm):
         if not isinstance(material, str) or not material:
             raise ValueError('Key file lacks material for configured algorithm and role')
         return material
+    if re.search(r'[{}\[\]]', raw):
+        raise ValueError('Raw key files cannot contain JSON delimiters; use a JSON key envelope')
     return raw
 
 
@@ -245,6 +260,9 @@ def main(argv=None):
             print(json.dumps(result, indent=2))
             sys.exit(0 if result["valid"] else 1)
 
+        result = _display_copy(result)
+        receipt = result['receipt']
+
         print("\n--- PROOF VERIFICATION REPORT ---")
         if result['receipt'] is None:
             for error in result['errors']:
@@ -302,7 +320,7 @@ def main(argv=None):
 
     if args.command == "inspect":
         with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+            receipt = _display_copy(json.load(f))
 
         print("\n=== NYMREL PROOF LEDGER AUDIT INSPECTOR ===")
         print(f"Protocol:    {receipt.get('protocol')} v{receipt.get('version')}")
@@ -347,7 +365,8 @@ def main(argv=None):
                 indent=2,
             )
         else:
-            out_str = f"# Attestation Report: {receipt.get('task', {}).get('name')}\n\n- Proof ID: `{receipt.get('proofId')}`\n- Merkle Root: `{receipt.get('merkle', {}).get('root')}`\n"
+            receipt = _display_copy(receipt, markdown=True)
+            out_str = f"# Attestation Report: {receipt.get('task', {}).get('name')}\n\n- Proof ID: {receipt.get('proofId')}\n- Merkle Root: {receipt.get('merkle', {}).get('root')}\n"
 
         if args.out:
             with open(args.out, "w", encoding="utf-8") as f:

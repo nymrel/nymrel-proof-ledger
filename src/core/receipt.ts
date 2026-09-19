@@ -1,10 +1,10 @@
 /** Versioned proof receipt generation and verification. */
 
 import { createHash, randomBytes } from 'node:crypto';
-import { promises as fs } from 'node:fs';
+import { promises as fs, accessSync, constants, realpathSync, statSync } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { canonicalHash, type CanonicalizationProfile } from './canonical.js';
 import { RECEIPT_PROTOCOL, validateReceiptEnvelope } from './envelope.js';
 import { MerkleTree, type MerkleProfile } from './merkle.js';
@@ -119,21 +119,41 @@ export function sanitizeGitRemote(remote: string): string | undefined {
 /** Gathers non-secret Git lineage without throwing outside a repository. */
 export function getGitContext(cwd: string = process.cwd()): ProofGitContext | undefined {
   try {
-    const commit = execSync('git rev-parse HEAD', { cwd, stdio: ['ignore', 'pipe', 'ignore'] })
+    const normalizeDirectory = (directory: string): string => {
+      const real = realpathSync(directory);
+      return process.platform === 'win32' ? real.toLowerCase() : real;
+    };
+    const root = normalizeDirectory(cwd);
+    const executable = (process.env.PATH ?? '').split(path.delimiter)
+      .filter(directory => {
+        if (!path.isAbsolute(directory)) return false;
+        try { return normalizeDirectory(directory) !== root; } catch { return false; }
+      })
+      .map(directory => path.join(directory, process.platform === 'win32' ? 'git.exe' : 'git'))
+      .find(candidate => {
+        try { accessSync(candidate, constants.X_OK); return statSync(candidate).isFile() && normalizeDirectory(path.dirname(realpathSync(candidate))) !== root; }
+        catch { return false; }
+      });
+    if (!executable) return undefined;
+    const git = realpathSync(executable);
+    const commit = execFileSync(git, ['rev-parse', 'HEAD'], { cwd, shell: false, stdio: ['ignore', 'pipe', 'ignore'] })
       .toString().trim();
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+    const branch = execFileSync(git, ['rev-parse', '--abbrev-ref', 'HEAD'], {
       cwd,
+      shell: false,
       stdio: ['ignore', 'pipe', 'ignore'],
     }).toString().trim();
-    const dirty = execSync('git status --porcelain', {
+    const dirty = execFileSync(git, ['status', '--porcelain'], {
       cwd,
+      shell: false,
       stdio: ['ignore', 'pipe', 'ignore'],
     }).toString().trim().length > 0;
     let remote: string | undefined;
     try {
       remote = sanitizeGitRemote(
-        execSync('git config --get remote.origin.url', {
+        execFileSync(git, ['config', '--get', 'remote.origin.url'], {
           cwd,
+          shell: false,
           stdio: ['ignore', 'pipe', 'ignore'],
         }).toString()
       );
@@ -300,6 +320,10 @@ async function artifactPathWithin(cwd: string, artifactPath: string): Promise<st
   if (path.posix.isAbsolute(artifactPath) || path.win32.isAbsolute(artifactPath) || /^[A-Za-z]:/.test(artifactPath)) return undefined;
   const unresolvedRoot = path.resolve(cwd);
   const portablePath = artifactPath.replace(/\\/g, '/');
+  // Apply the same portable filename policy on every host, before realpath.
+  if (portablePath.split('/').some(part => /[\u0000-\u001f<>:"|?*]/u.test(part) ||
+    /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])$/iu.test(part.split('.')[0].replace(/ +$/, '')) ||
+    (part !== '.' && part !== '..' && /[. ]$/.test(part)))) return undefined;
   const lexicalRelative = path.relative(unresolvedRoot, path.resolve(unresolvedRoot, portablePath));
   if (lexicalRelative === '..' || lexicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(lexicalRelative)) return undefined;
   const root = await fs.realpath(unresolvedRoot).catch(() => unresolvedRoot);
@@ -384,14 +408,29 @@ export async function verifyReceipt(
     );
   }
 
-  let artifactsValid = true;
+  const signatureChecked = hasKey;
+  let signatureValid: boolean | null = null;
+  if (signatureChecked) {
+    signatureValid = ProofSigner.verifySignature(
+      signingPayload(receipt, receipt.signature),
+      receipt.signature.value,
+      options.publicKeyOrSecret as string,
+      options.expectedAlgorithm as SignatureAlgorithm,
+      profiles.canonical
+    );
+    if (!signatureValid) errors.push('Cryptographic signature verification failed with provided key');
+  } else {
+    warnings.push('Signature was not cryptographically verified (no public key or secret provided)');
+  }
+
+  let artifactsValid = options.checkFilesOnDisk !== true || errors.length === 0;
   let checkedArtifacts = 0;
-  if (options.checkFilesOnDisk === true) {
+  if (options.checkFilesOnDisk === true && errors.length === 0) {
     for (const artifact of receipt.artifacts) {
       const fullPath = await artifactPathWithin(cwd, artifact.path);
       if (fullPath === undefined) {
         artifactsValid = false;
-        errors.push(`Artifact path escapes verification root: '${artifact.path}'`);
+        errors.push(`Artifact path escapes verification root or violates portable filename policy: '${artifact.path}'`);
         continue;
       }
       try {
@@ -409,21 +448,6 @@ export async function verifyReceipt(
         );
       }
     }
-  }
-
-  const signatureChecked = hasKey;
-  let signatureValid: boolean | null = null;
-  if (signatureChecked) {
-    signatureValid = ProofSigner.verifySignature(
-      signingPayload(receipt, receipt.signature),
-      receipt.signature.value,
-      options.publicKeyOrSecret as string,
-      options.expectedAlgorithm as SignatureAlgorithm,
-      profiles.canonical
-    );
-    if (!signatureValid) errors.push('Cryptographic signature verification failed with provided key');
-  } else {
-    warnings.push('Signature was not cryptographically verified (no public key or secret provided)');
   }
 
   if (receipt.version === LEGACY_RECEIPT_VERSION) {
