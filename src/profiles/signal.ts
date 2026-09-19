@@ -2,8 +2,8 @@
  * Nymrel Signal customer-facing ProofReceipt attestation profile.
  *
  * The profile binds Signal identifiers, disclosure/claim snapshots and explicit
- * attestation scopes as a normal Proof Ledger artifact. It deliberately does
- * not change Proof Ledger v1 Merkle or signature semantics.
+ * attestation scopes as a normal Proof Ledger artifact. It
+ * uses Proof Ledger v2 binding; legacy v1 core semantics remain unchanged.
  */
 
 import { createHash } from 'node:crypto';
@@ -396,7 +396,7 @@ function compareMirror(receipt: ProofReceipt, envelope: SignalProofEnvelopeV1): 
   const actual = canonicalize(mirror);
   return expected === actual
     ? []
-    : ['Unbound receipt.metadata.signalProfile disagrees with the authoritative bound envelope'];
+    : ['receipt.metadata.signalProfile disagrees with the authoritative bound envelope'];
 }
 
 function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
@@ -420,15 +420,14 @@ function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
  * separately so callers cannot mistake an unchecked signature for verification.
  */
 export async function verifySignalProofBundle(
-  bundle: SignalProofBundleV1,
+  input: unknown,
   options: VerifyReceiptOptions = {}
 ): Promise<SignalProofVerificationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!isRecord(bundle)) {
-    throw new TypeError('Signal proof bundle must be an object');
-  }
+  const bundle = isRecord(input) ? input : {};
+  if (!isRecord(input)) errors.push('Signal proof bundle must be an object');
   if (bundle.profile !== SIGNAL_PROOF_BUNDLE_PROFILE) {
     errors.push(`Unsupported Signal bundle profile: '${String(bundle.profile)}'`);
   }
@@ -440,51 +439,80 @@ export async function verifySignalProofBundle(
   errors.push(...envelopeErrors);
   const profileValidBeforeBinding = errors.length === 0;
 
-  const core = await verifyReceipt(bundle.receipt, options);
+  const diskRequested = options?.checkFilesOnDisk === true;
+  const core = await verifyReceipt(bundle.receipt, diskRequested ? { ...options, checkFilesOnDisk: false } : options);
   errors.push(...core.errors.map((item) => `Proof Ledger: ${item}`));
   warnings.push(...core.warnings.map((item) => `Proof Ledger: ${item}`));
+  if (core.receipt && core.receipt.version !== '2.0.0') {
+    errors.push('Signal requires Proof Ledger receipt version 2.0.0');
+  }
 
   let envelopeBound = false;
   let normalizedEnvelope: SignalProofEnvelopeV1 | undefined;
-  if (envelopeErrors.length === 0) {
-    normalizedEnvelope = cloneAndNormalizeEnvelope(bundle.envelope);
-    const canonicalEnvelope = canonicalize(normalizedEnvelope);
-    const expectedHash = createHash('sha256').update(canonicalEnvelope, 'utf8').digest('hex');
-    const expectedSize = Buffer.byteLength(canonicalEnvelope, 'utf8');
-    const envelopeArtifacts = bundle.receipt.artifacts.filter(
-      (item) => normalizeArtifactPath(item.path) === SIGNAL_PROOF_ENVELOPE_PATH
-    );
-
-    if (envelopeArtifacts.length !== 1) {
-      errors.push(
-        `Signal bundle must bind exactly one '${SIGNAL_PROOF_ENVELOPE_PATH}' artifact; found ${envelopeArtifacts.length}`
+  if (profileValidBeforeBinding && core.valid && core.merkleValid && core.receipt?.version === '2.0.0') {
+    try {
+      normalizedEnvelope = cloneAndNormalizeEnvelope(bundle.envelope as SignalProofEnvelopeV1);
+      const canonicalEnvelope = canonicalize(normalizedEnvelope);
+      const expectedHash = createHash('sha256').update(canonicalEnvelope, 'utf8').digest('hex');
+      const expectedSize = Buffer.byteLength(canonicalEnvelope, 'utf8');
+      const envelopeArtifacts = core.receipt.artifacts.filter(
+        (item) => normalizeArtifactPath(item.path) === SIGNAL_PROOF_ENVELOPE_PATH
       );
-    } else {
-      const artifact = envelopeArtifacts[0];
-      if (artifact.sha256.toLowerCase() !== expectedHash) {
-        errors.push('Bound Signal envelope digest does not match the portable envelope payload');
-      } else if (artifact.sizeBytes !== expectedSize) {
-        errors.push('Bound Signal envelope size does not match the portable envelope payload');
-      } else {
-        envelopeBound = true;
-      }
-      if (artifact.mimeType && artifact.mimeType !== 'application/json') {
-        errors.push(`Signal envelope artifact has unexpected mimeType '${artifact.mimeType}'`);
-      }
-    }
 
-    errors.push(...compareMirror(bundle.receipt, normalizedEnvelope));
+      if (envelopeArtifacts.length !== 1) {
+        errors.push(
+          `Signal bundle must bind exactly one '${SIGNAL_PROOF_ENVELOPE_PATH}' artifact; found ${envelopeArtifacts.length}`
+        );
+      } else {
+        const artifact = envelopeArtifacts[0];
+        if (artifact.sha256.toLowerCase() !== expectedHash) {
+          errors.push('Bound Signal envelope digest does not match the portable envelope payload');
+        } else if (artifact.sizeBytes !== expectedSize) {
+          errors.push('Bound Signal envelope size does not match the portable envelope payload');
+        } else {
+          envelopeBound = true;
+        }
+        if (artifact.mimeType && artifact.mimeType !== 'application/json') {
+          errors.push(`Signal envelope artifact has unexpected mimeType '${artifact.mimeType}'`);
+        }
+      }
+
+      errors.push(...compareMirror(core.receipt, normalizedEnvelope));
+    } catch {
+      normalizedEnvelope = undefined;
+      envelopeBound = false;
+      errors.push('Signal envelope or metadata mirror contains values outside canonical JSON');
+    }
   }
 
+  if (diskRequested) {
+    if (errors.length === 0 && envelopeBound && core.valid) {
+      const diskResult = await verifyReceipt(core.receipt, options);
+      Object.assign(core, diskResult);
+      errors.push(...diskResult.errors.map(item => `Proof Ledger: ${item}`));
+    } else {
+      const message = 'Artifact disk checks skipped because Signal admission failed';
+      core.artifactsValid = false;
+      core.checkedArtifacts = 0;
+      core.valid = false;
+      core.trusted = false;
+      core.errors.push(message);
+      errors.push(`Proof Ledger: ${message}`);
+    }
+  }
+
+  if (core.errors.length > 0) envelopeBound = false;
   const signatureChecked = core.signatureChecked;
   if (!signatureChecked) {
-    warnings.push('Signal validity is not established because no verification key was supplied');
+    warnings.push(options && options.publicKeyOrSecret == null && options.expectedAlgorithm == null
+      ? 'Signal validity is not established because no verification key was supplied'
+      : 'Signal validity is not established because verification context or receipt validation prevented signature checking');
   }
 
   let signatureMode: SignalSignatureMode = 'not_checked';
   if (signatureChecked && core.signatureValid) {
     signatureMode =
-      bundle.receipt.signature.algorithm === 'Ed25519'
+      core.receipt?.signature.algorithm === 'Ed25519'
         ? 'asymmetric_signature'
         : 'shared_secret_integrity';
   }
@@ -498,7 +526,7 @@ export async function verifySignalProofBundle(
     core.artifactsValid &&
     core.errors.length === 0;
   const valid = Boolean(structurallyValid && signatureChecked && core.signatureValid);
-  const authoritativeEnvelope = normalizedEnvelope;
+  const authoritativeEnvelope = structurallyValid ? normalizedEnvelope : undefined;
 
   return {
     valid,

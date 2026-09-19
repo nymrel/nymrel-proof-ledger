@@ -15,6 +15,7 @@ from nymrel_proof_ledger.signal import (
     verify_signal_proof_bundle,
 )
 from nymrel_proof_ledger.signer import ProofSigner
+from nymrel_proof_ledger.receipt import create_receipt
 
 
 EXPECTED_FIXTURE_DIGEST = "sha256:dbad113cf71570d27242476d5d9fc9f21328d21d3ce5082f98d1fe7ce5436dcb"
@@ -167,9 +168,17 @@ class TestSignalProofProfile(unittest.TestCase):
         result = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
         self.assertFalse(result["core"]["valid"])
         self.assertFalse(result["valid"])
-        self.assertTrue(result["envelopeBound"])
+        self.assertFalse(result["envelopeBound"])
         self.assertTrue(any("signature verification failed" in error for error in result["core"]["errors"]))
-        self.assertTrue(any("disagrees" in error for error in result["errors"]))
+        self.assertIsNone(result['authoritative']['signalReceiptId'])
+        tampered['receipt'] = create_receipt(task=original['receipt']['task'], signing_key=secret,
+            signer_identity='fixture', metadata=tampered['receipt']['metadata'],
+            artifacts=[{'path': 'signal-proof-envelope.json', 'data': canonicalize_signal_proof_envelope(tampered['envelope']), 'mimeType': 'application/json'}])
+        resigned = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
+        self.assertTrue(resigned['core']['trusted'])
+        self.assertFalse(resigned['valid'])
+        self.assertTrue(any('disagrees' in error for error in resigned['errors']))
+        self.assertIsNone(resigned['authoritative']['signalReceiptId'])
 
     def test_unknown_version_and_reserved_path_fail_closed(self):
         unsupported = fixture_envelope()

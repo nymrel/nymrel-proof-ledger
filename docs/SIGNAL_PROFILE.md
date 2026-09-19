@@ -1,6 +1,6 @@
 # Nymrel Signal ProofReceipt profile
 
-The Signal profile adds a customer-facing evidence envelope to Proof Ledger without changing the v1 Merkle tree, signature payload, or receipt protocol.
+The Signal profile adds a customer-facing evidence envelope using the existing Proof Ledger v2 receipt protocol. Core legacy v1 wire behavior remains unchanged, but Signal does not accept v1 receipts.
 
 ## What is bound
 
@@ -154,7 +154,7 @@ assert result["valid"]
 
 ## Metadata is not authoritative
 
-Proof Ledger v1 does not include `receipt.metadata` in the Merkle tree or signature payload. The profile mirrors selected fields under `metadata.signalProfile` only for convenience. A mismatch between that mirror and the bound envelope is a profile validation error.
+Signal requires Proof Ledger v2 receipts. Legacy v1 cannot authenticate the artifact label or metadata mirror and is rejected even when its core signature is valid. The profile mirrors selected fields under `metadata.signalProfile` only for convenience; consumers derive Signal values from the bound envelope. A mismatch between that mirror and the bound envelope is a profile validation error.
 
 Consumers must never use metadata-only Signal IDs or scopes as verified values.
 
@@ -162,9 +162,14 @@ Consumers must never use metadata-only Signal IDs or scopes as verified values.
 
 The portable bundle verifier validates the in-memory envelope against the bound artifact digest. The core `checkFilesOnDisk` option still checks every receipt artifact by path. Enable it only when the reserved envelope and all other artifacts have been materialized in the chosen `cwd`; otherwise use portable envelope validation plus separate application-controlled artifact retrieval.
 
+Signal first verifies core cryptography and profile/envelope binding with disk I/O disabled. It performs requested disk checks only after those checks pass. Failed admission reports zero checked artifacts. `authoritative` fields are populated only for structurally valid bundles; consumers must still require `valid` for authenticated acceptance. Unkeyed structural inspection never establishes signer identity or authority.
+
+When requested disk checks cannot run because admission failed, `core.valid`, `core.trusted` and `core.artifactsValid` are false. Any core failure, including a disk mismatch, makes the Signal `envelopeBound` admission flag false; use the core errors to distinguish cryptographic and disk failures. TypeScript disk checks require the literal boolean `true`, matching its core API.
+
 ## Versioning and release boundary
 
 - Unknown Signal profile and bundle major versions fail closed.
 - The profile does not alter existing `ProofReceipt` v1 leaf or signature construction.
+- Malformed JSON-shaped bundles, receipts and noncanonical envelope values return structured invalid results. This does not promise safe execution of arbitrary JavaScript proxies/getters or arbitrary Python objects.
 - No package publication is implied by merging the source change. npm/PyPI publication and `v*` tags remain separate release decisions.
-- If structured metadata binding becomes a general Proof Ledger capability, it should be introduced through an explicitly versioned core protocol with TypeScript/Python parity fixtures.
+- V2 already binds metadata through its signed payload; Signal additionally validates the envelope artifact and convenience mirror. Both runtimes offer explicit Git-context opt-in on creation, disabled by default.

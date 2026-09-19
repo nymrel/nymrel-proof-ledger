@@ -12,6 +12,7 @@ import {
   type SignalProofEnvelopeV1,
 } from '../../src/profiles/signal.js';
 import { ProofSigner } from '../../src/core/signer.js';
+import { createReceipt } from '../../src/core/receipt.js';
 
 const EXPECTED_FIXTURE_DIGEST =
   'sha256:dbad113cf71570d27242476d5d9fc9f21328d21d3ce5082f98d1fe7ce5436dcb';
@@ -197,9 +198,18 @@ describe('Nymrel Signal proof profile', () => {
 
     assert.strictEqual(result.core.valid, false);
     assert.strictEqual(result.valid, false);
-    assert.strictEqual(result.envelopeBound, true);
+    assert.strictEqual(result.envelopeBound, false);
     assert.ok(result.core.errors.some((error) => error.includes('signature verification failed')));
-    assert.ok(result.errors.some((error) => error.includes('disagrees')));
+    assert.strictEqual(result.authoritative.signalReceiptId, undefined);
+
+    tampered.receipt = await createReceipt({ task: original.receipt.task, signingKey: secret,
+      signerIdentity: 'fixture', metadata: tampered.receipt.metadata,
+      artifacts: [{ path: 'signal-proof-envelope.json', data: canonicalizeSignalProofEnvelope(tampered.envelope), mimeType: 'application/json' }] });
+    const resigned = await verifySignalProofBundle(tampered, { ...{ publicKeyOrSecret: secret }, expectedAlgorithm: 'HMAC-SHA256' });
+    assert.strictEqual(resigned.core.trusted, true);
+    assert.strictEqual(resigned.valid, false);
+    assert.ok(resigned.errors.some(error => error.includes('disagrees')));
+    assert.strictEqual(resigned.authoritative.signalReceiptId, undefined);
   });
 
   it('fails closed on unsupported versions and reserved artifact-path collisions', async () => {
