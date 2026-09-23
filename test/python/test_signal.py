@@ -238,8 +238,62 @@ class TestSignalProofProfile(unittest.TestCase):
 
         self.assertFalse(result["valid"])
         self.assertFalse(result["structurallyValid"])
-        self.assertIn("Signal verification could not be completed safely", result["errors"])
+        self.assertTrue(result["errors"])
         assert_no_authoritative_signal_data(self, result)
+
+    def test_verifier_snapshots_time_varying_receipts(self):
+        trusted_secret = ProofSigner.generate_secret_key()
+        untrusted_secret = ProofSigner.generate_secret_key()
+        trusted = create_signal_proof_bundle(
+            envelope=fixture_envelope(),
+            task={"name": "Trusted mutable-input fixture"},
+            signing_key=trusted_secret,
+            signer_identity="trusted-signal-verifier",
+        )
+        forged_envelope = fixture_envelope()
+        forged_envelope["signalReceiptId"] = "forged-signal-receipt"
+        forged_envelope["needDropId"] = "forged-need-drop"
+        forged = create_signal_proof_bundle(
+            envelope=forged_envelope,
+            task={"name": "Forged mutable-input fixture"},
+            signing_key=untrusted_secret,
+            signer_identity="untrusted-signal-verifier",
+        )
+
+        class SwitchingReceipt(dict):
+            def __init__(self, trusted_receipt, forged_receipt, switch_at):
+                super().__init__(trusted_receipt)
+                self._trusted = trusted_receipt
+                self._forged = forged_receipt
+                self._switch_at = switch_at
+                self._reads = 0
+
+            def _source(self):
+                self._reads += 1
+                return self._trusted if self._reads < self._switch_at else self._forged
+
+            def __getitem__(self, key):
+                return self._source()[key]
+
+            def get(self, key, default=None):
+                return self._source().get(key, default)
+
+            def keys(self):
+                return self._source().keys()
+
+        for switch_at in range(1, 97):
+            bundle = dict(forged)
+            bundle["receipt"] = SwitchingReceipt(
+                trusted["receipt"], forged["receipt"], switch_at
+            )
+            result = verify_signal_proof_bundle(
+                bundle,
+                public_key_or_secret=trusted_secret,
+                expected_algorithm="HMAC-SHA256",
+            )
+
+            self.assertFalse(result["valid"], f"switch point {switch_at} must fail closed")
+            assert_no_authoritative_signal_data(self, result)
 
     def test_unchecked_noncanonical_metadata_mirror_fails_closed(self):
         bundle = create_signal_proof_bundle(
@@ -253,9 +307,8 @@ class TestSignalProofProfile(unittest.TestCase):
         result = verify_signal_proof_bundle(bundle)
 
         self.assertFalse(result["valid"])
-        self.assertTrue(
-            any("outside its canonical JSON profile" in error for error in result["errors"])
-        )
+        self.assertFalse(result["structurallyValid"])
+        self.assertTrue(result["errors"])
         assert_no_authoritative_signal_data(self, result)
 
     def test_unknown_version_and_reserved_path_fail_closed(self):

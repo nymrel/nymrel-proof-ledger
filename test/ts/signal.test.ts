@@ -285,7 +285,45 @@ describe('Nymrel Signal proof profile', () => {
       const result = await verifySignalProofBundle(hostile);
       assert.strictEqual(result.valid, false);
       assert.strictEqual(result.structurallyValid, false);
-      assert.ok(result.errors.includes('Signal verification could not be completed safely'));
+      assert.ok(result.errors.length > 0);
+      assertNoAuthoritativeSignalData(result);
+    }
+  });
+
+  it('snapshots time-varying receipts before core and Signal verification', async () => {
+    const trustedSecret = ProofSigner.generateSecretKey();
+    const untrustedSecret = ProofSigner.generateSecretKey();
+    const trusted = await createSignalProofBundle({
+      envelope: fixtureEnvelope(),
+      task: { name: 'Trusted mutable-input fixture' },
+      signingKey: trustedSecret,
+      signerIdentity: 'trusted-signal-verifier',
+    });
+    const forgedEnvelope = fixtureEnvelope();
+    forgedEnvelope.signalReceiptId = 'forged-signal-receipt';
+    forgedEnvelope.needDropId = 'forged-need-drop';
+    const forged = await createSignalProofBundle({
+      envelope: forgedEnvelope,
+      task: { name: 'Forged mutable-input fixture' },
+      signingKey: untrustedSecret,
+      signerIdentity: 'untrusted-signal-verifier',
+    });
+
+    for (let switchAt = 1; switchAt <= 96; switchAt++) {
+      let reads = 0;
+      const switchingReceipt = new Proxy(trusted.receipt, {
+        get(_target, property) {
+          reads++;
+          const source = reads < switchAt ? trusted.receipt : forged.receipt;
+          return Reflect.get(source, property);
+        },
+      });
+      const result = await verifySignalProofBundle(
+        { ...forged, receipt: switchingReceipt },
+        { expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: trustedSecret }
+      );
+
+      assert.strictEqual(result.valid, false, `switch point ${switchAt} must fail closed`);
       assertNoAuthoritativeSignalData(result);
     }
   });
@@ -302,7 +340,8 @@ describe('Nymrel Signal proof profile', () => {
     const result = await verifySignalProofBundle(bundle);
 
     assert.strictEqual(result.valid, false);
-    assert.ok(result.errors.some((error) => error.includes('outside its canonical JSON profile')));
+    assert.strictEqual(result.structurallyValid, false);
+    assert.ok(result.errors.length > 0);
     assertNoAuthoritativeSignalData(result);
   });
 

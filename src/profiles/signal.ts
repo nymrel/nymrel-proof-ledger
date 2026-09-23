@@ -127,6 +127,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function freezeJsonSnapshot(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    for (const item of value) freezeJsonSnapshot(item);
+    return Object.freeze(value);
+  }
+  if (isRecord(value)) {
+    for (const item of Object.values(value)) freezeJsonSnapshot(item);
+    return Object.freeze(value);
+  }
+  return value;
+}
+
+/**
+ * Detaches adversarial input before any validation. Canonicalization both
+ * enforces the public JSON boundary and reads each accepted value into one
+ * stable representation; parsing removes proxies and accessors.
+ */
+function snapshotJsonInput(value: unknown): unknown {
+  return freezeJsonSnapshot(JSON.parse(canonicalize(value)) as unknown);
+}
+
 function normalizeArtifactPath(value: string): string {
   return value.replace(/\\/g, '/').replace(/^\.\//, '');
 }
@@ -468,7 +489,8 @@ async function verifySignalProofBundleInternal(
 ): Promise<SignalProofVerificationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const bundleRecord = isRecord(bundle) ? bundle : undefined;
+  const snapshot = snapshotJsonInput(bundle);
+  const bundleRecord = isRecord(snapshot) ? snapshot : undefined;
 
   if (bundleRecord === undefined) {
     errors.push('Signal proof bundle must be an object');

@@ -7,6 +7,7 @@ It requires Proof Ledger v2 binding; legacy v1 core semantics remain unchanged.
 
 from datetime import datetime
 import hashlib
+import json
 import re
 from typing import Any, Dict, List, Optional
 
@@ -398,8 +399,11 @@ def _verify_signal_proof_bundle(
     """Verifies core Proof Ledger integrity and the Signal-specific envelope binding."""
     errors: List[str] = []
     warnings: List[str] = []
-    bundle_record = bundle if _is_record(bundle) else {}
-    if not _is_record(bundle):
+    # Detach public input before validation so a dict subclass cannot change
+    # fields between core verification and Signal admission.
+    snapshot = json.loads(canonicalize(bundle))
+    bundle_record = snapshot if _is_record(snapshot) else {}
+    if not _is_record(snapshot):
         errors.append("Signal proof bundle must be an object")
     if bundle_record.get("profile") != SIGNAL_PROOF_BUNDLE_PROFILE:
         errors.append(f"Unsupported Signal bundle profile: '{bundle_record.get('profile')}'")
