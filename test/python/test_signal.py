@@ -57,6 +57,16 @@ def fixture_envelope():
     }
 
 
+def assert_no_authoritative_signal_data(test_case, result):
+    test_case.assertIsNone(result["authoritative"]["signalReceiptId"])
+    test_case.assertIsNone(result["authoritative"]["needDropId"])
+    test_case.assertIsNone(result["authoritative"]["challengeId"])
+    test_case.assertEqual(result["authoritative"]["attestedScopes"], [])
+    test_case.assertEqual(result["authoritative"]["publicEvidenceRefs"], [])
+    test_case.assertEqual(result["authoritative"]["nonPublicEvidenceCount"], 0)
+    test_case.assertIn("that the described execution occurred", result["doesNotProve"])
+
+
 class TestSignalProofProfile(unittest.TestCase):
     def test_algorithm_context_cannot_be_chosen_by_bundle(self):
         public = ProofSigner.generate_key_pair()['publicKey']
@@ -121,6 +131,7 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertFalse(result["signatureChecked"])
         self.assertEqual(result["signatureMode"], "not_checked")
         self.assertTrue(any("no verification key" in warning for warning in result["warnings"]))
+        assert_no_authoritative_signal_data(self, result)
 
     def test_asymmetric_verification_does_not_resolve_identity(self):
         keypair = ProofSigner.generate_key_pair()
@@ -153,6 +164,7 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertFalse(result["envelopeBound"])
         self.assertTrue(any("digest does not match" in error for error in result["errors"]))
+        assert_no_authoritative_signal_data(self, result)
 
     def test_signed_metadata_mirror_disagreement_is_detected(self):
         secret = ProofSigner.generate_secret_key()
@@ -170,15 +182,134 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertFalse(result["valid"])
         self.assertFalse(result["envelopeBound"])
         self.assertTrue(any("signature verification failed" in error for error in result["core"]["errors"]))
-        self.assertIsNone(result['authoritative']['signalReceiptId'])
-        tampered['receipt'] = create_receipt(task=original['receipt']['task'], signing_key=secret,
-            signer_identity='fixture', metadata=tampered['receipt']['metadata'],
-            artifacts=[{'path': 'signal-proof-envelope.json', 'data': canonicalize_signal_proof_envelope(tampered['envelope']), 'mimeType': 'application/json'}])
-        resigned = verify_signal_proof_bundle(tampered, expected_algorithm='HMAC-SHA256', public_key_or_secret=secret)
+        assert_no_authoritative_signal_data(self, result)
+
+        tampered['receipt'] = create_receipt(
+            task=original['receipt']['task'],
+            signing_key=secret,
+            signer_identity='fixture',
+            metadata=tampered['receipt']['metadata'],
+            artifacts=[{
+                'path': 'signal-proof-envelope.json',
+                'data': canonicalize_signal_proof_envelope(tampered['envelope']),
+                'mimeType': 'application/json',
+            }],
+        )
+        resigned = verify_signal_proof_bundle(
+            tampered,
+            expected_algorithm='HMAC-SHA256',
+            public_key_or_secret=secret,
+        )
         self.assertTrue(resigned['core']['trusted'])
         self.assertFalse(resigned['valid'])
         self.assertTrue(any('disagrees' in error for error in resigned['errors']))
-        self.assertIsNone(resigned['authoritative']['signalReceiptId'])
+        assert_no_authoritative_signal_data(self, resigned)
+
+    def test_verifier_is_total_and_empty_for_arbitrary_malformed_bundles(self):
+        malformed_bundles = [
+            None,
+            [],
+            "not-a-bundle",
+            {},
+            {
+                "profile": "nymrel-signal-proof-bundle",
+                "bundleVersion": "1.0.0",
+                "envelope": fixture_envelope(),
+                "receipt": {"artifacts": "not-an-array"},
+            },
+        ]
+
+        for malformed in malformed_bundles:
+            result = verify_signal_proof_bundle(
+                malformed,
+                public_key_or_secret="not-a-valid-key",
+                expected_algorithm="HMAC-SHA256",
+            )
+            self.assertFalse(result["valid"])
+            self.assertFalse(result["structurallyValid"])
+            assert_no_authoritative_signal_data(self, result)
+
+    def test_verifier_is_total_for_hostile_dict_subclasses(self):
+        class HostileDict(dict):
+            def get(self, key, default=None):
+                raise RuntimeError("hostile dict getter")
+
+        result = verify_signal_proof_bundle(HostileDict())
+
+        self.assertFalse(result["valid"])
+        self.assertFalse(result["structurallyValid"])
+        self.assertTrue(result["errors"])
+        assert_no_authoritative_signal_data(self, result)
+
+    def test_verifier_snapshots_time_varying_receipts(self):
+        trusted_secret = ProofSigner.generate_secret_key()
+        untrusted_secret = ProofSigner.generate_secret_key()
+        trusted = create_signal_proof_bundle(
+            envelope=fixture_envelope(),
+            task={"name": "Trusted mutable-input fixture"},
+            signing_key=trusted_secret,
+            signer_identity="trusted-signal-verifier",
+        )
+        forged_envelope = fixture_envelope()
+        forged_envelope["signalReceiptId"] = "forged-signal-receipt"
+        forged_envelope["needDropId"] = "forged-need-drop"
+        forged = create_signal_proof_bundle(
+            envelope=forged_envelope,
+            task={"name": "Forged mutable-input fixture"},
+            signing_key=untrusted_secret,
+            signer_identity="untrusted-signal-verifier",
+        )
+
+        class SwitchingReceipt(dict):
+            def __init__(self, trusted_receipt, forged_receipt, switch_at):
+                super().__init__(trusted_receipt)
+                self._trusted = trusted_receipt
+                self._forged = forged_receipt
+                self._switch_at = switch_at
+                self._reads = 0
+
+            def _source(self):
+                self._reads += 1
+                return self._trusted if self._reads < self._switch_at else self._forged
+
+            def __getitem__(self, key):
+                return self._source()[key]
+
+            def get(self, key, default=None):
+                return self._source().get(key, default)
+
+            def keys(self):
+                return self._source().keys()
+
+        for switch_at in range(1, 97):
+            bundle = dict(forged)
+            bundle["receipt"] = SwitchingReceipt(
+                trusted["receipt"], forged["receipt"], switch_at
+            )
+            result = verify_signal_proof_bundle(
+                bundle,
+                public_key_or_secret=trusted_secret,
+                expected_algorithm="HMAC-SHA256",
+            )
+
+            self.assertFalse(result["valid"], f"switch point {switch_at} must fail closed")
+            assert_no_authoritative_signal_data(self, result)
+
+    def test_unchecked_noncanonical_metadata_mirror_fails_closed(self):
+        bundle = create_signal_proof_bundle(
+            envelope=fixture_envelope(),
+            task={"name": "Non-canonical mirror fixture"},
+            signing_key=ProofSigner.generate_secret_key(),
+            signer_identity="signal-internal-verifier",
+        )
+        bundle["receipt"]["metadata"]["signalProfile"]["invalid"] = {"not-json"}
+
+        result = verify_signal_proof_bundle(bundle)
+
+        self.assertFalse(result["valid"])
+        self.assertFalse(result["structurallyValid"])
+        self.assertTrue(result["errors"])
+        assert_no_authoritative_signal_data(self, result)
 
     def test_unknown_version_and_reserved_path_fail_closed(self):
         unsupported = fixture_envelope()

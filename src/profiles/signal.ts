@@ -127,6 +127,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function freezeJsonSnapshot(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    for (const item of value) freezeJsonSnapshot(item);
+    return Object.freeze(value);
+  }
+  if (isRecord(value)) {
+    for (const item of Object.values(value)) freezeJsonSnapshot(item);
+    return Object.freeze(value);
+  }
+  return value;
+}
+
+/**
+ * Detaches adversarial input before any validation. Canonicalization both
+ * enforces the public JSON boundary and reads each accepted value into one
+ * stable representation; parsing removes proxies and accessors.
+ */
+function snapshotJsonInput(value: unknown): unknown {
+  return freezeJsonSnapshot(JSON.parse(canonicalize(value)) as unknown);
+}
+
 function normalizeArtifactPath(value: string): string {
   return value.replace(/\\/g, '/').replace(/^\.\//, '');
 }
@@ -392,11 +413,15 @@ function compareMirror(receipt: ProofReceipt, envelope: SignalProofEnvelopeV1): 
   if (mirror === undefined) return [];
   if (!isRecord(mirror)) return ['receipt.metadata.signalProfile must be an object when present'];
 
-  const expected = canonicalize(mirrorFromEnvelope(envelope));
-  const actual = canonicalize(mirror);
-  return expected === actual
-    ? []
-    : ['receipt.metadata.signalProfile disagrees with the authoritative bound envelope'];
+  try {
+    const expected = canonicalize(mirrorFromEnvelope(envelope));
+    const actual = canonicalize(mirror);
+    return expected === actual
+      ? []
+      : ['Unbound receipt.metadata.signalProfile disagrees with the authoritative bound envelope'];
+  } catch {
+    return ['receipt.metadata.signalProfile could not be canonicalized'];
+  }
 }
 
 function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
@@ -414,33 +439,83 @@ function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
   return boundaries;
 }
 
+function failedCoreVerification(): VerificationResult {
+  return {
+    valid: false,
+    trusted: false,
+    merkleValid: false,
+    signatureChecked: false,
+    signatureValid: null,
+    artifactsValid: false,
+    errors: ['Verification could not be completed safely'],
+    warnings: [],
+    checkedArtifacts: 0,
+    receipt: null,
+  };
+}
+
+function failedSignalProofVerification(): SignalProofVerificationResult {
+  return {
+    valid: false,
+    structurallyValid: false,
+    profileValid: false,
+    envelopeBound: false,
+    signatureChecked: false,
+    signatureMode: 'not_checked',
+    signerIdentityTrust: 'unresolved',
+    core: failedCoreVerification(),
+    errors: ['Signal verification could not be completed safely'],
+    warnings: [],
+    authoritative: {
+      signalReceiptId: undefined,
+      needDropId: undefined,
+      challengeId: undefined,
+      attestedScopes: [],
+      publicEvidenceRefs: [],
+      nonPublicEvidenceCount: 0,
+    },
+    doesNotProve: deriveDoesNotProve([]),
+  };
+}
+
 /**
  * Verifies the core Proof Ledger receipt and the Signal-specific binding.
  * `valid` requires a supplied verification key; structural integrity is exposed
  * separately so callers cannot mistake an unchecked signature for verification.
  */
-export async function verifySignalProofBundle(
-  input: unknown,
+async function verifySignalProofBundleInternal(
+  bundle: unknown,
   options: VerifyReceiptOptions = {}
 ): Promise<SignalProofVerificationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const snapshot = snapshotJsonInput(bundle);
+  const bundleRecord = isRecord(snapshot) ? snapshot : undefined;
 
-  const bundle = isRecord(input) ? input : {};
-  if (!isRecord(input)) errors.push('Signal proof bundle must be an object');
-  if (bundle.profile !== SIGNAL_PROOF_BUNDLE_PROFILE) {
-    errors.push(`Unsupported Signal bundle profile: '${String(bundle.profile)}'`);
+  if (bundleRecord === undefined) {
+    errors.push('Signal proof bundle must be an object');
   }
-  if (bundle.bundleVersion !== SIGNAL_PROOF_BUNDLE_VERSION) {
-    errors.push(`Unsupported Signal bundle version: '${String(bundle.bundleVersion)}'`);
+  if (bundleRecord?.profile !== SIGNAL_PROOF_BUNDLE_PROFILE) {
+    errors.push(`Unsupported Signal bundle profile: '${String(bundleRecord?.profile)}'`);
+  }
+  if (bundleRecord?.bundleVersion !== SIGNAL_PROOF_BUNDLE_VERSION) {
+    errors.push(`Unsupported Signal bundle version: '${String(bundleRecord?.bundleVersion)}'`);
   }
 
-  const envelopeErrors = validateSignalProofEnvelope(bundle.envelope);
+  const envelopeErrors = validateSignalProofEnvelope(bundleRecord?.envelope);
   errors.push(...envelopeErrors);
   const profileValidBeforeBinding = errors.length === 0;
 
+  let core: VerificationResult;
   const diskRequested = options?.checkFilesOnDisk === true;
-  const core = await verifyReceipt(bundle.receipt, diskRequested ? { ...options, checkFilesOnDisk: false } : options);
+  try {
+    core = await verifyReceipt(
+      bundleRecord?.receipt,
+      diskRequested ? { ...options, checkFilesOnDisk: false } : options
+    );
+  } catch {
+    core = failedCoreVerification();
+  }
   errors.push(...core.errors.map((item) => `Proof Ledger: ${item}`));
   warnings.push(...core.warnings.map((item) => `Proof Ledger: ${item}`));
   if (core.receipt && core.receipt.version !== '2.0.0') {
@@ -451,7 +526,9 @@ export async function verifySignalProofBundle(
   let normalizedEnvelope: SignalProofEnvelopeV1 | undefined;
   if (profileValidBeforeBinding && core.valid && core.merkleValid && core.receipt?.version === '2.0.0') {
     try {
-      normalizedEnvelope = cloneAndNormalizeEnvelope(bundle.envelope as SignalProofEnvelopeV1);
+      normalizedEnvelope = cloneAndNormalizeEnvelope(
+        bundleRecord?.envelope as SignalProofEnvelopeV1
+      );
       const canonicalEnvelope = canonicalize(normalizedEnvelope);
       const expectedHash = createHash('sha256').update(canonicalEnvelope, 'utf8').digest('hex');
       const expectedSize = Buffer.byteLength(canonicalEnvelope, 'utf8');
@@ -510,9 +587,9 @@ export async function verifySignalProofBundle(
   }
 
   let signatureMode: SignalSignatureMode = 'not_checked';
-  if (signatureChecked && core.signatureValid) {
+  if (signatureChecked && core.signatureValid && core.receipt !== null) {
     signatureMode =
-      core.receipt?.signature.algorithm === 'Ed25519'
+      core.receipt.signature.algorithm === 'Ed25519'
         ? 'asymmetric_signature'
         : 'shared_secret_integrity';
   }
@@ -525,8 +602,8 @@ export async function verifySignalProofBundle(
     core.merkleValid &&
     core.artifactsValid &&
     core.errors.length === 0;
-  const valid = Boolean(structurallyValid && signatureChecked && core.signatureValid);
-  const authoritativeEnvelope = structurallyValid ? normalizedEnvelope : undefined;
+  const valid = Boolean(structurallyValid && core.trusted);
+  const authoritativeEnvelope = valid ? normalizedEnvelope : undefined;
 
   return {
     valid,
@@ -553,4 +630,15 @@ export async function verifySignalProofBundle(
     },
     doesNotProve: deriveDoesNotProve(authoritativeEnvelope?.attestedScopes ?? []),
   };
+}
+
+export async function verifySignalProofBundle(
+  bundle: unknown,
+  options: VerifyReceiptOptions = {}
+): Promise<SignalProofVerificationResult> {
+  try {
+    return await verifySignalProofBundleInternal(bundle, options);
+  } catch {
+    return failedSignalProofVerification();
+  }
 }
