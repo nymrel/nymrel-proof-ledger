@@ -7,6 +7,7 @@ It requires Proof Ledger v2 binding; legacy v1 core semantics remain unchanged.
 
 from datetime import datetime
 import hashlib
+import json
 import re
 from typing import Any, Dict, List, Optional
 
@@ -318,11 +319,14 @@ def _compare_mirror(receipt: Dict[str, Any], envelope: Dict[str, Any]) -> List[s
         return []
     if not _is_record(mirror):
         return ["receipt.metadata.signalProfile must be an object when present"]
-    if canonicalize(mirror) != canonicalize(_mirror_from_envelope(envelope)):
-        return [
-            "receipt.metadata.signalProfile disagrees with the authoritative bound envelope"
-        ]
-    return []
+    try:
+        if canonicalize(mirror) != canonicalize(_mirror_from_envelope(envelope)):
+            return [
+                "Unbound receipt.metadata.signalProfile disagrees with the authoritative bound envelope"
+            ]
+        return []
+    except (TypeError, ValueError):
+        return ["receipt.metadata.signalProfile could not be canonicalized"]
 
 
 def _does_not_prove(scopes: List[str]) -> List[str]:
@@ -345,7 +349,46 @@ def _does_not_prove(scopes: List[str]) -> List[str]:
     return boundaries
 
 
-def verify_signal_proof_bundle(
+def _failed_core_verification() -> Dict[str, Any]:
+    return {
+        "valid": False,
+        "trusted": False,
+        "merkleValid": False,
+        "signatureChecked": False,
+        "signatureValid": None,
+        "artifactsValid": False,
+        "errors": ["Verification could not be completed safely"],
+        "warnings": [],
+        "checkedArtifacts": 0,
+        "receipt": None,
+    }
+
+
+def _failed_signal_proof_verification() -> Dict[str, Any]:
+    return {
+        "valid": False,
+        "structurallyValid": False,
+        "profileValid": False,
+        "envelopeBound": False,
+        "signatureChecked": False,
+        "signatureMode": "not_checked",
+        "signerIdentityTrust": "unresolved",
+        "core": _failed_core_verification(),
+        "errors": ["Signal verification could not be completed safely"],
+        "warnings": [],
+        "authoritative": {
+            "signalReceiptId": None,
+            "needDropId": None,
+            "challengeId": None,
+            "attestedScopes": [],
+            "publicEvidenceRefs": [],
+            "nonPublicEvidenceCount": 0,
+        },
+        "doesNotProve": _does_not_prove([]),
+    }
+
+
+def _verify_signal_proof_bundle(
     bundle: Any,
     public_key_or_secret: Optional[str] = None,
     check_files_on_disk: bool = False,
@@ -356,26 +399,32 @@ def verify_signal_proof_bundle(
     """Verifies core Proof Ledger integrity and the Signal-specific envelope binding."""
     errors: List[str] = []
     warnings: List[str] = []
-    if not _is_record(bundle):
+    # Detach public input before validation so a dict subclass cannot change
+    # fields between core verification and Signal admission.
+    snapshot = json.loads(canonicalize(bundle))
+    bundle_record = snapshot if _is_record(snapshot) else {}
+    if not _is_record(snapshot):
         errors.append("Signal proof bundle must be an object")
-        bundle = {}
-    if bundle.get("profile") != SIGNAL_PROOF_BUNDLE_PROFILE:
-        errors.append(f"Unsupported Signal bundle profile: '{bundle.get('profile')}'")
-    if bundle.get("bundleVersion") != SIGNAL_PROOF_BUNDLE_VERSION:
-        errors.append(f"Unsupported Signal bundle version: '{bundle.get('bundleVersion')}'")
+    if bundle_record.get("profile") != SIGNAL_PROOF_BUNDLE_PROFILE:
+        errors.append(f"Unsupported Signal bundle profile: '{bundle_record.get('profile')}'")
+    if bundle_record.get("bundleVersion") != SIGNAL_PROOF_BUNDLE_VERSION:
+        errors.append(f"Unsupported Signal bundle version: '{bundle_record.get('bundleVersion')}'")
 
-    envelope = bundle.get("envelope")
+    envelope = bundle_record.get("envelope")
     envelope_errors = validate_signal_proof_envelope(envelope)
     errors.extend(envelope_errors)
     profile_valid_before_binding = not errors
 
-    core = verify_receipt(
-        bundle.get("receipt", {}),
-        public_key_or_secret=public_key_or_secret,
-        check_files_on_disk=False,
-        cwd=cwd,
-        expected_algorithm=expected_algorithm,
-    )
+    try:
+        core = verify_receipt(
+            bundle_record.get("receipt"),
+            public_key_or_secret=public_key_or_secret,
+            check_files_on_disk=False,
+            cwd=cwd,
+            expected_algorithm=expected_algorithm,
+        )
+    except Exception:  # Public profile verification is total and fail-closed.
+        core = _failed_core_verification()
     errors.extend("Proof Ledger: " + item for item in core.get("errors", []))
     warnings.extend("Proof Ledger: " + item for item in core.get("warnings", []))
     receipt = core['receipt']
@@ -439,10 +488,10 @@ def verify_signal_proof_bundle(
         )
 
     signature_mode = "not_checked"
-    if signature_checked and core.get("signatureValid"):
+    if signature_checked and core.get("signatureValid") and _is_record(receipt):
         signature_mode = (
             "asymmetric_signature"
-            if receipt['signature']['algorithm'] == "Ed25519"
+            if receipt.get("signature", {}).get("algorithm") == "Ed25519"
             else "shared_secret_integrity"
         )
 
@@ -455,11 +504,11 @@ def verify_signal_proof_bundle(
         and core.get("artifactsValid")
         and not core.get("errors")
     )
-    valid = bool(structurally_valid and signature_checked and core.get("signatureValid"))
+    valid = bool(structurally_valid and core.get("trusted"))
 
-    normalized = normalized if structurally_valid else None
-    evidence = normalized.get("evidence", []) if normalized else []
-    scopes = normalized.get("attestedScopes", []) if normalized else []
+    authoritative = normalized if valid else None
+    evidence = authoritative.get("evidence", []) if authoritative else []
+    scopes = authoritative.get("attestedScopes", []) if authoritative else []
     return {
         "valid": valid,
         "structurallyValid": structurally_valid,
@@ -472,12 +521,33 @@ def verify_signal_proof_bundle(
         "errors": errors,
         "warnings": warnings,
         "authoritative": {
-            "signalReceiptId": normalized.get("signalReceiptId") if normalized else None,
-            "needDropId": normalized.get("needDropId") if normalized else None,
-            "challengeId": normalized.get("challengeId") if normalized else None,
+            "signalReceiptId": authoritative.get("signalReceiptId") if authoritative else None,
+            "needDropId": authoritative.get("needDropId") if authoritative else None,
+            "challengeId": authoritative.get("challengeId") if authoritative else None,
             "attestedScopes": scopes,
             "publicEvidenceRefs": [item["ref"] for item in evidence if item["privacy"] == "public"],
             "nonPublicEvidenceCount": len([item for item in evidence if item["privacy"] != "public"]),
         },
         "doesNotProve": _does_not_prove(scopes),
     }
+
+
+def verify_signal_proof_bundle(
+    bundle: Any,
+    public_key_or_secret: Optional[str] = None,
+    check_files_on_disk: bool = False,
+    cwd: Optional[str] = None,
+    *,
+    expected_algorithm: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Verifies a Signal bundle without raising for adversarial public input."""
+    try:
+        return _verify_signal_proof_bundle(
+            bundle,
+            public_key_or_secret=public_key_or_secret,
+            check_files_on_disk=check_files_on_disk,
+            cwd=cwd,
+            expected_algorithm=expected_algorithm,
+        )
+    except Exception:
+        return _failed_signal_proof_verification()
