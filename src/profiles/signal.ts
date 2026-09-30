@@ -439,6 +439,28 @@ function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
   return boundaries;
 }
 
+/**
+ * Separates cryptographically bound scope declarations from scopes whose
+ * semantic prerequisites are established by the current v1 envelope.
+ *
+ * Signer identity remains unresolved in this profile, so an envelope cannot
+ * establish identity by declaring it. A replay claim additionally requires an
+ * explicit evaluator and an independent observer; self/system declarations
+ * remain bound evidence, but cannot remove the independent-reproduction caveat.
+ */
+function deriveEstablishedScopes(
+  envelope: SignalProofEnvelopeV1 | undefined
+): SignalAttestedScope[] {
+  if (envelope === undefined) return [];
+  return envelope.attestedScopes.filter((scope) => {
+    if (scope === 'identity_verified') return false;
+    if (scope === 'outcome_rubric_replayed') {
+      return envelope.observer.kind === 'independent' && envelope.evaluator !== undefined;
+    }
+    return true;
+  });
+}
+
 function failedCoreVerification(): VerificationResult {
   return {
     valid: false,
@@ -604,6 +626,7 @@ async function verifySignalProofBundleInternal(
     core.errors.length === 0;
   const valid = Boolean(structurallyValid && core.trusted);
   const authoritativeEnvelope = valid ? normalizedEnvelope : undefined;
+  const establishedScopes = deriveEstablishedScopes(authoritativeEnvelope);
 
   return {
     valid,
@@ -620,7 +643,7 @@ async function verifySignalProofBundleInternal(
       signalReceiptId: authoritativeEnvelope?.signalReceiptId,
       needDropId: authoritativeEnvelope?.needDropId,
       challengeId: authoritativeEnvelope?.challengeId,
-      attestedScopes: authoritativeEnvelope?.attestedScopes ?? [],
+      attestedScopes: establishedScopes,
       publicEvidenceRefs:
         authoritativeEnvelope?.evidence
           .filter((item) => item.privacy === 'public')
@@ -628,7 +651,7 @@ async function verifySignalProofBundleInternal(
       nonPublicEvidenceCount:
         authoritativeEnvelope?.evidence.filter((item) => item.privacy !== 'public').length ?? 0,
     },
-    doesNotProve: deriveDoesNotProve(authoritativeEnvelope?.attestedScopes ?? []),
+    doesNotProve: deriveDoesNotProve(establishedScopes),
   };
 }
 
