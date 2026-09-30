@@ -349,7 +349,6 @@ def _does_not_prove(scopes: List[str]) -> List[str]:
     return boundaries
 
 
-
 def _established_scopes(envelope: Optional[Dict[str, Any]]) -> List[str]:
     """Returns only declared scopes whose v1 semantic prerequisites are established."""
     if envelope is None:
@@ -367,6 +366,7 @@ def _established_scopes(envelope: Optional[Dict[str, Any]]) -> List[str]:
             continue
         established.append(scope)
     return established
+
 
 def _failed_core_verification() -> Dict[str, Any]:
     return {
