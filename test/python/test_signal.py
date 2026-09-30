@@ -116,6 +116,70 @@ class TestSignalProofProfile(unittest.TestCase):
             result["doesNotProve"],
         )
 
+    def test_self_attested_artifact_does_not_establish_identity_or_replay(self):
+        secret = ProofSigner.generate_secret_key()
+        envelope = fixture_envelope()
+        envelope["observer"]["kind"] = "self"
+        envelope["attestedScopes"] = [
+            "artifact_integrity",
+            "identity_verified",
+            "outcome_rubric_replayed",
+        ]
+        bundle = create_signal_proof_bundle(
+            envelope=envelope,
+            task={"name": "Self-attested artifact fixture"},
+            signing_key=secret,
+            signer_identity="self-declared-participant",
+            algorithm="HMAC-SHA256",
+        )
+
+        result = verify_signal_proof_bundle(
+            bundle,
+            expected_algorithm="HMAC-SHA256",
+            public_key_or_secret=secret,
+        )
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["authoritative"]["attestedScopes"], ["artifact_integrity"])
+        self.assertIn("customer or participant identity", result["doesNotProve"])
+        self.assertIn(
+            "that a qualitative outcome was independently reproduced",
+            result["doesNotProve"],
+        )
+
+    def test_deterministic_replay_requires_independent_observer_and_evaluator(self):
+        secret = ProofSigner.generate_secret_key()
+        envelope = fixture_envelope()
+        envelope["observer"]["kind"] = "independent"
+        envelope["attestedScopes"] = [
+            "artifact_integrity",
+            "outcome_rubric_replayed",
+        ]
+        bundle = create_signal_proof_bundle(
+            envelope=envelope,
+            task={"name": "Independent deterministic replay fixture"},
+            signing_key=secret,
+            signer_identity="independent-replay-observer",
+            algorithm="HMAC-SHA256",
+        )
+
+        result = verify_signal_proof_bundle(
+            bundle,
+            expected_algorithm="HMAC-SHA256",
+            public_key_or_secret=secret,
+        )
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(
+            result["authoritative"]["attestedScopes"],
+            ["artifact_integrity", "outcome_rubric_replayed"],
+        )
+        self.assertNotIn(
+            "that a qualitative outcome was independently reproduced",
+            result["doesNotProve"],
+        )
+        self.assertIn("customer or participant identity", result["doesNotProve"])
+
     def test_unchecked_signature_is_not_valid(self):
         secret = ProofSigner.generate_secret_key()
         bundle = create_signal_proof_bundle(
