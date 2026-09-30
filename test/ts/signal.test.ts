@@ -134,6 +134,65 @@ describe('Nymrel Signal proof profile', () => {
     );
   });
 
+  it('keeps self-attested artifact integrity without identity or replay overclaims', async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const envelope = fixtureEnvelope();
+    envelope.observer.kind = 'self';
+    envelope.attestedScopes = [
+      'artifact_integrity',
+      'identity_verified',
+      'outcome_rubric_replayed',
+    ];
+    const bundle = await createSignalProofBundle({
+      envelope,
+      task: { name: 'Self-attested artifact fixture' },
+      signingKey: secret,
+      signerIdentity: 'self-declared-participant',
+      algorithm: 'HMAC-SHA256',
+    });
+
+    const result = await verifySignalProofBundle(bundle, {
+      expectedAlgorithm: 'HMAC-SHA256',
+      publicKeyOrSecret: secret,
+    });
+
+    assert.strictEqual(result.valid, true);
+    assert.deepStrictEqual(result.authoritative.attestedScopes, ['artifact_integrity']);
+    assert.ok(result.doesNotProve.includes('customer or participant identity'));
+    assert.ok(
+      result.doesNotProve.includes('that a qualitative outcome was independently reproduced')
+    );
+  });
+
+  it('establishes deterministic replay only with an independent observer and evaluator', async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const envelope = fixtureEnvelope();
+    envelope.observer.kind = 'independent';
+    envelope.attestedScopes = ['artifact_integrity', 'outcome_rubric_replayed'];
+    const bundle = await createSignalProofBundle({
+      envelope,
+      task: { name: 'Independent deterministic replay fixture' },
+      signingKey: secret,
+      signerIdentity: 'independent-replay-observer',
+      algorithm: 'HMAC-SHA256',
+    });
+
+    const result = await verifySignalProofBundle(bundle, {
+      expectedAlgorithm: 'HMAC-SHA256',
+      publicKeyOrSecret: secret,
+    });
+
+    assert.strictEqual(result.valid, true);
+    assert.deepStrictEqual(result.authoritative.attestedScopes, [
+      'artifact_integrity',
+      'outcome_rubric_replayed',
+    ]);
+    assert.ok(
+      !result.doesNotProve.includes('that a qualitative outcome was independently reproduced')
+    );
+    assert.ok(result.doesNotProve.includes('customer or participant identity'));
+  });
+
   it('does not call an unchecked signature a valid Signal proof', async () => {
     const secret = ProofSigner.generateSecretKey();
     const bundle = await createSignalProofBundle({
