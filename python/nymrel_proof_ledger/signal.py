@@ -349,6 +349,25 @@ def _does_not_prove(scopes: List[str]) -> List[str]:
     return boundaries
 
 
+
+def _established_scopes(envelope: Optional[Dict[str, Any]]) -> List[str]:
+    """Returns only declared scopes whose v1 semantic prerequisites are established."""
+    if envelope is None:
+        return []
+    established = []
+    for scope in envelope.get("attestedScopes", []):
+        if scope == "identity_verified":
+            # The public result intentionally leaves signer authority unresolved.
+            continue
+        if scope == "outcome_rubric_replayed" and not (
+            envelope.get("observer", {}).get("kind") == "independent"
+            and envelope.get("evaluator") is not None
+        ):
+            # A bound self/system declaration is not independent replay evidence.
+            continue
+        established.append(scope)
+    return established
+
 def _failed_core_verification() -> Dict[str, Any]:
     return {
         "valid": False,
@@ -508,7 +527,7 @@ def _verify_signal_proof_bundle(
 
     authoritative = normalized if valid else None
     evidence = authoritative.get("evidence", []) if authoritative else []
-    scopes = authoritative.get("attestedScopes", []) if authoritative else []
+    scopes = _established_scopes(authoritative)
     return {
         "valid": valid,
         "structurallyValid": structurally_valid,
