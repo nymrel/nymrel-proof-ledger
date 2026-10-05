@@ -350,22 +350,17 @@ def _does_not_prove(scopes: List[str]) -> List[str]:
 
 
 def _established_scopes(envelope: Optional[Dict[str, Any]]) -> List[str]:
-    """Returns only declared scopes whose v1 semantic prerequisites are established."""
+    """Returns scopes established by this verifier, not merely signed declarations."""
     if envelope is None:
         return []
-    established = []
-    for scope in envelope.get("attestedScopes", []):
-        if scope == "identity_verified":
-            # The public result intentionally leaves signer authority unresolved.
-            continue
-        if scope == "outcome_rubric_replayed" and not (
-            envelope.get("observer", {}).get("kind") == "independent"
-            and envelope.get("evaluator") is not None
-        ):
-            # A bound self/system declaration is not independent replay evidence.
-            continue
-        established.append(scope)
-    return established
+    # v1 verifies receipt/Merkle/signature and exact envelope-artifact binding.
+    # It does not execute an evaluator, resolve observer/signer authority, or
+    # independently re-observe execution, timing, or price evidence.
+    return [
+        scope
+        for scope in envelope.get("attestedScopes", [])
+        if scope == "artifact_integrity"
+    ]
 
 
 def _failed_core_verification() -> Dict[str, Any]:
