@@ -147,13 +147,17 @@ class TestSignalProofProfile(unittest.TestCase):
             result["doesNotProve"],
         )
 
-    def test_deterministic_replay_requires_independent_observer_and_evaluator(self):
+    def test_labeled_independent_replay_remains_declared_until_replay_is_verified(self):
         secret = ProofSigner.generate_secret_key()
         envelope = fixture_envelope()
         envelope["observer"]["kind"] = "independent"
         envelope["attestedScopes"] = [
             "artifact_integrity",
+            "execution_observed",
+            "timing_observed",
+            "price_source_checked",
             "outcome_rubric_replayed",
+            "identity_verified",
         ]
         bundle = create_signal_proof_bundle(
             envelope=envelope,
@@ -172,13 +176,16 @@ class TestSignalProofProfile(unittest.TestCase):
         self.assertTrue(result["valid"])
         self.assertEqual(
             result["authoritative"]["attestedScopes"],
-            ["artifact_integrity", "outcome_rubric_replayed"],
+            ["artifact_integrity"],
         )
-        self.assertNotIn(
+        for boundary in [
+            "customer or participant identity",
+            "reported timing or duration",
+            "current price or commercial terms",
+            "that the described execution occurred",
             "that a qualitative outcome was independently reproduced",
-            result["doesNotProve"],
-        )
-        self.assertIn("customer or participant identity", result["doesNotProve"])
+        ]:
+            self.assertIn(boundary, result["doesNotProve"])
 
     def test_unchecked_signature_is_not_valid(self):
         secret = ProofSigner.generate_secret_key()
