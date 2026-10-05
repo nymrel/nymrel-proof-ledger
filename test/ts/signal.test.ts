@@ -164,11 +164,18 @@ describe('Nymrel Signal proof profile', () => {
     );
   });
 
-  it('establishes deterministic replay only with an independent observer and evaluator', async () => {
+  it('keeps labeled independent replay as a bound declaration until replay is verified', async () => {
     const secret = ProofSigner.generateSecretKey();
     const envelope = fixtureEnvelope();
     envelope.observer.kind = 'independent';
-    envelope.attestedScopes = ['artifact_integrity', 'outcome_rubric_replayed'];
+    envelope.attestedScopes = [
+      'artifact_integrity',
+      'execution_observed',
+      'timing_observed',
+      'price_source_checked',
+      'outcome_rubric_replayed',
+      'identity_verified',
+    ];
     const bundle = await createSignalProofBundle({
       envelope,
       task: { name: 'Independent deterministic replay fixture' },
@@ -183,14 +190,16 @@ describe('Nymrel Signal proof profile', () => {
     });
 
     assert.strictEqual(result.valid, true);
-    assert.deepStrictEqual(result.authoritative.attestedScopes, [
-      'artifact_integrity',
-      'outcome_rubric_replayed',
-    ]);
-    assert.ok(
-      !result.doesNotProve.includes('that a qualitative outcome was independently reproduced')
-    );
-    assert.ok(result.doesNotProve.includes('customer or participant identity'));
+    assert.deepStrictEqual(result.authoritative.attestedScopes, ['artifact_integrity']);
+    for (const boundary of [
+      'customer or participant identity',
+      'reported timing or duration',
+      'current price or commercial terms',
+      'that the described execution occurred',
+      'that a qualitative outcome was independently reproduced',
+    ]) {
+      assert.ok(result.doesNotProve.includes(boundary));
+    }
   });
 
   it('does not call an unchecked signature a valid Signal proof', async () => {
