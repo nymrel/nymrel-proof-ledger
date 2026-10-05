@@ -73,10 +73,27 @@ semantic_cases.append((
     {'customer or participant identity', 'that a qualitative outcome was independently reproduced'},
 ))
 
-independent_replay = fixture_envelope()
-independent_replay['observer']['kind'] = 'independent'
-independent_replay['attestedScopes'] = ['artifact_integrity', 'outcome_rubric_replayed']
-semantic_cases.append((independent_replay, independent_replay['attestedScopes'], set()))
+labeled_semantic_scopes = fixture_envelope()
+labeled_semantic_scopes['observer']['kind'] = 'independent'
+labeled_semantic_scopes['attestedScopes'] = [
+    'artifact_integrity',
+    'execution_observed',
+    'timing_observed',
+    'price_source_checked',
+    'outcome_rubric_replayed',
+    'identity_verified',
+]
+semantic_cases.append((
+    labeled_semantic_scopes,
+    ['artifact_integrity'],
+    {
+        'customer or participant identity',
+        'reported timing or duration',
+        'current price or commercial terms',
+        'that the described execution occurred',
+        'that a qualitative outcome was independently reproduced',
+    },
+))
 
 for envelope, expected_scopes, required_boundaries in semantic_cases:
     options = dict(
