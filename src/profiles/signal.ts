@@ -440,25 +440,20 @@ function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
 }
 
 /**
- * Separates cryptographically bound scope declarations from scopes whose
- * semantic prerequisites are established by the current v1 envelope.
+ * Separates cryptographically bound scope declarations from scopes actually
+ * established by this verifier.
  *
- * Signer identity remains unresolved in this profile, so an envelope cannot
- * establish identity by declaring it. A replay claim additionally requires an
- * explicit evaluator and an independent observer; self/system declarations
- * remain bound evidence, but cannot remove the independent-reproduction caveat.
+ * v1 recomputes the receipt/Merkle/signature and exact envelope-artifact
+ * binding, so it can establish artifact integrity. It does not execute an
+ * evaluator, independently resolve observer/signer authority, or re-observe
+ * execution, timing, or price evidence. Those semantic scopes remain signed
+ * declarations in the bound envelope and cannot remove public caveats.
  */
 function deriveEstablishedScopes(
   envelope: SignalProofEnvelopeV1 | undefined
 ): SignalAttestedScope[] {
   if (envelope === undefined) return [];
-  return envelope.attestedScopes.filter((scope) => {
-    if (scope === 'identity_verified') return false;
-    if (scope === 'outcome_rubric_replayed') {
-      return envelope.observer.kind === 'independent' && envelope.evaluator !== undefined;
-    }
-    return true;
-  });
+  return envelope.attestedScopes.filter((scope) => scope === 'artifact_integrity');
 }
 
 function failedCoreVerification(): VerificationResult {
