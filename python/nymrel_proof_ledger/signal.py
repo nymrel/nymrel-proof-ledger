@@ -349,6 +349,20 @@ def _does_not_prove(scopes: List[str]) -> List[str]:
     return boundaries
 
 
+def _established_scopes(envelope: Optional[Dict[str, Any]]) -> List[str]:
+    """Returns scopes established by this verifier, not merely signed declarations."""
+    if envelope is None:
+        return []
+    # v1 verifies receipt/Merkle/signature and exact envelope-artifact binding.
+    # It does not execute an evaluator, resolve observer/signer authority, or
+    # independently re-observe execution, timing, or price evidence.
+    return [
+        scope
+        for scope in envelope.get("attestedScopes", [])
+        if scope == "artifact_integrity"
+    ]
+
+
 def _failed_core_verification() -> Dict[str, Any]:
     return {
         "valid": False,
@@ -508,7 +522,7 @@ def _verify_signal_proof_bundle(
 
     authoritative = normalized if valid else None
     evidence = authoritative.get("evidence", []) if authoritative else []
-    scopes = authoritative.get("attestedScopes", []) if authoritative else []
+    scopes = _established_scopes(authoritative)
     return {
         "valid": valid,
         "structurallyValid": structurally_valid,

@@ -58,4 +58,76 @@ for algorithm in ('HMAC-SHA256', 'Ed25519'):
         assert not actual_disk['core']['valid'] and not actual_disk['core']['artifactsValid']
         assert actual_disk['core']['checkedArtifacts'] == expected_disk['core']['checkedArtifacts'] == 0
         checks += 1
+
+semantic_cases = []
+self_attested = fixture_envelope()
+self_attested['observer']['kind'] = 'self'
+self_attested['attestedScopes'] = [
+    'artifact_integrity',
+    'identity_verified',
+    'outcome_rubric_replayed',
+]
+semantic_cases.append((
+    self_attested,
+    ['artifact_integrity'],
+    {'customer or participant identity', 'that a qualitative outcome was independently reproduced'},
+))
+
+labeled_semantic_scopes = fixture_envelope()
+labeled_semantic_scopes['observer']['kind'] = 'independent'
+labeled_semantic_scopes['attestedScopes'] = [
+    'artifact_integrity',
+    'execution_observed',
+    'timing_observed',
+    'price_source_checked',
+    'outcome_rubric_replayed',
+    'identity_verified',
+]
+semantic_cases.append((
+    labeled_semantic_scopes,
+    ['artifact_integrity'],
+    {
+        'customer or participant identity',
+        'reported timing or duration',
+        'current price or commercial terms',
+        'that the described execution occurred',
+        'that a qualitative outcome was independently reproduced',
+    },
+))
+
+for envelope, expected_scopes, required_boundaries in semantic_cases:
+    options = dict(
+        envelope=envelope,
+        task={'name': 'cross-runtime Signal scope prerequisites'},
+        signingKey='fixture-secret',
+        signerIdentity='fixture',
+        algorithm='HMAC-SHA256',
+    )
+    created = [
+        node([{'action': 'create', 'options': options}])[0],
+        create_signal_proof_bundle(
+            envelope=envelope,
+            task=options['task'],
+            signing_key='fixture-secret',
+            signer_identity='fixture',
+            algorithm='HMAC-SHA256',
+        ),
+    ]
+    for good in created:
+        ts = node([{
+            'bundle': good,
+            'options': {
+                'publicKeyOrSecret': 'fixture-secret',
+                'expectedAlgorithm': 'HMAC-SHA256',
+            },
+        }])[0]
+        py = verify_signal_proof_bundle(
+            good,
+            public_key_or_secret='fixture-secret',
+            expected_algorithm='HMAC-SHA256',
+        )
+        assert verdict(ts) == verdict(py)
+        assert ts['authoritative']['attestedScopes'] == expected_scopes
+        assert required_boundaries.issubset(ts['doesNotProve'])
+        checks += 1
 print(json.dumps({'signal_cross_runtime_cases': checks, 'status': 'PASS'}))
