@@ -117,7 +117,7 @@ class TestBadge(unittest.TestCase):
         self.assertIn("application/ld+json", html_doc)
         self.assertIn("Publisher: Nymrel", html_doc)
         self.assertIn("UNVERIFIED RECEIPT", html_doc)
-        self.assertEqual(html_doc.count("</script>"), 1)
+        self.assertEqual(html_doc.count("</script>"), 2)
         self.assertNotIn("</script><img", html_doc)
         self.assertNotIn("JalenBuilds", html_doc)
         self.assertNotIn("proofs.nymrel.com", html_doc)

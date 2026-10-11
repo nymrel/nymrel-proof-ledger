@@ -126,6 +126,16 @@ if not result["trusted"]:
     raise RuntimeError(result["errors"] or ["Signature was not checked"])
 ~~~
 
+## HTML certificates
+
+Use `node bin/proof-ledger.js badge proof.json --format html --out certificate.html`
+or either runtime's HTML certificate API to create a portable receipt view. It adapts to phone widths
+and keeps the original receipt JSON available. Copy Merkle Root reports success
+after the browser accepts the copy; if the clipboard is unavailable, it selects
+the root for manual copying. Without JavaScript, select the root directly and
+use the browser's Print command. Generating, copying, or printing a certificate
+does not verify the receipt or its reported task outcome.
+
 ## CLI
 
 ~~~powershell

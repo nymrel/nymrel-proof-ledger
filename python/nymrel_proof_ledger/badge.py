@@ -272,6 +272,9 @@ def generate_html_certificate(
         if isinstance(receipt.get("merkle"), dict)
         else ""
     )
+    git_info = receipt['environment'].get('git') or {}
+    git_branch = git_info.get('branch') or 'standalone'
+    git_commit = (git_info.get('commit') or '')[:8] or 'n/a'
 
     structured_data = _safe_json_for_html(
         {
@@ -344,6 +347,8 @@ def generate_html_certificate(
       align-items: center;
       border-bottom: 1.5px solid var(--border);
       padding-bottom: 20px;
+      gap: 16px;
+      flex-wrap: wrap;
     }}
     .brand-title {{
       font-size: 1.25rem;
@@ -351,6 +356,12 @@ def generate_html_certificate(
       letter-spacing: 0.5px;
       color: var(--cedar);
     }}
+    .brand-sub {{
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }}
+    .publisher {{ font-size: 0.85rem; color: var(--text-muted); }}
+    .presentation-note {{ color: var(--text-muted); }}
     .badge-card {{
       background: var(--white);
       border-radius: 16px;
@@ -361,11 +372,15 @@ def generate_html_certificate(
       display: flex;
       justify-content: center;
     }}
+    .badge-card svg {{ display: block; max-width: 100%; height: auto; }}
     .section-title {{
       font-size: 1.1rem;
       font-weight: 700;
       color: var(--cedar);
       margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }}
     .data-card {{
       background: var(--card-bg);
@@ -376,50 +391,64 @@ def generate_html_certificate(
     }}
     .grid-2 {{
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
     }}
+    .grid-2 > div {{ min-width: 0; }}
     .label {{
       font-size: 0.75rem;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
+      letter-spacing: 0.5px;
       margin-bottom: 4px;
     }}
     .value {{
       font-size: 0.95rem;
       font-weight: 600;
-      word-break: break-all;
+      overflow-wrap: anywhere;
     }}
     .mono {{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.88rem;
     }}
+    .root-value {{
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 12px;
+      color: var(--terracotta);
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      line-height: 1.5;
+    }}
+    .table-scroll {{ max-width: 100%; overflow-x: auto; }}
+    .table-help {{ display: none; color: var(--text-muted); font-size: 0.85rem; }}
     table {{
       width: 100%;
+      min-width: 540px;
+      table-layout: fixed;
       border-collapse: collapse;
       margin-top: 10px;
       font-size: 0.9rem;
     }}
+    caption {{ text-align: left; color: var(--text-muted); margin-bottom: 8px; }}
     th, td {{
       padding: 10px 12px;
       text-align: left;
       border-bottom: 1px solid var(--border);
+      overflow-wrap: anywhere;
     }}
     th {{
       font-size: 0.75rem;
       color: var(--text-muted);
       text-transform: uppercase;
     }}
-    pre {{
-      background: #1C2320;
-      color: #FAF8F2;
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-size: 0.82rem;
-      max-height: 300px;
-    }}
+    th:first-child {{ width: 35%; }}
+    th:nth-child(2) {{ width: 50%; }}
+    th:last-child {{ width: 15%; }}
     .btn {{
       background: var(--cedar);
       color: var(--bg);
@@ -429,26 +458,76 @@ def generate_html_certificate(
       font-weight: 600;
       font-size: 0.9rem;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s ease;
+      min-height: 44px;
+    }}
+    .btn:hover {{ opacity: 0.9; }}
+    .btn:disabled {{ cursor: wait; opacity: 0.65; }}
+    :focus-visible {{ outline: 3px solid var(--terracotta); outline-offset: 3px; }}
+    .btn-secondary {{
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+    }}
+    .actions {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }}
+    [hidden] {{ display: none !important; }}
+    .copy-status {{ margin-top: 12px; color: var(--text-muted); }}
+    pre {{
+      background: #1C2320;
+      color: #FAF8F2;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      max-height: 300px;
+    }}
+    @media (max-width: 600px) {{
+      body {{ padding: 24px 16px; }}
+      .grid-2 {{ grid-template-columns: minmax(0, 1fr); }}
+      .badge-card, .data-card {{ padding: 16px; }}
+      .actions .btn {{ flex: 1 1 180px; justify-content: center; }}
+      .table-help {{ display: block; margin-bottom: 8px; }}
+    }}
+    @media print {{
+      body {{ padding: 0; background: white; }}
+      .actions, .copy-status, .table-help, noscript {{ display: none !important; }}
+      .badge-card, .data-card {{ box-shadow: none; }}
+      .table-scroll, pre {{ overflow: visible; }}
+      table {{ min-width: 0; }}
+      pre {{ max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }}
     }}
   </style>
 </head>
 <body>
-  <div class="container">
+  <main class="container">
     <header>
       <div>
-        <div class="brand-title">NYMREL PROOF LEDGER</div>
-        <div style="font-size: 0.85rem; color: var(--text-muted);">Python Attestation Engine</div>
+        <h1 class="brand-title">NYMREL PROOF LEDGER</h1>
+        <div class="brand-sub">Cryptographic Attestation &amp; Audit Protocol</div>
       </div>
       <div>
-        <span style="border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;">Publisher: Nymrel</span>
+        <span class="publisher">Publisher: Nymrel</span>
       </div>
     </header>
 
-    <div class="badge-card">
+    <section class="data-card" aria-labelledby="receipt-state-title">
+      <h2 id="receipt-state-title" class="section-title">{presentation_label}</h2>
+      <p class="presentation-note">This certificate presents receipt data and the supplied verification state. To verify the receipt, use the original JSON and a key from a trusted source with an independently configured algorithm. Task status is a reported outcome; copying or printing does not verify it.</p>
+    </section>
+
+    <div class="badge-card" role="img" aria-label="Receipt badge: {presentation_label}">
       {svg_badge}
     </div>
 
-    <div class="section-title">Execution Context</div>
+    <h2 class="section-title">Execution Context</h2>
     <div class="data-card">
       <div class="grid-2">
         <div>
@@ -464,40 +543,84 @@ def generate_html_certificate(
           <div class="value mono">{html.escape(receipt.get("proofId", ""))}</div>
         </div>
         <div>
-          <div class="label">Timestamp</div>
+          <div class="label">Attestation Timestamp</div>
           <div class="value">{html.escape(receipt.get("timestamp", ""))}</div>
         </div>
         <div>
           <div class="label">Presentation State</div>
           <div class="value">{presentation_label}</div>
         </div>
+        <div>
+          <div class="label">Signer Identity</div>
+          <div class="value">{html.escape(receipt['signature']['signerIdentity'])} ({html.escape(receipt['signature']['algorithm'])})</div>
+        </div>
+        <div>
+          <div class="label">Git Lineage</div>
+          <div class="value mono">{html.escape(git_branch)} @ {html.escape(git_commit)}</div>
+        </div>
       </div>
     </div>
 
-    <div class="section-title">Cryptographic Proofs</div>
+    <h2 class="section-title">Cryptographic Merkle Tree</h2>
     <div class="data-card">
-      <div class="label">Merkle Root</div>
-      <div class="value mono" style="color: var(--terracotta); margin-bottom: 16px;">{html.escape(merkle_root)}</div>
+      <label class="label" for="merkle-root">Merkle Root (SHA-256 Domain-Separated)</label>
+      <textarea id="merkle-root" class="value mono root-value" rows="3" readonly spellcheck="false" aria-describedby="copy-status">{html.escape(merkle_root)}</textarea>
+      <div id="certificate-actions" class="actions" hidden>
+        <button id="copy-root-button" class="btn" type="button">Copy Merkle Root</button>
+        <button id="print-certificate-button" class="btn btn-secondary" type="button">Print Certificate</button>
+      </div>
+      <p id="copy-status" class="copy-status" role="status" aria-live="polite" aria-atomic="true">You can also select and copy the Merkle root above.</p>
+      <noscript><p class="copy-status">Select the Merkle root to copy it. Use your browser’s Print command to print this certificate.</p></noscript>
 
-      <div class="label">Artifacts ({len(artifacts)})</div>
+      <h3 class="label" style="margin-top: 20px;">Attested Artifacts ({len(artifacts)})</h3>
+      <p id="artifact-table-help" class="table-help">Scroll the table to see all artifact details.</p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Attested artifacts" aria-describedby="artifact-table-help">
       <table>
+        <caption>File paths, SHA-256 digests, and byte sizes recorded in this receipt.</caption>
         <thead>
           <tr>
-            <th>Path</th>
-            <th>SHA-256</th>
-            <th>Size</th>
+            <th scope="col">Path</th>
+            <th scope="col">SHA-256 Hash</th>
+            <th scope="col">Size</th>
           </tr>
         </thead>
         <tbody>
-          {"".join([f'<tr><td><strong>{html.escape(a.get("path", ""))}</strong></td><td class="mono" style="font-size: 0.8rem;">{html.escape(a.get("sha256", ""))}</td><td>{a.get("sizeBytes", 0)} B</td></tr>' for a in artifacts])}
+          {"".join([f'<tr><td><strong>{html.escape(a.get("path", ""))}</strong></td><td class="mono" style="font-size: 0.8rem;">{html.escape(a.get("sha256", ""))}</td><td>{a.get("sizeBytes", 0)} B</td></tr>' for a in artifacts]) or '<tr><td colspan="3">No artifacts were recorded in this receipt.</td></tr>'}
         </tbody>
       </table>
+      </div>
     </div>
 
-    <div class="section-title">Raw Receipt</div>
+    <h2 class="section-title">Raw Proof Receipt (JSON)</h2>
     <div class="data-card">
-      <pre><code>{html.escape(json_str)}</code></pre>
+      <pre tabindex="0" role="region" aria-label="Raw proof receipt JSON"><code>{html.escape(json_str)}</code></pre>
     </div>
-  </div>
+  </main>
+  <script>
+    const actions = document.getElementById('certificate-actions');
+    const copyButton = document.getElementById('copy-root-button');
+    const printButton = document.getElementById('print-certificate-button');
+    const rootField = document.getElementById('merkle-root');
+    const copyStatus = document.getElementById('copy-status');
+    actions.hidden = false;
+    copyButton.addEventListener('click', async () => {{
+      copyButton.disabled = true;
+      copyStatus.textContent = 'Copying Merkle root…';
+      try {{
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {{
+          throw new Error('Clipboard unavailable');
+        }}
+        await navigator.clipboard.writeText(rootField.value);
+        copyStatus.textContent = 'Merkle root copied.';
+      }} catch {{
+        rootField.focus();
+        rootField.select();
+        copyStatus.textContent = 'Clipboard is unavailable. The Merkle root is selected; use your device’s Copy command.';
+      }} finally {{
+        copyButton.disabled = false;
+      }}
+    }});
+    printButton.addEventListener('click', () => window.print());
+  </script>
 </body>
 </html>"""
