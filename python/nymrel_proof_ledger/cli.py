@@ -10,6 +10,7 @@ import sys
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
 from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
+from .envelope import validate_receipt_envelope
 
 
 def _display_copy(value, markdown=False):
@@ -23,6 +24,18 @@ def _display_copy(value, markdown=False):
     if isinstance(value, list):
         return [_display_copy(item, markdown) for item in value]
     return value
+
+
+def _terminal_error_message(message):
+    """Bound terminal diagnostics only; verifier errors and JSON keep full detail."""
+    safe = _display_copy(message)
+    limit = 800
+    if len(safe) <= limit:
+        return safe
+    marker = ' … [details shortened; check the receipt or options and retry] … '
+    tail_length = 200
+    head_length = limit - len(marker) - tail_length
+    return safe[:head_length] + marker + safe[-tail_length:]
 
 
 def _load_key_material(key_file, role, algorithm):
@@ -54,11 +67,25 @@ def _load_key_material(key_file, role, algorithm):
     return raw
 
 
-def main(argv=None):
+def _read_receipt_for_presentation(proof_path):
+    with open(proof_path, 'r', encoding='utf-8') as proof_file:
+        receipt = json.load(proof_file)
+    validation = validate_receipt_envelope(receipt)
+    if not validation['valid']:
+        details = '; '.join(
+            f"{error.get('path') or '<root>'}: {error['message']}"
+            for error in validation['errors']
+        )
+        raise ValueError(f'Invalid proof receipt: {details}')
+    return receipt
+
+
+def _main(argv=None):
     parser = argparse.ArgumentParser(
         prog="proof-ledger-py",
         description="Nymrel Proof Ledger (Python Engine) - Cryptographic Attestation Protocol",
     )
+    parser.add_argument('--version', '-v', action='version', version='2.0.0')
     subparsers = parser.add_subparsers(dest="command", help="Sub-command help")
 
     # keygen
@@ -303,8 +330,7 @@ def main(argv=None):
         sys.exit(0 if result["valid"] else 1)
 
     if args.command == "badge":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt = _read_receipt_for_presentation(args.proof)
 
         if args.format == "html":
             content = generate_html_certificate(receipt)
@@ -319,8 +345,7 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "inspect":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = _display_copy(json.load(f))
+        receipt = _display_copy(_read_receipt_for_presentation(args.proof))
 
         print("\n=== NYMREL PROOF LEDGER AUDIT INSPECTOR ===")
         print(f"Protocol:    {receipt.get('protocol')} v{receipt.get('version')}")
@@ -343,8 +368,7 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "export":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt = _read_receipt_for_presentation(args.proof)
 
         if args.format == "html":
             out_str = generate_html_certificate(receipt)
@@ -375,6 +399,14 @@ def main(argv=None):
         else:
             print(out_str)
         sys.exit(0)
+
+
+def main(argv=None):
+    try:
+        _main(argv)
+    except (OSError, ValueError, TypeError, RecursionError) as error:
+        print(f'Proof Ledger command failed: {_terminal_error_message(str(error))}', file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

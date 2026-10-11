@@ -68,6 +68,11 @@ To install the Python package from this checkout:
 python -m pip install .
 ~~~
 
+The API examples below use an inline artifact, so no files need to be prepared.
+For artifacts already on disk, omit `data`, set `path` to your file, and enable
+`checkFilesOnDisk: true` or `check_files_on_disk=True` when verifying from that
+working directory.
+
 ## TypeScript API
 
 ~~~typescript
@@ -85,7 +90,7 @@ const receipt = await attestExecution({
     status: 'SUCCESS',
     exitCode: 0,
   },
-  artifacts: [{ path: 'dist/manifest.json' }],
+  artifacts: [{ path: 'dist/manifest.json', data: '{"build":"example"}' }],
   signingKey: secret,
   signerIdentity: 'nymrel-release',
   metadata: { environment: 'local-acceptance' },
@@ -93,7 +98,6 @@ const receipt = await attestExecution({
 
 const result = await verifyProof(receipt, {
   expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
-  checkFilesOnDisk: true,
 });
 
 if (!result.trusted) {
@@ -110,7 +114,7 @@ secret = ProofSigner.generate_secret_key()
 
 receipt = create_receipt(
     task={"name": "Release acceptance", "status": "SUCCESS", "exitCode": 0},
-    artifacts=[{"path": "dist/manifest.json"}],
+    artifacts=[{"path": "dist/manifest.json", "data": '{"build":"example"}'}],
     signing_key=secret,
     signer_identity="nymrel-release",
     metadata={"environment": "local-acceptance"},
@@ -119,12 +123,21 @@ receipt = create_receipt(
 result = verify_receipt(
     receipt,
     expected_algorithm='HMAC-SHA256', public_key_or_secret=secret,
-    check_files_on_disk=True,
 )
 
 if not result["trusted"]:
     raise RuntimeError(result["errors"] or ["Signature was not checked"])
 ~~~
+
+## HTML certificates
+
+Use `node bin/proof-ledger.js badge proof.json --format html --out certificate.html`
+or either runtime's HTML certificate API to create a portable receipt view. It adapts to phone widths
+and keeps the original receipt JSON available. Copy Merkle Root reports success
+after the browser accepts the copy; if the clipboard is unavailable, it selects
+the root for manual copying. Without JavaScript, select the root directly and
+use the browser's Print command. Generating, copying, or printing a certificate
+does not verify the receipt or its reported task outcome.
 
 ## CLI
 

@@ -137,7 +137,7 @@ describe("Visual Badge & Certificate Generation", () => {
     assert.ok(html.includes("UNVERIFIED RECEIPT"));
     assert.ok(html.includes(receipt.merkle.root));
     assert.ok(html.includes("bundle.tar.gz"));
-    assert.equal(html.match(/<\/script>/g)?.length, 1);
+    assert.equal(html.match(/<\/script>/g)?.length, 2);
     assert.ok(!html.includes("</script><img"));
     assert.ok(!html.includes("JalenBuilds"));
     assert.ok(!html.includes("proofs.nymrel.com"));
