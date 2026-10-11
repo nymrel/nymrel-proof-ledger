@@ -1,0 +1,21 @@
+{
+  "acceptedPaths": [
+    "artifact.txt",
+    ".cache/artifact.txt",
+    "..notes.txt",
+    "..cache/artifact.txt",
+    "...cache/artifact.txt",
+    "nested/..notes.txt"
+  ],
+  "rejectedPaths": [
+    "..",
+    "../outside.txt",
+    "..\\outside.txt",
+    "/",
+    "/outside.txt",
+    "\\outside.txt",
+    "C:/outside.txt",
+    "C:outside.txt",
+    "//attacker.invalid/share/artifact.txt"
+  ]
+}

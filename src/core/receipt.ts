@@ -330,7 +330,7 @@ async function artifactPathWithin(cwd: string, artifactPath: string): Promise<st
   const unresolvedCandidate = path.resolve(root, portablePath);
   const candidate = await fs.realpath(unresolvedCandidate).catch(() => unresolvedCandidate);
   const relative = path.relative(root, candidate);
-  if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) return candidate;
+  if (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) return candidate;
   return undefined;
 }
 
