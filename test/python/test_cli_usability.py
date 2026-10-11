@@ -8,7 +8,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'python'))
 
-from nymrel_proof_ledger.receipt import create_receipt
+from nymrel_proof_ledger.receipt import create_receipt, verify_receipt
 
 PYTHON_SOURCE = str(Path(__file__).resolve().parents[2] / 'python')
 
@@ -115,6 +115,48 @@ class TestCliFirstUseAndRecovery(unittest.TestCase):
         self.assertTrue(json.loads(retry.stdout)['trusted'])
         self.assertEqual((self.directory / 'proof.json').read_bytes(), proof_before)
         self.assertEqual((self.directory / 'hmac.key').read_bytes(), key_before)
+
+    def test_terminal_errors_are_bounded_but_verification_json_keeps_full_details(self):
+        receipt = json.loads((self.directory / 'proof.json').read_text(encoding='utf-8'))
+        receipt['protocol'] = '\x1b[2J\x07\u202e' + 'x' * 20_000 + '\n'
+        input_text = json.dumps(receipt)
+        (self.directory / 'oversized.json').write_text(input_text, encoding='utf-8')
+        output = self.directory / 'report.md'
+        output.write_text('customer existing output', encoding='utf-8')
+        for arguments in (
+            ('inspect', 'oversized.json'),
+            ('export', 'oversized.json', '--out', 'report.md'),
+            ('badge', 'oversized.json', '--out', 'report.md'),
+        ):
+            with self.subTest(command=arguments[0]):
+                result = self.command(*arguments)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(result.stdout, '')
+                self.assertLessEqual(len(result.stderr), 850)
+                self.assertIn('Invalid proof receipt: protocol: Unsupported protocol identifier', result.stderr)
+                self.assertIn('details shortened; check the receipt or options and retry', result.stderr)
+                self.assertNotRegex(result.stderr.rstrip(), r'[\x00-\x1f\x7f-\x9f\u202e]|Traceback')
+        structured = self.command('verify', 'oversized.json', '--json')
+        self.assertEqual(structured.returncode, 1)
+        self.assertEqual(structured.stderr, '')
+        verification = json.loads(structured.stdout)
+        self.assertFalse(verification['valid'])
+        self.assertEqual(verification['errors'], verify_receipt(receipt)['errors'])
+        self.assertGreater(len(verification['errors'][0]), 20_000)
+        self.assertNotIn('details shortened', structured.stdout)
+        self.assertEqual((self.directory / 'oversized.json').read_text(encoding='utf-8'), input_text)
+        self.assertEqual(output.read_text(encoding='utf-8'), 'customer existing output')
+        retry = self.command('inspect', 'proof.json')
+        self.assertEqual(retry.returncode, 0, retry.stderr)
+        self.assertIn('Customer release', retry.stdout)
+
+    def test_short_native_error_details_remain_intact_for_recovery(self):
+        result = self.command('inspect', 'missing-receipt.json')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, '')
+        self.assertIn("[Errno 2] No such file or directory: 'missing-receipt.json'", result.stderr)
+        self.assertNotRegex(result.stderr.rstrip(), r'details shortened|Traceback|[\x00-\x1f\x7f-\x9f]')
+        self.assertLess(len(result.stderr), 300)
 
 
 if __name__ == '__main__':

@@ -30,6 +30,17 @@ function displayCopy<T>(value: T, markdown = false): T {
   })) as T;
 }
 
+/** Bound terminal diagnostics only; verifier errors and JSON retain full detail. */
+function terminalErrorMessage(message: string): string {
+  const characters = Array.from(displayCopy(message));
+  const limit = 800;
+  if (characters.length <= limit) return characters.join('');
+  const marker = ' … [details shortened; check the receipt or options and retry] … ';
+  const tailLength = 200;
+  const headLength = limit - Array.from(marker).length - tailLength;
+  return characters.slice(0, headLength).join('') + marker + characters.slice(-tailLength).join('');
+}
+
 function printHelp(): void {
   console.log(`
 \x1b[1m\x1b[32mNYMREL PROOF LEDGER CLI\x1b[0m (v2.0.0)
@@ -512,7 +523,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
   }
   try { return await runCliUnchecked(argv); }
   catch (error) {
-    console.error(`Proof Ledger command failed: ${displayCopy(error instanceof Error ? error.message : String(error))}`);
+    console.error(`Proof Ledger command failed: ${terminalErrorMessage(error instanceof Error ? error.message : String(error))}`);
     return 1;
   }
 }

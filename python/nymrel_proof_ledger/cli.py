@@ -26,6 +26,18 @@ def _display_copy(value, markdown=False):
     return value
 
 
+def _terminal_error_message(message):
+    """Bound terminal diagnostics only; verifier errors and JSON keep full detail."""
+    safe = _display_copy(message)
+    limit = 800
+    if len(safe) <= limit:
+        return safe
+    marker = ' … [details shortened; check the receipt or options and retry] … '
+    tail_length = 200
+    head_length = limit - len(marker) - tail_length
+    return safe[:head_length] + marker + safe[-tail_length:]
+
+
 def _load_key_material(key_file, role, algorithm):
     """
     Loads signing key material from a file.
@@ -393,7 +405,7 @@ def main(argv=None):
     try:
         _main(argv)
     except (OSError, ValueError, TypeError, RecursionError) as error:
-        print(f'Proof Ledger command failed: {_display_copy(str(error))}', file=sys.stderr)
+        print(f'Proof Ledger command failed: {_terminal_error_message(str(error))}', file=sys.stderr)
         raise SystemExit(1) from None
 
 

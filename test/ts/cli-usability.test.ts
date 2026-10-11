@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { createReceipt } from '../../src/core/receipt.js';
+import { createReceipt, verifyReceipt } from '../../src/core/receipt.js';
 
 const entrypoint = path.resolve('bin/proof-ledger.js');
 
@@ -146,6 +146,53 @@ describe('CLI first-use and recovery', () => {
       assert.equal(JSON.parse(retry.stdout).trusted, true);
       assert.equal(await fs.readFile(path.join(directory, 'proof.json'), 'utf8'), proofBefore);
       assert.equal(await fs.readFile(path.join(directory, 'hmac.key'), 'utf8'), keyBefore);
+    });
+  });
+
+  it('bounds escaped terminal errors while preserving detailed verification JSON and a safe retry', async () => {
+    await withConsumer(async directory => {
+      const receipt = JSON.parse(await fs.readFile(path.join(directory, 'proof.json'), 'utf8'));
+      receipt.protocol = '\u001b[2J\u0007\u202e' + 'x'.repeat(20_000) + '\n';
+      const input = JSON.stringify(receipt);
+      await fs.writeFile(path.join(directory, 'oversized.json'), input);
+      await fs.writeFile(path.join(directory, 'report.md'), 'customer existing output');
+      for (const args of [
+        ['inspect', 'oversized.json'],
+        ['export', 'oversized.json', '--out', 'report.md'],
+        ['badge', 'oversized.json', '--out', 'report.md'],
+      ]) {
+        const result = command(directory, args);
+        assert.equal(result.status, 1);
+        assert.equal(result.stdout, '');
+        assert.ok(result.stderr.length <= 850, `Diagnostic length: ${result.stderr.length}`);
+        assert.match(result.stderr, /Invalid proof receipt: protocol: Unsupported protocol identifier/);
+        assert.match(result.stderr, /details shortened; check the receipt or options and retry/);
+        assert.doesNotMatch(result.stderr.trimEnd(), /[\u0000-\u001f\u007f-\u009f\u202e]|Traceback/);
+      }
+      const structured = command(directory, ['verify', 'oversized.json', '--json']);
+      assert.equal(structured.status, 1);
+      assert.equal(structured.stderr, '');
+      const verification = JSON.parse(structured.stdout);
+      assert.equal(verification.valid, false);
+      assert.deepEqual(verification.errors, (await verifyReceipt(receipt)).errors);
+      assert.ok(verification.errors[0].length > 20_000);
+      assert.doesNotMatch(structured.stdout, /details shortened/);
+      assert.equal(await fs.readFile(path.join(directory, 'oversized.json'), 'utf8'), input);
+      assert.equal(await fs.readFile(path.join(directory, 'report.md'), 'utf8'), 'customer existing output');
+      const retry = command(directory, ['inspect', 'proof.json']);
+      assert.equal(retry.status, 0, retry.stderr);
+      assert.match(retry.stdout, /Customer release/);
+    });
+  });
+
+  it('keeps short native error details intact for recovery', async () => {
+    await withConsumer(async directory => {
+      const result = command(directory, ['inspect', 'missing-receipt.json']);
+      assert.equal(result.status, 1);
+      assert.equal(result.stdout, '');
+      assert.match(result.stderr, /ENOENT: no such file or directory, open .*missing-receipt\.json/);
+      assert.doesNotMatch(result.stderr.trimEnd(), /details shortened|Traceback|[\u0000-\u001f\u007f-\u009f]/);
+      assert.ok(result.stderr.length < 300);
     });
   });
 });
