@@ -18,6 +18,7 @@ import * as path from 'node:path';
 import { createReceipt, verifyReceipt, type ProofReceipt, type VerifyReceiptOptions } from './core/receipt.js';
 import { generateSvgBadge, generateShieldSvg, generateHtmlCertificate } from './visual/badge.js';
 import { ProofSigner, type SignatureAlgorithm } from './core/signer.js';
+import { validateReceiptEnvelope } from './core/envelope.js';
 
 /** Escape untrusted display strings without changing receipt or signature bytes. */
 function displayCopy<T>(value: T, markdown = false): T {
@@ -66,6 +67,46 @@ interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
+const booleanFlags = new Set([
+  'help', 'h', 'version', 'v', 'json', 'compact', 'checkFiles', 'check-files', 'include-git-context',
+]);
+const commonFlags = ['help', 'h', 'version', 'v'];
+const commandFlags: Record<string, string[]> = {
+  keygen: ['algo', 'out'],
+  attest: ['task', 'description', 'signer', 'algo', 'key', 'key-file', 'keyFile', 'files', 'f', 'status', 'out', 'badge', 'html', 'include-git-context'],
+  verify: ['proof', 'key', 'key-file', 'keyFile', 'algo', 'algorithm', 'checkFiles', 'check-files', 'json'],
+  badge: ['proof', 'out', 'format', 'compact'],
+  inspect: ['proof'],
+  export: ['proof', 'format', 'out'],
+};
+const valueFlags = new Set(Object.values(commandFlags).flat().filter(flag => !booleanFlags.has(flag)));
+
+function validateCommandFlags(parsed: ParsedArgs): void {
+  const allowed = new Set([...commonFlags, ...(commandFlags[parsed.command ?? ''] ?? [])]);
+  for (const flag of Object.keys(parsed.flags)) {
+    if (!allowed.has(flag)) {
+      throw new Error(`Unsupported ${parsed.command ?? 'CLI'} option: --${flag}. Run proof-ledger --help for examples`);
+    }
+  }
+  if (parsed.command && commandFlags[parsed.command] && parsed.command !== 'keygen') {
+    if (parsed.positionals.length > 1) {
+      throw new Error(`${parsed.command} accepts at most one positional argument`);
+    }
+    if (parsed.flags.proof !== undefined && parsed.positionals.length > 0) {
+      throw new Error('Choose a positional receipt path or --proof, not both');
+    }
+  }
+}
+
+async function readReceiptForPresentation(proofPath: string): Promise<ProofReceipt> {
+  const receipt: unknown = JSON.parse(await fs.readFile(path.resolve(proofPath), 'utf8'));
+  const validation = validateReceiptEnvelope(receipt);
+  if (!validation.valid) {
+    throw new Error(`Invalid proof receipt: ${validation.errors.map(error => `${error.path ?? '<root>'}: ${error.message}`).join('; ')}`);
+  }
+  return receipt as ProofReceipt;
+}
+
 /**
  * Reads a flag value trying multiple spellings (kebab-case and camelCase),
  * because parseArgs stores flag names verbatim as typed by the user.
@@ -110,21 +151,28 @@ function parseArgs(args: string[]): ParsedArgs {
     flags: {},
   };
 
+  let positionalsOnly = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
-        result.flags[key] = args[i + 1];
-        i++;
-      } else {
+    if (!positionalsOnly && arg === '--') {
+      positionalsOnly = true;
+      continue;
+    }
+    if (!positionalsOnly && arg.startsWith('-')) {
+      const option = arg.replace(/^-+/, '');
+      const equals = option.indexOf('=');
+      const key = equals === -1 ? option : option.slice(0, equals);
+      if (booleanFlags.has(key)) {
+        if (equals !== -1) throw new Error(`--${key} does not accept a value`);
         result.flags[key] = true;
-      }
-    } else if (arg.startsWith('-')) {
-      const key = arg.slice(1);
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
-        result.flags[key] = args[i + 1];
-        i++;
+      } else if (equals !== -1) {
+        const value = option.slice(equals + 1);
+        if (!value) throw new Error(`--${key} requires a value`);
+        result.flags[key] = value;
+      } else if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        result.flags[key] = args[++i];
+      } else if (valueFlags.has(key)) {
+        throw new Error(`--${key} requires a value`);
       } else {
         result.flags[key] = true;
       }
@@ -144,6 +192,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv);
 
   if (parsed.flags.help || parsed.flags.h || !parsed.command) {
+    validateCommandFlags(parsed);
     printHelp();
     return 0;
   }
@@ -152,6 +201,8 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
     console.log('2.0.0');
     return 0;
   }
+
+  validateCommandFlags(parsed);
 
   switch (parsed.command) {
     case 'keygen': {
@@ -320,9 +371,10 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       const outPath = (parsed.flags.out as string) || 'badge.svg';
       const format = (parsed.flags.format as string) || 'svg';
       const compact = Boolean(parsed.flags.compact);
-
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: ProofReceipt = JSON.parse(raw);
+      if (!['svg', 'shield', 'html'].includes(format)) {
+        throw new Error('Unsupported badge format; use svg, shield, or html');
+      }
+      const receipt = await readReceiptForPresentation(proofPath);
 
       let content: string;
       if (format === 'html') {
@@ -340,8 +392,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
 
     case 'inspect': {
       const proofPath = parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json';
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: ProofReceipt = displayCopy(JSON.parse(raw));
+      const receipt = displayCopy(await readReceiptForPresentation(proofPath));
 
       console.log('\n\x1b[1m╔══════════════════════════════════════════════════════════════════╗\x1b[0m');
       console.log('\x1b[1m║               NYMREL PROOF LEDGER AUDIT INSPECTOR                ║\x1b[0m');
@@ -378,9 +429,10 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       const proofPath = parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json';
       const format = (parsed.flags.format as string) || 'markdown';
       const outPath = parsed.flags.out as string | undefined;
-
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      let receipt: ProofReceipt = JSON.parse(raw);
+      if (!['markdown', 'jsonld', 'json-ld', 'html'].includes(format)) {
+        throw new Error('Unsupported export format; use markdown, jsonld, or html');
+      }
+      let receipt = await readReceiptForPresentation(proofPath);
 
       let output = '';
       if (format === 'jsonld' || format === 'json-ld') {
@@ -454,6 +506,10 @@ ${receipt.artifacts.map((a) => `| ${a.path} | ${a.sha256} | ${a.sizeBytes} |`).j
 }
 
 export async function runCli(argv: string[] = process.argv.slice(2)): Promise<number> {
+  if (argv.length === 1 && (argv[0] === '--version' || argv[0] === '-v')) {
+    console.log('2.0.0');
+    return 0;
+  }
   try { return await runCliUnchecked(argv); }
   catch (error) {
     console.error(`Proof Ledger command failed: ${displayCopy(error instanceof Error ? error.message : String(error))}`);
