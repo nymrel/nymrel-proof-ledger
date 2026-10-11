@@ -4,6 +4,7 @@ CLI Driver for Python nymrel_proof_ledger package.
 
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -163,6 +164,9 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "keygen":
+        if args.out == "":
+            keygen_parser.error("--out must be a non-empty path")
+
         if args.algo == "Ed25519":
             kp = ProofSigner.generate_key_pair()
             out_str = json.dumps(kp, indent=2)
@@ -172,10 +176,22 @@ def main(argv=None):
                 {"algorithm": "HMAC-SHA256", "secretKey": sec}, indent=2
             )
 
-        if args.out:
-            with open(args.out, "w", encoding="utf-8") as f:
-                f.write(out_str)
-            print(f"Key saved to {args.out}")
+        if args.out is not None:
+            try:
+                with open(
+                    args.out,
+                    "x",
+                    encoding="utf-8",
+                    opener=lambda path, flags: os.open(path, flags, 0o600),
+                ) as f:
+                    f.write(out_str)
+            except (OSError, ValueError) as error:
+                print(
+                    f"Error: Cannot create key file: {_display_copy(str(error))}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(f"Key saved to {_display_copy(args.out)}")
         else:
             print(out_str)
         sys.exit(0)
