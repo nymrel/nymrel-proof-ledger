@@ -7,8 +7,52 @@ import {
   generateHtmlCertificate,
 } from "../../src/visual/badge.js";
 import { ProofSigner } from "../../src/core/signer.js";
+import { generateQRMatrix } from "../../src/visual/qr.js";
 
 describe("Visual Badge & Certificate Generation", () => {
+  it("keeps a four-module QR quiet zone clear of labels and footers at every supported size", async () => {
+    const receipt = await createReceipt({
+      task: { name: "QR Layout" },
+      signingKey: "test-key",
+      signerIdentity: "test",
+    });
+    for (const compact of [false, true]) {
+      for (const targetBytes of [17, 18, 32, 33, 53, 54, 78, 79, 106, 107, 134]) {
+        receipt.proofId = 'A'.repeat(targetBytes - 'https://v.test/'.length);
+        const matrix = generateQRMatrix(`https://v.test/${receipt.proofId}`);
+        const svg = generateSvgBadge(receipt, { compact, verificationBaseUrl: 'https://v.test' });
+        const qrGroup = svg.match(/<!-- QR Verification Container -->\s*<g>([\s\S]*?)<\/g>/)?.[1];
+        assert.ok(qrGroup);
+        const box = qrGroup.match(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+        const firstModule = qrGroup.match(/M([\d.]+),([\d.]+)h([\d.]+)v/);
+        const label = qrGroup.match(/<text x="[\d.]+" y="([\d.]+)"/);
+        const footer = svg.match(/<line x1="24" y1="([\d.]+)"/);
+        assert.ok(box && firstModule && label && footer);
+        const [boxX, boxY, boxWidth, boxHeight] = box.slice(1).map(Number);
+        const [qrX, qrY, cell] = firstModule.slice(1).map(Number);
+        assert.ok(qrX - boxX >= 4 * cell + 0.5);
+        assert.ok(qrY - boxY >= 4 * cell + 0.5);
+        assert.ok(boxX + boxWidth - qrX - matrix.length * cell >= 4 * cell + 0.5);
+        assert.ok(boxY + boxHeight - qrY - matrix.length * cell >= 4 * cell + 0.5);
+        assert.ok(boxY >= 34, 'QR border must clear the header');
+        assert.ok(Number(label[1]) - 9 >= boxY + boxHeight, 'label must clear the quiet zone');
+        assert.ok(Number(label[1]) < Number(footer[1]), 'label must clear the footer');
+      }
+    }
+  });
+
+  it("rejects verifier targets beyond QR capacity instead of rendering a truncated destination", async () => {
+    const receipt = await createReceipt({
+      task: { name: "QR Capacity" },
+      signingKey: "test-key",
+      signerIdentity: "test",
+    });
+    assert.throws(
+      () => generateSvgBadge(receipt, { verificationBaseUrl: `https://example.test/${'a'.repeat(134)}` }),
+      /134 UTF-8 bytes/,
+    );
+  });
+
   it("defaults to an offline, explicitly unverified receipt presentation", async () => {
     const secret = ProofSigner.generateSecretKey();
     const receipt = await createReceipt({
