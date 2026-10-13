@@ -15,7 +15,7 @@
 
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { createReceipt, verifyReceipt, type ProofReceipt, type VerifyReceiptOptions } from './core/receipt.js';
+import { createReceipt, verifyReceipt, type ProofReceipt, type VerificationResult, type VerifyReceiptOptions } from './core/receipt.js';
 import { generateSvgBadge, generateShieldSvg, generateHtmlCertificate } from './visual/badge.js';
 import { ProofSigner, type SignatureAlgorithm } from './core/signer.js';
 import { validateReceiptEnvelope } from './core/envelope.js';
@@ -116,6 +116,40 @@ async function readReceiptForPresentation(proofPath: string): Promise<ProofRecei
     throw new Error(`Invalid proof receipt: ${validation.errors.map(error => `${error.path ?? '<root>'}: ${error.message}`).join('; ')}`);
   }
   return receipt as ProofReceipt;
+}
+
+function invalidReceiptInput(message: string): VerificationResult {
+  return {
+    valid: false, trusted: false, merkleValid: false, signatureChecked: false,
+    signatureValid: null, artifactsValid: false, checkedArtifacts: 0, receipt: null,
+    errors: [message], warnings: [],
+  };
+}
+
+async function readReceiptForVerification(proofPath: string): Promise<
+  { loaded: true; receipt: unknown } | { loaded: false; result: VerificationResult }
+> {
+  let bytes: Uint8Array;
+  try {
+    bytes = await fs.readFile(path.resolve(proofPath));
+  } catch {
+    return {
+      loaded: false,
+      result: invalidReceiptInput('Receipt file could not be read. Check the receipt path and read permissions, then retry.'),
+    };
+  }
+  try {
+    // Retain a BOM so both runtimes apply the same strict UTF-8 JSON parser.
+    const raw = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+    return { loaded: true, receipt: JSON.parse(raw) };
+  } catch (error) {
+    if (!(error instanceof SyntaxError) && !(error instanceof TypeError &&
+        'code' in error && error.code === 'ERR_ENCODING_INVALID_ENCODED_DATA')) throw error;
+    return {
+      loaded: false,
+      result: invalidReceiptInput('Receipt file is not valid UTF-8 JSON. Supply a complete UTF-8 JSON receipt, then retry.'),
+    };
+  }
 }
 
 /**
@@ -308,27 +342,28 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
 
     case 'verify': {
       const proofPath = (parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json');
-      const key = parsed.flags.key as string | undefined;
-      const keyFile = getFlag(parsed, 'key-file', 'keyFile');
-      let signingKey = key;
-      const expectedAlgorithm = getFlag(parsed, 'algo', 'algorithm');
-      let keyFileInvalid = false;
-      if (!signingKey && keyFile) {
-        try { signingKey = await loadKeyMaterial(keyFile, 'verify', expectedAlgorithm); }
-        catch { signingKey = ''; keyFileInvalid = true; }
-      }
-
       const checkFiles = Boolean(parsed.flags.checkFiles || parsed.flags['check-files']);
-
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: unknown = JSON.parse(raw);
-
-      let result = await verifyReceipt(receipt, {
-        publicKeyOrSecret: signingKey,
-        expectedAlgorithm,
-        checkFilesOnDisk: checkFiles,
-      } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
-      if (keyFileInvalid) result.errors = ['Invalid verification key file or algorithm context'];
+      const input = await readReceiptForVerification(proofPath);
+      let result: VerificationResult;
+      if (!input.loaded) {
+        result = input.result;
+      } else {
+        const key = parsed.flags.key as string | undefined;
+        const keyFile = getFlag(parsed, 'key-file', 'keyFile');
+        let signingKey = key;
+        const expectedAlgorithm = getFlag(parsed, 'algo', 'algorithm');
+        let keyFileInvalid = false;
+        if (!signingKey && keyFile) {
+          try { signingKey = await loadKeyMaterial(keyFile, 'verify', expectedAlgorithm); }
+          catch { signingKey = ''; keyFileInvalid = true; }
+        }
+        result = await verifyReceipt(input.receipt, {
+          publicKeyOrSecret: signingKey,
+          expectedAlgorithm,
+          checkFilesOnDisk: checkFiles,
+        } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
+        if (keyFileInvalid) result.errors = ['Invalid verification key file or algorithm context'];
+      }
 
       if (parsed.flags.json) {
         console.log(JSON.stringify(result, null, 2));

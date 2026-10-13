@@ -38,6 +38,30 @@ def _terminal_error_message(message):
     return safe[:head_length] + marker + safe[-tail_length:]
 
 
+def _invalid_receipt_input(message):
+    return {
+        'valid': False, 'trusted': False, 'merkleValid': False,
+        'signatureChecked': False, 'signatureValid': None, 'artifactsValid': False,
+        'checkedArtifacts': 0, 'receipt': None, 'errors': [message], 'warnings': [],
+    }
+
+
+def _read_receipt_for_verification(proof_path):
+    try:
+        with open(proof_path, 'rb') as file:
+            data = file.read()
+    except OSError:
+        return None, _invalid_receipt_input(
+            'Receipt file could not be read. Check the receipt path and read permissions, then retry.',
+        )
+    try:
+        return json.loads(data.decode('utf-8')), None
+    except (UnicodeError, ValueError, RecursionError):
+        return None, _invalid_receipt_input(
+            'Receipt file is not valid UTF-8 JSON. Supply a complete UTF-8 JSON receipt, then retry.',
+        )
+
+
 def _load_key_material(key_file, role, algorithm):
     """
     Loads signing key material from a file.
@@ -262,26 +286,25 @@ def _main(argv=None):
         sys.exit(0)
 
     if args.command == "verify":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt, result = _read_receipt_for_verification(args.proof)
+        if result is None:
+            key = args.key
+            key_file_invalid = False
+            if not key and args.key_file:
+                try:
+                    key = _load_key_material(args.key_file, "verify", args.algo)
+                except (OSError, ValueError, TypeError, RecursionError):
+                    key = ''
+                    key_file_invalid = True
 
-        key = args.key
-        key_file_invalid = False
-        if not key and args.key_file:
-            try:
-                key = _load_key_material(args.key_file, "verify", args.algo)
-            except (OSError, ValueError, TypeError, RecursionError):
-                key = ''
-                key_file_invalid = True
-
-        result = verify_receipt(
-            receipt,
-            public_key_or_secret=key,
-            expected_algorithm=args.algo,
-            check_files_on_disk=args.check_files,
-        )
-        if key_file_invalid:
-            result['errors'] = ['Invalid verification key file or algorithm context']
+            result = verify_receipt(
+                receipt,
+                public_key_or_secret=key,
+                expected_algorithm=args.algo,
+                check_files_on_disk=args.check_files,
+            )
+            if key_file_invalid:
+                result['errors'] = ['Invalid verification key file or algorithm context']
 
         if args.json:
             print(json.dumps(result, indent=2))

@@ -102,8 +102,11 @@ class TestCliFirstUseAndRecovery(unittest.TestCase):
         (self.directory / 'broken.json').write_text('{ broken json', encoding='utf-8')
         malformed = self.command('verify', 'broken.json', '--json')
         self.assertEqual(malformed.returncode, 1)
-        self.assertIn('Proof Ledger command failed', malformed.stderr)
-        self.assertNotIn('Traceback', malformed.stderr)
+        self.assertEqual(malformed.stderr, '')
+        self.assertEqual(json.loads(malformed.stdout)['errors'], [
+            'Receipt file is not valid UTF-8 JSON. '
+            'Supply a complete UTF-8 JSON receipt, then retry.',
+        ])
         missing_algorithm = self.command('verify', 'proof.json', '--key-file', 'hmac.key', '--json')
         self.assertEqual(missing_algorithm.returncode, 1)
         self.assertFalse(json.loads(missing_algorithm.stdout)['trusted'])
