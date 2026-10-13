@@ -9,9 +9,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '17 7 * * 2'
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'scheduled' || 'normal' }}
   cancel-in-progress: true
 
 permissions:
@@ -20,6 +22,7 @@ permissions:
 jobs:
   node:
     name: Node ${{ matrix.node-version }}
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
@@ -52,6 +55,7 @@ jobs:
 
   python:
     name: Python ${{ matrix.python-version }}
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
@@ -120,9 +124,7 @@ jobs:
         run: uvx ruff@0.16.5 check --select E4,E7,E9,F python test
 
       - name: Verify authentication across actual Node and Python runtimes
-        run: |
-          npm run build
-          uv run --no-project --with "cryptography>=50.0.1,<51" --with "rfc8785==0.1.4" python test/cross_runtime_auth.py
+        run: npm run test:cross
 
       - name: Audit GitHub Actions definitions
         uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482  # v0.6.4
