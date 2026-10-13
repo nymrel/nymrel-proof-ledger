@@ -16,6 +16,42 @@ The repository is the current source of truth. The npm name
 published, and proofs.nymrel.com is not represented here as an active
 verification service.
 
+Use it to attach signed receipts to build artifacts, automation outputs, or
+audit exports that another process can verify offline with a known public key.
+The signer supplies the task record; the library does not independently observe
+execution or establish the real-world identity of the signer.
+
+## First run from source
+
+With Node.js 22.12 through 26.x and npm 11 installed:
+
+~~~sh
+git clone https://github.com/nymrel/nymrel-proof-ledger.git
+cd nymrel-proof-ledger
+npm ci --ignore-scripts
+npm run build
+node examples/ed25519-demo.mjs
+~~~
+
+The demo creates a v2 Ed25519 receipt for a local artifact, then verifies the
+saved receipt using a separately configured **public** key and expected algorithm.
+It also checks the artifact bytes on disk. Expect:
+
+~~~text
+Original receipt + configured public key + disk check: valid=true, trusted=true, signatureChecked=true
+Original receipt without a verification key: valid=true, trusted=false, signatureChecked=false
+Receipt with changed signed metadata: valid=false, trusted=false, signatureChecked=true
+~~~
+
+The last result is an expected tamper rejection; the demo exits successfully only
+when all expectations pass. It uses fresh experimental keys, saves no private key,
+removes its temporary files, and needs no account or hosted verifier.
+
+For source installation into another Node or Python project and public-key-only
+CLI verification, see the [source installation guide](docs/QUICKSTART.md).
+Registry installs such as `npm install @nymrel/proof-ledger` and
+`pip install nymrel-proof-ledger` are not the current installation path.
+
 ## Runtime support
 
 | Runtime | Supported | Production dependencies |
@@ -70,12 +106,17 @@ python -m pip install .
 
 ## TypeScript API
 
+After building this checkout, a script at the repository root can import the
+compiled API as below. A consumer that installs the local npm archive described
+in the [source installation guide](docs/QUICKSTART.md) can instead import from
+`@nymrel/proof-ledger`.
+
 ~~~typescript
 import {
   ProofLedger,
   attestExecution,
   verifyProof,
-} from '@nymrel/proof-ledger';
+} from './dist/src/index.js';
 
 const secret = ProofLedger.generateSecretKey();
 
@@ -85,7 +126,7 @@ const receipt = await attestExecution({
     status: 'SUCCESS',
     exitCode: 0,
   },
-  artifacts: [{ path: 'dist/manifest.json' }],
+  artifacts: [{ path: 'README.md' }],
   signingKey: secret,
   signerIdentity: 'nymrel-release',
   metadata: { environment: 'local-acceptance' },
@@ -110,7 +151,7 @@ secret = ProofSigner.generate_secret_key()
 
 receipt = create_receipt(
     task={"name": "Release acceptance", "status": "SUCCESS", "exitCode": 0},
-    artifacts=[{"path": "dist/manifest.json"}],
+    artifacts=[{"path": "README.md"}],
     signing_key=secret,
     signer_identity="nymrel-release",
     metadata={"environment": "local-acceptance"},
@@ -128,15 +169,18 @@ if not result["trusted"]:
 
 ## CLI
 
+Build the checkout first. The [source installation guide](docs/QUICKSTART.md)
+shows how to prepare a separate public-only verifier key file.
+
 ~~~powershell
 # Generate portable raw-hex Ed25519 keys.
 node bin/proof-ledger.js keygen --algo Ed25519 --out signer.key
 
 # Create a v2 receipt.
-node bin/proof-ledger.js attest --task "Build and test" --files "dist/index.js,README.md" --key-file signer.key --algo Ed25519 --out proof.json
+node bin/proof-ledger.js attest --task "Build and test" --files "dist/src/index.js,README.md" --key-file signer.key --algo Ed25519 --out proof.json
 
 # Authenticated verification.
-node bin/proof-ledger.js verify proof.json --key-file signer.key --algo Ed25519 --check-files
+node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files
 
 # Integrity-only verification is explicit and is never labeled trusted.
 node bin/proof-ledger.js verify proof.json
@@ -144,6 +188,9 @@ node bin/proof-ledger.js verify proof.json
 
 The Python entry point is proof-ledger-py after package installation.
 --key-file accepts raw text or the JSON envelope produced by keygen.
+The generated Ed25519 signing envelope contains a private key. Keep it with the
+signer; share only its public key and independently configure `--algo Ed25519`
+for the verifier. Never obtain the trusted key or expected algorithm from a receipt.
 
 Authenticated verification requires an independently configured algorithm together
 with the key: `expectedAlgorithm` in TypeScript, keyword-only `expected_algorithm`
