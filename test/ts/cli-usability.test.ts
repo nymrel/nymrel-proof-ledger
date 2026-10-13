@@ -137,7 +137,9 @@ describe('CLI first-use and recovery', () => {
       await fs.writeFile(path.join(directory, 'broken.json'), '{ broken json');
       const malformed = command(directory, ['verify', 'broken.json', '--json']);
       assert.equal(malformed.status, 1);
-      assert.match(malformed.stderr, /Proof Ledger command failed/);
+      assert.equal(malformed.stderr, '');
+      assert.equal(JSON.parse(malformed.stdout).receipt, null);
+      assert.match(JSON.parse(malformed.stdout).errors[0], /complete UTF-8 JSON receipt, then retry/);
       const missingAlgorithm = command(directory, ['verify', 'proof.json', '--key-file', 'hmac.key', '--json']);
       assert.equal(missingAlgorithm.status, 1);
       assert.equal(JSON.parse(missingAlgorithm.stdout).trusted, false);

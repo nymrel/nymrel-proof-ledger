@@ -158,6 +158,12 @@ node bin/proof-ledger.js verify proof.json
 The Python entry point is proof-ledger-py after package installation.
 --key-file accepts raw text or the JSON envelope produced by keygen.
 
+`verify --json` returns the verification-result JSON object with exit code 1
+when a receipt cannot be read or parsed as UTF-8 JSON. These input failures have
+`valid: false`, `trusted: false`, `receipt: null`, and no signature or disk checks;
+`errors` explains how to retry without including receipt contents. Successfully
+parsed values continue through the regular envelope and integrity checks.
+
 Authenticated verification requires an independently configured algorithm together
 with the key: `expectedAlgorithm` in TypeScript, keyword-only `expected_algorithm`
 in Python, and `--algo` in either CLI (including with `--key-file`). Configure the
