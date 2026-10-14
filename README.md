@@ -233,6 +233,16 @@ uvx pip-audit .
 
 See SECURITY.md before using receipts as an authorization or release gate.
 
+`npm run test:release` includes both runtime suites and actual bidirectional
+authentication and Signal checks. Run `npm run test:cross` for the cross-runtime
+checks alone; it builds the Node package first and uses an isolated Python 3.13
+environment. The TypeScript runner allows five minutes per suite, and each
+cross-runtime Node bridge call allows one minute before failing.
+
+CI also audits dependencies and workflow definitions every Tuesday at 07:17 UTC
+on the default branch. Scheduled runs skip the runtime matrices and use a
+separate concurrency group so normal CI cannot cancel the periodic audit.
+
 ## License
 
 MIT License. Copyright 2026 Nymrel.

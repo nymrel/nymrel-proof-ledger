@@ -14,6 +14,7 @@ def node(request):
     process = subprocess.run(
         ['node', 'test/auth-bridge.mjs'], input=json.dumps(request),
         capture_output=True, text=True, encoding='utf-8', cwd=ROOT, check=True,
+        timeout=60,
     )
     return json.loads(process.stdout)
 

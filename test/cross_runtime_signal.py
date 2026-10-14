@@ -12,7 +12,7 @@ from test_auth_context import VECTORS  # noqa: E402
 from nymrel_proof_ledger.signal import create_signal_proof_bundle, verify_signal_proof_bundle  # noqa: E402
 
 def node(rows):
-    run = subprocess.run(['node', 'test/signal-bridge.mjs'], input=json.dumps(rows), capture_output=True, text=True, encoding='utf-8', cwd=ROOT, check=True)
+    run = subprocess.run(['node', 'test/signal-bridge.mjs'], input=json.dumps(rows), capture_output=True, text=True, encoding='utf-8', cwd=ROOT, check=True, timeout=60)
     return json.loads(run.stdout)
 
 def verdict(result):
