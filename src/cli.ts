@@ -140,8 +140,49 @@ function parseArgs(args: string[]): ParsedArgs {
   return result;
 }
 
+/** Validate key output options before generating secret material. */
+function parseKeygenArgs(args: string[]): ParsedArgs {
+  if (args[0] !== 'keygen') {
+    throw new Error('Place keygen before its options');
+  }
+  const result: ParsedArgs = { command: 'keygen', positionals: [], flags: {} };
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
+    if (['--help', '-h', '--version', '-v'].includes(arg)) {
+      result.flags[arg.replace(/^-+/, '')] = true;
+      continue;
+    }
+    const equals = arg.indexOf('=');
+    const option = equals === -1 ? arg : arg.slice(0, equals);
+    if (option !== '--algo' && option !== '--out') {
+      throw new Error(`Unsupported keygen argument: ${arg}`);
+    }
+    const name = option.slice(2);
+    if (Object.hasOwn(result.flags, name)) {
+      throw new Error(`Duplicate keygen option: ${option}`);
+    }
+    let value: string;
+    if (equals !== -1) {
+      value = arg.slice(equals + 1);
+    } else {
+      if (i + 1 >= args.length || args[i + 1].startsWith('-')) {
+        throw new Error(`${option} requires a value`);
+      }
+      value = args[++i];
+    }
+    if (value.length === 0) throw new Error(`${option} requires a nonempty value`);
+    result.flags[name] = value;
+  }
+  if (result.flags.algo !== undefined &&
+      result.flags.algo !== 'HMAC-SHA256' && result.flags.algo !== 'Ed25519') {
+    throw new Error('Unsupported keygen algorithm; use HMAC-SHA256 or Ed25519');
+  }
+  return result;
+}
+
 async function runCliUnchecked(argv: string[]): Promise<number> {
-  const parsed = parseArgs(argv);
+  const initial = parseArgs(argv);
+  const parsed = initial.command === 'keygen' ? parseKeygenArgs(argv) : initial;
 
   if (parsed.flags.help || parsed.flags.h || !parsed.command) {
     printHelp();
@@ -157,25 +198,17 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
     case 'keygen': {
       const algo = (parsed.flags.algo as SignatureAlgorithm) || 'HMAC-SHA256';
       const outPath = parsed.flags.out as string | undefined;
-
-      if (algo === 'Ed25519') {
-        const keypair = ProofSigner.generateKeyPair();
-        const output = JSON.stringify(keypair, null, 2);
-        if (outPath) {
-          await fs.writeFile(path.resolve(outPath), output, 'utf8');
-          console.log(`\x1b[32m✓ Ed25519 keypair saved to ${outPath}\x1b[0m`);
-        } else {
-          console.log(output);
-        }
+      const material = algo === 'Ed25519'
+        ? ProofSigner.generateKeyPair()
+        : { algorithm: algo, secretKey: ProofSigner.generateSecretKey() };
+      const output = JSON.stringify(material, null, 2);
+      if (outPath !== undefined) {
+        // Exclusive creation prevents replacement and refuses destination symlinks.
+        // Set permissions at creation so key bytes are never initially world-readable.
+        await fs.writeFile(path.resolve(outPath), output, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+        console.log(`\x1b[32m✓ ${algo} key saved to ${displayCopy(outPath)}\x1b[0m`);
       } else {
-        const secret = ProofSigner.generateSecretKey();
-        const output = JSON.stringify({ algorithm: 'HMAC-SHA256', secretKey: secret }, null, 2);
-        if (outPath) {
-          await fs.writeFile(path.resolve(outPath), output, 'utf8');
-          console.log(`\x1b[32m✓ HMAC-SHA256 secret key saved to ${outPath}\x1b[0m`);
-        } else {
-          console.log(output);
-        }
+        console.log(output);
       }
       return 0;
     }
