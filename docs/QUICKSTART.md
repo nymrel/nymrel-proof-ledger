@@ -71,8 +71,9 @@ use `py -m venv .venv` and `.venv\Scripts\Activate.ps1`.
 The local install makes `from nymrel_proof_ledger import create_receipt,
 verify_receipt` available. It installs the bounded `cryptography` and `rfc8785`
 runtime dependencies declared in `pyproject.toml`; it does not publish to PyPI.
-The first-run executable demo above uses Node. Both runtimes implement the same
-versioned receipt contract.
+Both runtimes implement the same versioned receipt contract. Follow the
+[cross-runtime demo](CROSS_RUNTIME_DEMO.md) to sign in Node and verify in Python,
+then reverse the direction, with disk checks and explicit tamper rejections.
 
 ## Verify with a public-only CLI key file
 
