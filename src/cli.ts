@@ -52,7 +52,7 @@ Parent Organization: Nymrel
 
 \x1b[1mEXAMPLES:\x1b[0m
   $ proof-ledger keygen --algo HMAC-SHA256
-  $ proof-ledger attest --task "Build and Test" --files "dist/index.js,README.md" --key "secret123" --out proof.json --badge badge.svg
+  $ proof-ledger attest --task "Build and Test" --files "dist/src/index.js,README.md" --key "secret123" --out proof.json --badge badge.svg
   $ proof-ledger verify proof.json --key "secret123" --algo HMAC-SHA256 --check-files
   $ proof-ledger inspect proof.json
   $ proof-ledger badge proof.json --format svg --out badge.svg

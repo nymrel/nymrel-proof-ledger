@@ -172,10 +172,12 @@ export function generateSvgBadge(
 
   // Generate QR Code vector path
   const qrMatrix = generateQRMatrix(target.value);
-  const qrCellSize = isCompact ? 3 : 4;
+  // Keep a four-module quiet zone and the label above the compact footer.
+  const qrCellSize = isCompact ? Math.min(3, Math.floor(100 / (qrMatrix.length + 8))) : 4;
+  const qrPadding = 4 * qrCellSize + 1; // The stroke sits outside the quiet zone.
   const qrSizePx = qrMatrix.length * qrCellSize;
   const qrOffsetX = width - qrSizePx - 32;
-  const qrOffsetY = isCompact ? 30 : 60;
+  const qrOffsetY = isCompact ? 36 + qrPadding : 60;
   const qrPath = generateQRSvgPath(qrMatrix, qrCellSize, qrOffsetX, qrOffsetY);
 
   const gitCommit = receipt.environment.git?.commit
@@ -221,27 +223,27 @@ export function generateSvgBadge(
     <text x="0" y="0" fill="#5C665F" font-weight="600">MERKLE ROOT</text>
     <text x="0" y="18" fill="#1C2320" font-family="'SF Mono', Monaco, Consolas, monospace" font-weight="700">${escapeXml(truncatedRoot)}</text>
 
-    <text x="0" y="44" fill="#5C665F" font-weight="600">SIGNER IDENTITY</text>
+    ${isCompact ? '' : `<text x="0" y="44" fill="#5C665F" font-weight="600">SIGNER IDENTITY</text>
     <text x="0" y="62" fill="#1C2320">${escapeXml(receipt.signature.signerIdentity)} <tspan fill="#A8541F" font-weight="600">(${escapeXml(receipt.signature.algorithm)})</tspan></text>
 
     <text x="220" y="0" fill="#5C665F" font-weight="600">LINEAGE &amp; ENV</text>
     <text x="220" y="18" fill="#1C2320" font-family="'SF Mono', Monaco, Consolas, monospace">${escapeXml(gitBranch)}@${escapeXml(gitCommit)} (${escapeXml(receipt.environment.platform)})</text>
 
     <text x="220" y="44" fill="#5C665F" font-weight="600">TIMESTAMP</text>
-    <text x="220" y="62" fill="#1C2320">${escapeXml(receipt.timestamp)}</text>
+    <text x="220" y="62" fill="#1C2320">${escapeXml(receipt.timestamp)}</text>`}
   </g>
 
   <!-- QR Verification Container -->
   <g>
-    <rect x="${qrOffsetX - 8}" y="${qrOffsetY - 8}" width="${qrSizePx + 16}" height="${qrSizePx + 16}" rx="8" fill="#FFFFFF" stroke="#E2DDD5" stroke-width="1"/>
+    <rect x="${qrOffsetX - qrPadding}" y="${qrOffsetY - qrPadding}" width="${qrSizePx + 2 * qrPadding}" height="${qrSizePx + 2 * qrPadding}" fill="#FFFFFF" stroke="#E2DDD5" stroke-width="1"/>
     <path d="${qrPath}" fill="#1C2320"/>
-    <text x="${qrOffsetX + qrSizePx / 2}" y="${qrOffsetY + qrSizePx + 18}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">${target.label}</text>
+    <text x="${qrOffsetX + qrSizePx / 2}" y="${qrOffsetY + qrSizePx + qrPadding + 12}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">${target.label}</text>
   </g>
 
   <!-- Footer Dual-Audience Marker -->
-  <line x1="24" y1="${height - 38}" x2="${width - 24}" y2="${height - 38}" stroke="#E2DDD5" stroke-width="1"/>
-  <text x="24" y="${height - 20}" fill="#5C665F" font-size="10">Portable receipt • Verify with authenticated key material</text>
-  <text x="${width - 24}" y="${height - 20}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">${escapeXml(target.host)}</text>
+  <line x1="24" y1="${height - (isCompact ? 26 : 38)}" x2="${width - 24}" y2="${height - (isCompact ? 26 : 38)}" stroke="#E2DDD5" stroke-width="1"/>
+  <text x="24" y="${height - (isCompact ? 12 : 20)}" fill="#5C665F" font-size="10">Portable receipt • Verify with authenticated key material</text>
+  <text x="${width - 24}" y="${height - (isCompact ? 12 : 20)}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">${escapeXml(target.host)}</text>
 
   <!-- Machine-Readable Metadata Anchor -->
   <metadata>

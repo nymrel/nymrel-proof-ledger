@@ -66,6 +66,8 @@
     "bin",
     "LICENSE",
     "README.md",
+    "SECURITY.md",
+    "docs",
     "llms.txt"
   ],
   "scripts": {

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 import unittest
 
@@ -14,9 +15,42 @@ from nymrel_proof_ledger.badge import (
 )
 from nymrel_proof_ledger.receipt import create_receipt, verify_receipt
 from nymrel_proof_ledger.signer import ProofSigner
+from nymrel_proof_ledger.qr import generate_qr_matrix
 
 
 class TestBadge(unittest.TestCase):
+    def test_four_module_quiet_zone_clears_labels_and_footers_at_all_sizes(self):
+        receipt = create_receipt(
+            task={"name": "QR Layout"}, signing_key="test-key", signer_identity="test",
+        )
+        for compact in [False, True]:
+            for target_bytes in [17, 18, 32, 33, 53, 54, 78, 79, 106, 107, 134]:
+                with self.subTest(compact=compact, target_bytes=target_bytes):
+                    receipt["proofId"] = "A" * (target_bytes - len("https://v.test/"))
+                    matrix = generate_qr_matrix(f"https://v.test/{receipt['proofId']}")
+                    svg = generate_svg_badge(receipt, compact=compact, verification_base_url="https://v.test")
+                    group = re.search(r'<!-- QR Verification Container -->\s*<g>([\s\S]*?)</g>', svg)[1]
+                    box = re.search(r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"', group)
+                    module = re.search(r'M([\d.]+),([\d.]+)h([\d.]+)v', group)
+                    label_y = float(re.search(r'<text x="[\d.]+" y="([\d.]+)"', group)[1])
+                    footer_y = float(re.search(r'<line x1="24" y1="([\d.]+)"', svg)[1])
+                    box_x, box_y, box_width, box_height = map(float, box.groups())
+                    qr_x, qr_y, cell = map(float, module.groups())
+                    self.assertGreaterEqual(qr_x - box_x, 4 * cell + 0.5)
+                    self.assertGreaterEqual(qr_y - box_y, 4 * cell + 0.5)
+                    self.assertGreaterEqual(box_x + box_width - qr_x - len(matrix) * cell, 4 * cell + 0.5)
+                    self.assertGreaterEqual(box_y + box_height - qr_y - len(matrix) * cell, 4 * cell + 0.5)
+                    self.assertGreaterEqual(box_y, 34)
+                    self.assertGreaterEqual(label_y - 9, box_y + box_height)
+                    self.assertLess(label_y, footer_y)
+
+    def test_rejects_oversize_verifier_targets_without_truncating(self):
+        receipt = create_receipt(
+            task={"name": "QR Capacity"}, signing_key="test-key", signer_identity="test",
+        )
+        with self.assertRaisesRegex(ValueError, "134 UTF-8 bytes"):
+            generate_svg_badge(receipt, verification_base_url="https://example.test/" + "a" * 134)
+
     def test_svg_badge_defaults_to_unverified_offline_presentation(self):
         secret = ProofSigner.generate_secret_key()
         receipt = create_receipt(

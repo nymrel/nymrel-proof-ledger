@@ -83,6 +83,10 @@ used as a trust signal. Pass the corresponding verification result to render
 unless the caller explicitly supplies an absolute HTTPS verifier base URL; this
 package does not assume that a hosted verifier exists.
 
+SVG badge QR payloads support up to 134 UTF-8 bytes. Longer receipt URNs or
+verifier URLs raise an error rather than encoding a truncated target. Generated
+badges include the four-module white margin required around a QR code.
+
 ## Local development
 
 ### Node.js
@@ -91,6 +95,10 @@ package does not assume that a hosted verifier exists.
 npm install --ignore-scripts
 npm run test:release
 ~~~
+
+The release gate builds the TypeScript files. When packing a checkout without
+running that gate, run `npm run build` before `npm pack` or `npm pack --dry-run`;
+the compiled package files are not stored in Git.
 
 ### Python
 
@@ -274,7 +282,7 @@ The shared fixture at test/fixtures/protocol-v2-vectors.json contains:
 npm run test:release
 npm audit --audit-level=high
 npm pack --dry-run
-uvx ruff check python test/python
+uvx ruff@0.16.5 check --select E4,E7,E9,F python test
 uvx pip-audit .
 ~~~
 
