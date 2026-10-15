@@ -439,6 +439,23 @@ function deriveDoesNotProve(scopes: SignalAttestedScope[]): string[] {
   return boundaries;
 }
 
+/**
+ * Separates cryptographically bound scope declarations from scopes actually
+ * established by this verifier.
+ *
+ * v1 recomputes the receipt/Merkle/signature and exact envelope-artifact
+ * binding, so it can establish artifact integrity. It does not execute an
+ * evaluator, independently resolve observer/signer authority, or re-observe
+ * execution, timing, or price evidence. Those semantic scopes remain signed
+ * declarations in the bound envelope and cannot remove public caveats.
+ */
+function deriveEstablishedScopes(
+  envelope: SignalProofEnvelopeV1 | undefined
+): SignalAttestedScope[] {
+  if (envelope === undefined) return [];
+  return envelope.attestedScopes.filter((scope) => scope === 'artifact_integrity');
+}
+
 function failedCoreVerification(): VerificationResult {
   return {
     valid: false,
@@ -604,6 +621,7 @@ async function verifySignalProofBundleInternal(
     core.errors.length === 0;
   const valid = Boolean(structurallyValid && core.trusted);
   const authoritativeEnvelope = valid ? normalizedEnvelope : undefined;
+  const establishedScopes = deriveEstablishedScopes(authoritativeEnvelope);
 
   return {
     valid,
@@ -620,7 +638,7 @@ async function verifySignalProofBundleInternal(
       signalReceiptId: authoritativeEnvelope?.signalReceiptId,
       needDropId: authoritativeEnvelope?.needDropId,
       challengeId: authoritativeEnvelope?.challengeId,
-      attestedScopes: authoritativeEnvelope?.attestedScopes ?? [],
+      attestedScopes: establishedScopes,
       publicEvidenceRefs:
         authoritativeEnvelope?.evidence
           .filter((item) => item.privacy === 'public')
@@ -628,7 +646,7 @@ async function verifySignalProofBundleInternal(
       nonPublicEvidenceCount:
         authoritativeEnvelope?.evidence.filter((item) => item.privacy !== 'public').length ?? 0,
     },
-    doesNotProve: deriveDoesNotProve(authoritativeEnvelope?.attestedScopes ?? []),
+    doesNotProve: deriveDoesNotProve(establishedScopes),
   };
 }
 
