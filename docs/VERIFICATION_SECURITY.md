@@ -111,6 +111,9 @@ checks remain an explicit caller capability. Portable disk paths reject Windows
 device names, alternate streams, trailing dots/spaces and reserved characters on
 all hosts, in addition to existing root confinement. A filename accepted for
 in-memory attestation can therefore be ineligible for portable disk verification.
+Names beginning with two dots, such as `..notes.txt` or `..cache/artifact.txt`,
+remain valid when their resolved paths stay within the verification root. Only
+the `..` parent component denotes traversal; symlinks are checked after resolution.
 
 Git context still requires opt-in and a trusted directory/installation. It resolves
 an executable from absolute PATH directories, excluding the selected working
