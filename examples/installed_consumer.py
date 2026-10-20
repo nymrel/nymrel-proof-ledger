@@ -10,6 +10,12 @@ import nymrel_proof_ledger
 from nymrel_proof_ledger import ProofSigner, create_receipt, verify_receipt
 
 
+def require(condition, message):
+    """Keep acceptance checks active under Python -O/-OO and PYTHONOPTIMIZE."""
+    if not condition:
+        raise AssertionError(message)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('create', 'verify'))
@@ -40,36 +46,36 @@ def main():
             json.dump(receipt, stream)
     else:
         config = json.loads(config_path.read_text(encoding='utf-8'))
-        assert sorted(config) == ['algorithm', 'publicKey']
-        assert config['algorithm'] == 'Ed25519'
-        assert isinstance(config['publicKey'], str)
+        require(sorted(config) == ['algorithm', 'publicKey'], 'Installed-consumer acceptance condition failed')
+        require(config['algorithm'] == 'Ed25519', 'Installed-consumer acceptance condition failed')
+        require(isinstance(config['publicKey'], str), 'Installed-consumer acceptance condition failed')
         receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
-        assert receipt['version'] == '2.0.0'
+        require(receipt['version'] == '2.0.0', 'Installed-consumer acceptance condition failed')
         options = {
             'public_key_or_secret': config['publicKey'],
             'expected_algorithm': config['algorithm'],
             'check_files_on_disk': True, 'cwd': str(root),
         }
         original = verify_receipt(receipt, **options)
-        assert original['valid'] and original['trusted'] and original['signatureChecked']
-        assert original['checkedArtifacts'] == 1
+        require(original['valid'] and original['trusted'] and original['signatureChecked'], 'Installed-consumer acceptance condition failed')
+        require(original['checkedArtifacts'] == 1, 'Installed-consumer acceptance condition failed')
         checks.append('trusted-v2-public-only')
 
         wrong_key = verify_receipt(receipt, **{
             **options, 'public_key_or_secret': ProofSigner.generate_key_pair()['publicKey'],
         })
-        assert not wrong_key['valid'] and not wrong_key['trusted']
+        require(not wrong_key['valid'] and not wrong_key['trusted'], 'Installed-consumer acceptance condition failed')
         checks.append('wrong-key-rejected')
 
         tampered = deepcopy(receipt)
         tampered['metadata']['purpose'] = 'changed-after-signing'
         rejected = verify_receipt(tampered, **options)
-        assert not rejected['valid'] and not rejected['trusted']
-        assert rejected['merkleValid'] and rejected['signatureValid'] is False
+        require(not rejected['valid'] and not rejected['trusted'], 'Installed-consumer acceptance condition failed')
+        require(rejected['merkleValid'] and rejected['signatureValid'] is False, 'Installed-consumer acceptance condition failed')
         checks.append('signed-metadata-tampering-rejected')
 
         integrity = verify_receipt(receipt, check_files_on_disk=True, cwd=str(root))
-        assert integrity['valid'] and not integrity['trusted'] and not integrity['signatureChecked']
+        require(integrity['valid'] and not integrity['trusted'] and not integrity['signatureChecked'], 'Installed-consumer acceptance condition failed')
         checks.append('integrity-only-untrusted')
 
     print(json.dumps({

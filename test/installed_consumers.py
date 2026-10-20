@@ -30,6 +30,12 @@ ENVIRONMENT = {
 ENVIRONMENT['PYTHONNOUSERSITE'] = '1'
 
 
+def require(condition, message):
+    """Keep acceptance checks active under Python -O/-OO and PYTHONOPTIMIZE."""
+    if not condition:
+        raise AssertionError(message)
+
+
 def digest(path):
     hasher = hashlib.sha256()
     with path.open('rb') as stream:
@@ -66,18 +72,18 @@ def check_npm_documentation(archive):
             if not (name == 'package/README.md' or name.startswith('package/docs/')) or not name.endswith('.md'):
                 continue
             stream = package.extractfile(member)
-            assert stream is not None
+            require(stream is not None, 'Installed-consumer acceptance condition failed')
             markdown = stream.read().decode('utf-8')
             for target in re.findall(r'\[[^\]]*\]\(([^\s)]+)\)', markdown):
                 link = urlsplit(target.strip('<>'))
                 if link.scheme or link.netloc or not link.path:
                     continue
                 candidate = os.path.normpath(str(Path(name).parent / unquote(link.path))).replace('\\', '/')
-                assert candidate in members, f'Broken packaged documentation link: {name}: {target}'
+                require(candidate in members, f'Broken packaged documentation link: {name}: {target}')
                 checked += 1
         for required in ('package/examples/installed-consumer.mjs', 'package/examples/installed_consumer.py',
                          'package/SECURITY.md', 'package/CONTRIBUTING.md', 'package/docs/INSTALLED_CONSUMERS.md'):
-            assert required in members, f'Missing npm archive member: {required}'
+            require(required in members, f'Missing npm archive member: {required}')
         return checked
 
 
@@ -87,7 +93,7 @@ def main():
     parser.add_argument('--artifacts', type=Path, help='Reuse exactly one npm tgz, wheel, and Python tar.gz found recursively here; skip rebuilding')
     args = parser.parse_args()
     output = args.output.resolve() if args.output else Path(tempfile.mkdtemp(prefix='proof-ledger-acceptance-'))
-    assert not output.is_relative_to(ROOT), 'Keep build artifacts and consumer environments outside the checkout'
+    require(not output.is_relative_to(ROOT), 'Keep build artifacts and consumer environments outside the checkout')
     if args.output:
         output.mkdir(parents=True, exist_ok=False)
     artifacts = output / 'artifacts'
@@ -119,7 +125,7 @@ def main():
             'stdout': process.stdout, 'stderr': process.stderr,
         }
         steps.append(row)
-        assert process.returncode in expected, f'{label} failed: {row}'
+        require(process.returncode in expected, f'{label} failed: {row}')
         return process
 
     def json_run(label, command, cwd, expected=(0,)):
@@ -132,10 +138,10 @@ def main():
         report['host']['uv'] = run('uv-version', ['uv', '--version'], ROOT).stdout.strip()
         if args.artifacts:
             supplied = args.artifacts.resolve()
-            assert supplied.is_dir(), f'Artifact input directory does not exist: {supplied}'
+            require(supplied.is_dir(), f'Artifact input directory does not exist: {supplied}')
             for pattern in ('*.tgz', '*.whl', '*.tar.gz'):
                 matches = [path for path in supplied.rglob(pattern) if path.is_file()]
-                assert len(matches) == 1, f'Expected exactly one {pattern} recursively under {supplied}'
+                require(len(matches) == 1, f'Expected exactly one {pattern} recursively under {supplied}')
                 shutil.copyfile(matches[0], artifacts / matches[0].name)
         else:
             run('npm-build', ['npm', 'run', 'build'], ROOT)
@@ -143,42 +149,42 @@ def main():
                 'npm', 'pack', '--json', '--ignore-scripts', '--pack-destination', artifacts,
             ], ROOT)
             run('python-build-sdist-and-wheel', ['uv', 'build', '--python', sys.executable, '--out-dir', artifacts], ROOT)
-            assert report['source'] == source_state(), 'Source changed during artifact construction; rerun against a stable checkout'
+            require(report['source'] == source_state(), 'Source changed during artifact construction; rerun against a stable checkout')
         npm_archives = list(artifacts.glob('*.tgz'))
-        assert len(npm_archives) == 1, 'Expected exactly one npm archive'
+        require(len(npm_archives) == 1, 'Expected exactly one npm archive')
         npm_archive = npm_archives[0]
         with tarfile.open(npm_archive, 'r:gz') as distribution:
             manifest_stream = distribution.extractfile('package/package.json')
-            assert manifest_stream is not None
+            require(manifest_stream is not None, 'Installed-consumer acceptance condition failed')
             npm_metadata = json.load(manifest_stream)
-            assert npm_metadata['name'] == '@nymrel/proof-ledger'
+            require(npm_metadata['name'] == '@nymrel/proof-ledger', 'Installed-consumer acceptance condition failed')
         report['packaged_markdown_links_checked'] = check_npm_documentation(npm_archive)
         wheels = list(artifacts.glob('*.whl'))
         sdists = list(artifacts.glob('*.tar.gz'))
-        assert len(wheels) == len(sdists) == 1, 'Expected exactly one wheel and sdist'
+        require(len(wheels) == len(sdists) == 1, 'Expected exactly one wheel and sdist')
         wheel, sdist = wheels[0], sdists[0]
         with zipfile.ZipFile(wheel) as distribution:
             metadata_names = [name for name in distribution.namelist() if name.endswith('.dist-info/METADATA')]
-            assert len(metadata_names) == 1
+            require(len(metadata_names) == 1, 'Installed-consumer acceptance condition failed')
             metadata = distribution.read(metadata_names[0]).decode()
             version = re.search(r'^Version: (.+)$', metadata, flags=re.MULTILINE).group(1)
             wheel_name = re.search(r'^Name: (.+)$', metadata, flags=re.MULTILINE).group(1)
-            assert re.sub(r'[-_.]+', '-', wheel_name).lower() == 'nymrel-proof-ledger'
-        assert npm_metadata['version'] == version, 'Node and Python distribution versions differ'
+            require(re.sub(r'[-_.]+', '-', wheel_name).lower() == 'nymrel-proof-ledger', 'Installed-consumer acceptance condition failed')
+        require(npm_metadata['version'] == version, 'Node and Python distribution versions differ')
         with tarfile.open(sdist, 'r:gz') as distribution:
             names = distribution.getnames()
             metadata_member = next(name for name in names if name.count('/') == 1 and name.endswith('/PKG-INFO'))
             metadata_stream = distribution.extractfile(metadata_member)
-            assert metadata_stream is not None
+            require(metadata_stream is not None, 'Installed-consumer acceptance condition failed')
             sdist_metadata = metadata_stream.read().decode('utf-8')
-            assert re.search(r'^Version: (.+)$', sdist_metadata, flags=re.MULTILINE).group(1) == version
+            require(re.search(r'^Version: (.+)$', sdist_metadata, flags=re.MULTILINE).group(1) == version, 'Installed-consumer acceptance condition failed')
             sdist_name = re.search(r'^Name: (.+)$', sdist_metadata, flags=re.MULTILINE).group(1)
-            assert re.sub(r'[-_.]+', '-', sdist_name).lower() == 'nymrel-proof-ledger'
+            require(re.sub(r'[-_.]+', '-', sdist_name).lower() == 'nymrel-proof-ledger', 'Installed-consumer acceptance condition failed')
             example_member = next(name for name in names if name.endswith('/examples/installed_consumer.py'))
             example_stream = distribution.extractfile(example_member)
-            assert example_stream is not None
+            require(example_stream is not None, 'Installed-consumer acceptance condition failed')
             python_example_bytes = example_stream.read()
-            assert any(name.endswith('/docs/INSTALLED_CONSUMERS.md') for name in names)
+            require(any(name.endswith('/docs/INSTALLED_CONSUMERS.md') for name in names), 'Installed-consumer acceptance condition failed')
         report['version'] = version
         report['artifacts'] = [
             {'filename': path.name, 'bytes': path.stat().st_size, 'sha256': digest(path)}
@@ -190,7 +196,7 @@ def main():
 
         with tempfile.TemporaryDirectory(prefix='proof-ledger-consumers-') as temporary:
             consumer_root = Path(temporary).resolve()
-            assert not consumer_root.is_relative_to(ROOT)
+            require(not consumer_root.is_relative_to(ROOT), 'Installed-consumer acceptance condition failed')
             node_project = consumer_root / 'node'
             node_project.mkdir()
             (node_project / 'package.json').write_text(json.dumps({'private': True, 'type': 'module'}), encoding='utf-8')
@@ -203,8 +209,8 @@ def main():
             run('node-installed-cli-help', [node_cli, '--help'], node_project)
             node_public = consumer_root / 'node-public'
             created = json_run('node-create', ['node', node_example, 'create', node_public], node_project)
-            assert str(ROOT) not in created['module']
-            assert str(node_project / 'node_modules') in unquote(created['module'])
+            require(str(ROOT) not in created['module'], 'Installed-consumer acceptance condition failed')
+            require(str(node_project / 'node_modules') in unquote(created['module']), 'Installed-consumer acceptance condition failed')
             consumers = [('node', node_project, [node_cli])]
             receipts = [('node', node_public)]
 
@@ -222,20 +228,33 @@ def main():
                 run(f'{kind}-installed-cli-help', [python_cli, '--help'], project)
                 public = consumer_root / f'{kind}-public'
                 created = json_run(f'{kind}-create', [python, '-I', python_example, 'create', public], project)
-                assert Path(created['module']).resolve().is_relative_to(environment)
-                assert created['version'] == version
+                require(Path(created['module']).resolve().is_relative_to(environment), 'Installed-consumer acceptance condition failed')
+                require(created['version'] == version, 'Installed-consumer acceptance condition failed')
                 receipts.append((kind, public))
                 consumers.append((kind, project, [python_cli]))
                 result = json_run(f'{kind}-verify-node-public-only', [python, '-I', python_example, 'verify', node_public], project)
-                assert len(result['checks']) == 4
+                require(len(result['checks']) == 4, 'Installed-consumer acceptance condition failed')
+                optimized = json_run(f'{kind}-verify-node-optimized', [python, '-I', '-O', python_example, 'verify', node_public], project)
+                require(len(optimized['checks']) == 4, 'Optimized consumer must execute every verdict check')
+                original_receipt = (node_public / 'proof.json').read_bytes()
+                corrupted = json.loads(original_receipt)
+                corrupted['metadata']['purpose'] = 'changed-after-signing'
+                (node_public / 'proof.json').write_text(json.dumps(corrupted), encoding='utf-8')
+                try:
+                    rejected = run(f'{kind}-verify-node-optimized-tampering', [
+                        python, '-I', '-O', python_example, 'verify', node_public,
+                    ], project, expected=(1,))
+                    require(not rejected.stdout.strip(), 'Rejected optimized consumer must not emit PASS evidence')
+                finally:
+                    (node_public / 'proof.json').write_bytes(original_receipt)
                 result = json_run(f'node-verify-{kind}-public-only', ['node', node_example, 'verify', public], node_project)
-                assert len(result['checks']) == 4
+                require(len(result['checks']) == 4, 'Installed-consumer acceptance condition failed')
 
             cli_checks = []
             for source, public in receipts:
                 config = json.loads((public / 'verifier-config.json').read_text(encoding='utf-8'))
-                assert sorted(config) == ['algorithm', 'publicKey']
-                assert not any('private' in name.lower() or 'secret' in name.lower() for name in config)
+                require(sorted(config) == ['algorithm', 'publicKey'], 'Installed-consumer acceptance condition failed')
+                require(not any('private' in name.lower() or 'secret' in name.lower() for name in config), 'Installed-consumer acceptance condition failed')
                 receipt = json.loads((public / 'proof.json').read_text(encoding='utf-8'))
                 tampered = deepcopy(receipt)
                 tampered['metadata']['purpose'] = 'changed-after-signing'
@@ -252,12 +271,12 @@ def main():
                         result = json_run(f'{consumer}-gate-{source}-{case}', [
                             *cli, 'verify', proof, *args_for_key, *(common if options is None else options),
                         ], public, (0,) if accepted else (1,))
-                        assert result['trusted'] is accepted, (consumer, source, case, result)
-                        assert result['policy']['name'] == 'authenticated-v2'
-                        assert result['policy']['passed'] is accepted
-                        assert bool(result['policy']['errors']) is not accepted
+                        require(result['trusted'] is accepted, (consumer, source, case, result))
+                        require(result['policy']['name'] == 'authenticated-v2', 'Installed-consumer acceptance condition failed')
+                        require(result['policy']['passed'] is accepted, 'Installed-consumer acceptance condition failed')
+                        require(bool(result['policy']['errors']) is not accepted, 'Installed-consumer acceptance condition failed')
                         if accepted:
-                            assert result['valid'] and result['signatureChecked'] and result['checkedArtifacts'] == 1
+                            require(result['valid'] and result['signatureChecked'] and result['checkedArtifacts'] == 1, 'Installed-consumer acceptance condition failed')
                         cli_checks.append({'consumer': consumer, 'signer': source, 'case': case, 'accepted': accepted})
                         return result
 
@@ -265,13 +284,13 @@ def main():
                     integrity = gate('integrity-only-rejected', key_args=[], options=[
                         '--check-files', '--require-trusted-v2', '--json',
                     ])
-                    assert integrity['valid'] and not integrity['signatureChecked']
+                    require(integrity['valid'] and not integrity['signatureChecked'], 'Installed-consumer acceptance condition failed')
                     # The default retains integrity-only success; the gate is opt-in.
                     default = json_run(f'{consumer}-default-integrity-only-{source}', [
                         *cli, 'verify', 'proof.json', '--check-files', '--json',
                     ], public)
-                    assert default['valid'] and not default['trusted']
-                    assert 'policy' not in default
+                    require(default['valid'] and not default['trusted'], 'Installed-consumer acceptance condition failed')
+                    require('policy' not in default, 'Installed-consumer acceptance condition failed')
                     gate('wrong-key-rejected', key_args=['--key-file', other / 'verifier-config.json'])
                     gate('wrong-algorithm-rejected', options=[
                         '--algo', 'HMAC-SHA256', '--check-files', '--require-trusted-v2', '--json',

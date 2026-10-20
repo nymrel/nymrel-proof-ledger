@@ -23,11 +23,17 @@ two separate virtual environments. Consumers run outside the checkout, without
 or source-tree API import is used.
 
 Each Python installation creates an Ed25519 receipt that the installed Node
-consumer verifies. Each also verifies the Node receipt. The scripts assert
+consumer verifies. Each also verifies the Node receipt. The scripts require
 authenticated v2 success, rejection with a different public key, rejection of
 changed signed metadata, and the untrusted status of integrity-only results.
 Only public keys, receipts, and artifact bytes cross the signing/verifying
 boundary. The private keys stay in the creating process's memory.
+
+Python acceptance conditions use explicit checks that remain active with `-O`,
+`-OO`, or `PYTHONOPTIMIZE`. Each installed Python consumer also runs with `-I -O`:
+the original Node receipt succeeds, while changed signed metadata must fail
+without emitting a `PASS` report. The regression suite injects failed subprocesses,
+broken package links, and an incorrectly authenticated wrong-key verdict.
 
 The installed `proof-ledger` and `proof-ledger-py` entry points are also exercised
 against all three generated receipts. With `--require-trusted-v2 --check-files`,
@@ -113,7 +119,7 @@ Back in the Node consuming project:
 node installed-consumer.mjs verify /tmp/ledger-python-public
 ```
 
-Both scripts print a JSON `PASS` only after all assertions succeed. The `create`
+Both scripts print a JSON `PASS` only after all acceptance checks succeed. The `create`
 action requires new output files and refuses to overwrite existing receipts,
 artifacts, or public configurations. The example shell commands use POSIX paths;
 on Windows use the virtual environment's `Scripts/python.exe` and equivalent
