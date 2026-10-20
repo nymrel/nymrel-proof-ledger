@@ -192,6 +192,21 @@ The generated Ed25519 signing envelope contains a private key. Keep it with the
 signer; share only its public key and independently configure `--algo Ed25519`
 for the verifier. Never obtain the trusted key or expected algorithm from a receipt.
 
+`keygen --out PATH` creates a new key file exclusively, with owner-only permissions
+(`0600`, further restricted by the process umask) on POSIX systems. It refuses an
+existing file, directory, or destination symlink, preserving the existing key.
+Choose a new filename when generating a replacement key. On Windows, access is
+controlled by the destination directory's ACLs; use a private directory.
+
+Both CLIs accept `--algo Ed25519` / `--algo=Ed25519` and `--out PATH` /
+`--out=PATH`. HMAC-SHA256 is the default algorithm. Unsupported algorithms and
+missing or empty option values fail; an empty `--out` never selects stdout.
+Node keygen also rejects unknown or repeated options and unexpected positional
+arguments; place `keygen` before its options.
+Omitting `--out` deliberately prints the secret-bearing JSON envelope to stdout.
+Prefer `--out` for stored keys: shell redirection uses the shell's file permissions
+and overwrite behavior instead of the CLI's protections.
+
 Authenticated verification requires an independently configured algorithm together
 with the key: `expectedAlgorithm` in TypeScript, keyword-only `expected_algorithm`
 in Python, and `--algo` in either CLI (including with `--key-file`). Configure the
