@@ -82,6 +82,12 @@ After building the checkout, the signer can create a local experimental keypair:
 node bin/proof-ledger.js keygen --algo Ed25519 --out signer.key
 ```
 
+Choose a new output path: key generation refuses to replace existing files or
+symlinks. New key files use owner-only `0600` permissions on POSIX; on Windows,
+use a directory with a restrictive ACL. Omitting `--out` explicitly exports the
+private key to stdout. Attestation requires a supplied signing key and never
+creates or logs a replacement key.
+
 `signer.key` contains both private and public key material. Keep it private and
 outside version control. To prepare a public-only file in this local experiment:
 
@@ -97,13 +103,19 @@ node bin/proof-ledger.js attest --task "Local build manifest" --files README.md 
 node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files --json
 ```
 
+For an automation gate, add `--require-trusted-v2` to the verification command.
+It exits one unless signature authentication, protocol v2, and all requested
+checks succeed. JSON output includes `policy.passed` and `policy.errors`; these
+are policy decisions alongside the original cryptographic result fields. The
+same flag is available in `proof-ledger-py verify`.
+
 Run this experiment from the checkout root so the relative artifact path resolves
 to the same file. Separate verification environments must have matching artifact
 bytes under their own verification root when using `--check-files`.
 
 Require `trusted: true`, and require receipt version `2.0.0` if your policy needs
-v2 signed fields. CLI exit zero by itself is insufficient: integrity-only
-verification also exits zero. Badges and certificates present receipt data; they
+v2 signed fields. Without `--require-trusted-v2`, CLI exit zero by itself is
+insufficient: integrity-only verification also exits zero. Badges and certificates present receipt data; they
 do not establish trust. Production key custody, identity binding, rotation, and
 revocation remain operator responsibilities. Read [verification boundaries](VERIFICATION_SECURITY.md)
 and [SECURITY.md](../SECURITY.md) before using this as a release or authorization gate.

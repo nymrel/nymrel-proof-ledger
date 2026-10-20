@@ -94,3 +94,13 @@ Do not place production keys in source control, command history, receipts,
 badges, or logs. HMAC keys are symmetric and should not be distributed as
 public verification material. Prefer Ed25519 when verifiers must not gain
 signing capability. Obtain public keys through an authenticated channel.
+
+CLI attestation requires a supplied key and never generates or prints a fallback
+secret. Explicit `keygen` without `--out` exports private key material to stdout
+and must not run in a captured-log context.
+
+Use `verify --require-trusted-v2` when the CLI exit code controls an authenticated
+v2 gate. Default exit zero also permits integrity-only verification. The gate's
+JSON `policy` verdict is separate from the core cryptographic verdict and does
+not establish signer authorization or execution. Add `--check-files` when local
+artifact checks are required.

@@ -21,6 +21,7 @@ Run the local release gate:
 
 ~~~powershell
 npm run test:release
+npm run test:installed
 npm audit --audit-level=high
 npm pack --dry-run
 ~~~
@@ -29,7 +30,7 @@ Run Python checks in an isolated environment:
 
 ~~~powershell
 uv run --isolated --no-project --python 3.13 --with "cryptography>=50.0.1,<51" --with "rfc8785==0.1.4" python -m unittest discover -s test/python -p "test_*.py"
-uvx ruff check python test/python
+uvx ruff@0.16.5 check --select E4,E7,E9,F python test
 uvx pip-audit .
 ~~~
 

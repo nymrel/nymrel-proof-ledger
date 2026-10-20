@@ -49,6 +49,7 @@ Parent Organization: Nymrel
 \x1b[1mOPTIONS:\x1b[0m
   --help, -h       Show this help message
   --version, -v    Show version number
+  --require-trusted-v2  Verify only: require authenticated protocol v2 (exit 1 otherwise)
 
 \x1b[1mEXAMPLES:\x1b[0m
   $ proof-ledger keygen --algo HMAC-SHA256
@@ -104,17 +105,38 @@ async function loadKeyMaterial(keyFile: string, role: 'sign' | 'verify', algorit
   return raw;
 }
 
+/** Create a new private key file without replacing a file or following a symlink. */
+async function writePrivateKeyFile(outPath: string, output: string): Promise<void> {
+  const file = await fs.open(path.resolve(outPath), 'wx', 0o600);
+  try {
+    if (process.platform !== 'win32') await file.chmod(0o600);
+    await file.writeFile(output, 'utf8');
+  } finally {
+    await file.close();
+  }
+}
+
 function parseArgs(args: string[]): ParsedArgs {
   const result: ParsedArgs = {
     positionals: [],
-    flags: {},
+    flags: Object.create(null) as Record<string, string | boolean>,
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+      const equals = arg.indexOf('=');
+      const key = arg.slice(2, equals === -1 ? undefined : equals);
+      const boolean = ['help', 'version', 'json', 'check-files', 'checkFiles',
+        'require-trusted-v2', 'include-git-context', 'compact'].includes(key);
+      if (boolean) {
+        if (equals !== -1) throw new Error(`--${key} does not accept a value`);
+        result.flags[key] = true;
+        continue;
+      }
+      if (equals !== -1) {
+        result.flags[key] = arg.slice(equals + 1);
+      } else if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
         result.flags[key] = args[i + 1];
         i++;
       } else {
@@ -122,6 +144,11 @@ function parseArgs(args: string[]): ParsedArgs {
       }
     } else if (arg.startsWith('-')) {
       const key = arg.slice(1);
+      if (!['h', 'v', 'f'].includes(key)) throw new Error(`Unsupported short option: ${arg}`);
+      if (key === 'h' || key === 'v') {
+        result.flags[key] = true;
+        continue;
+      }
       if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
         result.flags[key] = args[i + 1];
         i++;
@@ -145,7 +172,10 @@ function parseKeygenArgs(args: string[]): ParsedArgs {
   if (args[0] !== 'keygen') {
     throw new Error('Place keygen before its options');
   }
-  const result: ParsedArgs = { command: 'keygen', positionals: [], flags: {} };
+  const result: ParsedArgs = {
+    command: 'keygen', positionals: [],
+    flags: Object.create(null) as Record<string, string | boolean>,
+  };
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
     if (['--help', '-h', '--version', '-v'].includes(arg)) {
@@ -184,6 +214,23 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
   const initial = parseArgs(argv);
   const parsed = initial.command === 'keygen' ? parseKeygenArgs(argv) : initial;
 
+  // Security-sensitive commands must reject unknown options before exporting
+  // keys or returning a verification verdict. Typos cannot silently weaken them.
+  const allowed = parsed.command === 'keygen'
+    ? ['algo', 'out', 'help', 'h', 'version', 'v']
+    : parsed.command === 'verify'
+      ? ['proof', 'key', 'key-file', 'keyFile', 'algo', 'algorithm', 'check-files',
+        'checkFiles', 'json', 'require-trusted-v2', 'help', 'h', 'version', 'v']
+      : undefined;
+  if (allowed !== undefined) {
+    for (const key of Object.keys(parsed.flags)) {
+      if (!allowed.includes(key)) throw new Error(`Unsupported option for ${parsed.command}: --${key}`);
+    }
+    if (parsed.command === 'keygen' && parsed.positionals.length > 0) {
+      throw new Error('keygen does not accept positional arguments');
+    }
+  }
+
   if (parsed.flags.help || parsed.flags.h || !parsed.command) {
     printHelp();
     return 0;
@@ -196,16 +243,21 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
 
   switch (parsed.command) {
     case 'keygen': {
-      const algo = (parsed.flags.algo as SignatureAlgorithm) || 'HMAC-SHA256';
-      const outPath = parsed.flags.out as string | undefined;
+      const algo = parsed.flags.algo ?? 'HMAC-SHA256';
+      if (algo !== 'HMAC-SHA256' && algo !== 'Ed25519') {
+        throw new Error('Unsupported key algorithm; use HMAC-SHA256 or Ed25519');
+      }
+      const outPath = parsed.flags.out;
+      if (outPath !== undefined && (typeof outPath !== 'string' || outPath.length === 0)) {
+        throw new Error('--out requires a non-empty file path');
+      }
+
       const material = algo === 'Ed25519'
         ? ProofSigner.generateKeyPair()
         : { algorithm: algo, secretKey: ProofSigner.generateSecretKey() };
       const output = JSON.stringify(material, null, 2);
       if (outPath !== undefined) {
-        // Exclusive creation prevents replacement and refuses destination symlinks.
-        // Set permissions at creation so key bytes are never initially world-readable.
-        await fs.writeFile(path.resolve(outPath), output, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+        await writePrivateKeyFile(outPath, output);
         console.log(`\x1b[32m✓ ${algo} key saved to ${displayCopy(outPath)}\x1b[0m`);
       } else {
         console.log(output);
@@ -218,15 +270,14 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       const description = parsed.flags.description as string | undefined;
       const signer = (parsed.flags.signer as string) || 'nymrel-agent';
       const algo = (parsed.flags.algo as SignatureAlgorithm) || 'HMAC-SHA256';
-      let key = parsed.flags.key as string | undefined;
+      let key = getFlag(parsed, 'key');
       const keyFile = getFlag(parsed, 'key-file', 'keyFile');
 
       if (!key && keyFile) {
         key = await loadKeyMaterial(keyFile, 'sign', algo);
       }
       if (!key) {
-        key = ProofSigner.generateSecretKey();
-        console.warn(`\x1b[33m! Warning: No signing key provided. Generated ephemeral secret key: ${key}\x1b[0m`);
+        throw new Error('Signing key required: supply --key or --key-file; generate one with keygen');
       }
 
       // Collect files
@@ -278,6 +329,9 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
     }
 
     case 'verify': {
+      if (parsed.positionals.length > 1) {
+        throw new Error('verify accepts one receipt path');
+      }
       const proofPath = (parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json');
       const key = parsed.flags.key as string | undefined;
       const keyFile = getFlag(parsed, 'key-file', 'keyFile');
@@ -301,9 +355,19 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
       if (keyFileInvalid) result.errors = ['Invalid verification key file or algorithm context'];
 
+      // Policy is an explicit CLI decision, separate from cryptographic verdicts.
+      const policyErrors: string[] = [];
+      if (!result.valid) policyErrors.push('Receipt verification failed');
+      if (!result.trusted) policyErrors.push('Authenticated verification is required');
+      if (result.receipt?.version !== '2.0.0') policyErrors.push('Receipt protocol v2 is required');
+      const policy = parsed.flags['require-trusted-v2']
+        ? { name: 'authenticated-v2', passed: policyErrors.length === 0, errors: policyErrors }
+        : undefined;
+      const accepted = result.valid && (policy === undefined || policy.passed);
+
       if (parsed.flags.json) {
-        console.log(JSON.stringify(result, null, 2));
-        return result.valid ? 0 : 1;
+        console.log(JSON.stringify(policy === undefined ? result : { ...result, policy }, null, 2));
+        return accepted ? 0 : 1;
       }
 
       result = displayCopy(result);
@@ -339,13 +403,20 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
         result.warnings.forEach((w) => console.log(`  ! ${w}`));
       }
 
-      const overall = result.trusted
+      if (policy !== undefined) {
+        console.log(`Policy:      authenticated-v2 (${policy.passed ? 'PASSED' : 'FAILED'})`);
+        policy.errors.forEach((error) => console.log(`  ✗ ${error}`));
+      }
+
+      const overall = policy !== undefined && !policy.passed
+        ? '\x1b[1m\x1b[31mFAILED (POLICY)\x1b[0m'
+        : result.trusted
         ? '\x1b[1m\x1b[32mPASSED (TRUSTED)\x1b[0m'
         : result.valid
           ? '\x1b[1m\x1b[33mPASSED (INTEGRITY ONLY)\x1b[0m'
           : '\x1b[1m\x1b[31mFAILED (UNVERIFIED)\x1b[0m';
       console.log(`\nOverall:     ${overall}\n`);
-      return result.valid ? 0 : 1;
+      return accepted ? 0 : 1;
     }
 
     case 'badge': {

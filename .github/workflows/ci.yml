@@ -126,6 +126,19 @@ jobs:
       - name: Verify authentication across actual Node and Python runtimes
         run: npm run test:cross
 
+      - name: Verify independently installed package consumers
+        run: >-
+          npm run test:installed --
+          --output "${{ runner.temp }}/proof-ledger-installed-acceptance"
+
+      - name: Retain the tested archives and installed-consumer evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: installed-consumer-acceptance
+          path: ${{ runner.temp }}/proof-ledger-installed-acceptance
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Audit GitHub Actions definitions
         uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482  # v0.6.4
         with:

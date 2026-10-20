@@ -42,9 +42,9 @@ for (const artifactPath of cases.rejectedPaths) {
     // must come from the filesystem boundary rather than signature validation.
     const receipt = structuredClone(legacy.receipt);
     receipt.artifacts[0].path = artifactPath;
-    const originalRead = fs.readFile;
-    let reads = 0;
-    fs.readFile = (async () => { reads++; throw new Error('Unexpected artifact read'); }) as typeof originalRead;
+    const originalOpen = fs.open;
+    let opens = 0;
+    fs.open = (async () => { opens++; throw new Error('Unexpected artifact open'); }) as typeof originalOpen;
     try {
       const result = await verifyReceipt(receipt, {
         publicKeyOrSecret: legacy.secret, expectedAlgorithm: 'HMAC-SHA256', checkFilesOnDisk: true,
@@ -56,8 +56,8 @@ for (const artifactPath of cases.rejectedPaths) {
       assert.equal(result.artifactsValid, false);
       assert.equal(result.checkedArtifacts, 0);
       assert.match(result.errors.join('; '), /escapes verification root/);
-      assert.equal(reads, 0);
-    } finally { fs.readFile = originalRead; }
+      assert.equal(opens, 0);
+    } finally { fs.open = originalOpen; }
   });
 }
 
@@ -75,12 +75,12 @@ for (const outside of [false, true]) {
         task: { name: 'Symlink fixture' }, signingKey: auth.publicKeyOrSecret,
         signerIdentity: 'fixture', cwd, artifacts: [{ path: '..alias/artifact.txt', data: 'path fixture' }],
       });
-      const originalRead = fs.readFile;
-      let reads = 0;
-      fs.readFile = (async (...args: Parameters<typeof originalRead>) => {
-        reads++;
-        return originalRead(...args);
-      }) as typeof originalRead;
+      const originalOpen = fs.open;
+      let opens = 0;
+      fs.open = (async (...args: Parameters<typeof originalOpen>) => {
+        opens++;
+        return originalOpen(...args);
+      }) as typeof originalOpen;
       try {
         const result = await verifyReceipt(receipt, { ...auth, checkFilesOnDisk: true, cwd });
         assert.equal(result.merkleValid, true);
@@ -89,8 +89,8 @@ for (const outside of [false, true]) {
         assert.equal(result.trusted, !outside);
         assert.equal(result.artifactsValid, !outside);
         assert.equal(result.checkedArtifacts, outside ? 0 : 1);
-        assert.equal(reads, outside ? 0 : 1);
-      } finally { fs.readFile = originalRead; }
+        assert.equal(opens, outside ? 0 : 1);
+      } finally { fs.open = originalOpen; }
     } finally { await fs.rm(directory, { recursive: true, force: true }); }
   });
 }
