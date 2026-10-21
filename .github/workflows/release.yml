@@ -38,6 +38,12 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Verify package versions and tag identity
+        env:
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          RELEASE_REF_TYPE: ${{ github.ref_type }}
+        run: python tools/check_release.py
+
       - name: Set up uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
         with:
@@ -46,19 +52,6 @@ jobs:
 
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
-
-      - name: Verify package versions and tag identity
-        env:
-          RELEASE_REF_NAME: ${{ github.ref_name }}
-          RELEASE_REF_TYPE: ${{ github.ref_type }}
-        run: |
-          node_version="$(node -p "require('./package.json').version")"
-          python_version="$(python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])")"
-          test "$node_version" = "$python_version"
-          if [ "$RELEASE_REF_TYPE" = "tag" ]; then
-            test "v$node_version" = "$RELEASE_REF_NAME"
-            git merge-base --is-ancestor HEAD refs/remotes/origin/main
-          fi
 
       - name: Run the combined release gate
         run: npm run test:release
@@ -131,6 +124,32 @@ jobs:
           name: release-distributions
           path: release
 
+      - name: Verify downloaded release distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          fail() { printf 'Release archive verification failed: %s\n' "$1" >&2; exit 1; }
+          for directory in release release/npm release/python; do
+            [[ -d "$directory" && ! -L "$directory" ]] || fail "Missing or unsafe distribution directory"
+          done
+          [[ -f release/SHA256SUMS && ! -L release/SHA256SUMS ]] || fail "Missing or unsafe checksum manifest"
+          [[ -z "$(find release/npm release/python ! -type d ! -type f -print -quit)" ]] || fail "Nonregular distribution entry"
+          checksum_directory="$(mktemp -d)"
+          trap 'rm -rf "$checksum_directory"' EXIT
+          checksum_pattern='^[[:xdigit:]]{64} [ *](release/(npm|python)/[[:alnum:]_.+-]+)$'
+          while IFS= read -r entry || [[ -n "$entry" ]]; do
+            [[ "$entry" =~ $checksum_pattern ]] || fail "Invalid checksum entry or distribution path"
+            printf '%s\n' "${BASH_REMATCH[1]}" >> "$checksum_directory/manifest"
+          done < release/SHA256SUMS
+          [[ -s "$checksum_directory/manifest" ]] || fail "Empty checksum manifest"
+          sort "$checksum_directory/manifest" > "$checksum_directory/expected"
+          [[ -z "$(uniq -d "$checksum_directory/expected")" ]] || fail "Duplicate checksum entry"
+          find release/npm release/python -type f -print0 | sort -z > "$checksum_directory/actual"
+          tr '\n' '\0' < "$checksum_directory/expected" > "$checksum_directory/expected-null"
+          cmp "$checksum_directory/expected-null" "$checksum_directory/actual" || fail "Distribution files differ from checksum manifest"
+          sha256sum --check --strict release/SHA256SUMS
+
       - name: Generate build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
         with:
@@ -154,6 +173,32 @@ jobs:
         with:
           name: release-distributions
           path: release
+
+      - name: Verify downloaded release distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          fail() { printf 'Release archive verification failed: %s\n' "$1" >&2; exit 1; }
+          for directory in release release/npm release/python; do
+            [[ -d "$directory" && ! -L "$directory" ]] || fail "Missing or unsafe distribution directory"
+          done
+          [[ -f release/SHA256SUMS && ! -L release/SHA256SUMS ]] || fail "Missing or unsafe checksum manifest"
+          [[ -z "$(find release/npm release/python ! -type d ! -type f -print -quit)" ]] || fail "Nonregular distribution entry"
+          checksum_directory="$(mktemp -d)"
+          trap 'rm -rf "$checksum_directory"' EXIT
+          checksum_pattern='^[[:xdigit:]]{64} [ *](release/(npm|python)/[[:alnum:]_.+-]+)$'
+          while IFS= read -r entry || [[ -n "$entry" ]]; do
+            [[ "$entry" =~ $checksum_pattern ]] || fail "Invalid checksum entry or distribution path"
+            printf '%s\n' "${BASH_REMATCH[1]}" >> "$checksum_directory/manifest"
+          done < release/SHA256SUMS
+          [[ -s "$checksum_directory/manifest" ]] || fail "Empty checksum manifest"
+          sort "$checksum_directory/manifest" > "$checksum_directory/expected"
+          [[ -z "$(uniq -d "$checksum_directory/expected")" ]] || fail "Duplicate checksum entry"
+          find release/npm release/python -type f -print0 | sort -z > "$checksum_directory/actual"
+          tr '\n' '\0' < "$checksum_directory/expected" > "$checksum_directory/expected-null"
+          cmp "$checksum_directory/expected-null" "$checksum_directory/actual" || fail "Distribution files differ from checksum manifest"
+          sha256sum --check --strict release/SHA256SUMS
 
       - name: Set up Node.js for npm trusted publishing
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
@@ -197,6 +242,32 @@ jobs:
         with:
           name: release-distributions
           path: release
+
+      - name: Verify downloaded release distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          fail() { printf 'Release archive verification failed: %s\n' "$1" >&2; exit 1; }
+          for directory in release release/npm release/python; do
+            [[ -d "$directory" && ! -L "$directory" ]] || fail "Missing or unsafe distribution directory"
+          done
+          [[ -f release/SHA256SUMS && ! -L release/SHA256SUMS ]] || fail "Missing or unsafe checksum manifest"
+          [[ -z "$(find release/npm release/python ! -type d ! -type f -print -quit)" ]] || fail "Nonregular distribution entry"
+          checksum_directory="$(mktemp -d)"
+          trap 'rm -rf "$checksum_directory"' EXIT
+          checksum_pattern='^[[:xdigit:]]{64} [ *](release/(npm|python)/[[:alnum:]_.+-]+)$'
+          while IFS= read -r entry || [[ -n "$entry" ]]; do
+            [[ "$entry" =~ $checksum_pattern ]] || fail "Invalid checksum entry or distribution path"
+            printf '%s\n' "${BASH_REMATCH[1]}" >> "$checksum_directory/manifest"
+          done < release/SHA256SUMS
+          [[ -s "$checksum_directory/manifest" ]] || fail "Empty checksum manifest"
+          sort "$checksum_directory/manifest" > "$checksum_directory/expected"
+          [[ -z "$(uniq -d "$checksum_directory/expected")" ]] || fail "Duplicate checksum entry"
+          find release/npm release/python -type f -print0 | sort -z > "$checksum_directory/actual"
+          tr '\n' '\0' < "$checksum_directory/expected" > "$checksum_directory/expected-null"
+          cmp "$checksum_directory/expected-null" "$checksum_directory/actual" || fail "Distribution files differ from checksum manifest"
+          sha256sum --check --strict release/SHA256SUMS
 
       - name: Publish the exact Python distributions
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
