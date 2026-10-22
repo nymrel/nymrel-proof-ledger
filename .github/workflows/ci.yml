@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -44,10 +44,8 @@ jobs:
       - name: Install locked dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Type-check
-        run: npm run typecheck
-
-      - name: Build and test
+      # The build runs the same strict compiler checks as typecheck.
+      - name: Build, type-check, and test
         run: npm test
 
       - name: Inspect the npm package boundary
@@ -95,7 +93,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -106,9 +104,13 @@ jobs:
           python-version: '3.13'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            package.json
+            .github/workflows/*.yml
           version: 0.12.7
 
       - name: Install locked JavaScript dependencies
@@ -121,7 +123,7 @@ jobs:
         run: uvx pip-audit@2.10.1 .
 
       - name: Check Python correctness rules
-        run: uvx ruff@0.16.5 check --select E4,E7,E9,F python test
+        run: uvx ruff@0.16.5 check --select E4,E7,E9,F python test tools
 
       - name: Verify authentication across actual Node and Python runtimes
         run: npm run test:cross
