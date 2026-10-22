@@ -1,0 +1,1301 @@
+
+> @nymrel/proof-ledger@2.0.0 test:ts
+> node dist/test/ts/run-tests.js
+
+Discovered 15 compiled TypeScript test files.
+TAP version 13
+# Subtest: legacy serialization remains frozen at JavaScript historical edge representations
+ok 1 - legacy serialization remains frozen at JavaScript historical edge representations
+  ---
+  duration_ms: 1.207746
+  type: 'test'
+  ...
+# Subtest: Signal malformed bundles and receipts return invalid without throwing
+ok 2 - Signal malformed bundles and receipts return invalid without throwing
+  ---
+  duration_ms: 6.109063
+  type: 'test'
+  ...
+# Subtest: Signal rejects noncanonical envelope and mirror values without throwing
+ok 3 - Signal rejects noncanonical envelope and mirror values without throwing
+  ---
+  duration_ms: 1.711721
+  type: 'test'
+  ...
+# Subtest: Signal rejects a genuinely valid legacy receipt with an envelope artifact
+ok 4 - Signal rejects a genuinely valid legacy receipt with an envelope artifact
+  ---
+  duration_ms: 4.684376
+  type: 'test'
+  ...
+# Subtest: failed Signal cryptography cannot expose bound authority or remove identity limitations
+ok 5 - failed Signal cryptography cannot expose bound authority or remove identity limitations
+  ---
+  duration_ms: 3.572893
+  type: 'test'
+  ...
+# Subtest: valid Signal bundles still perform requested disk checks after admission
+ok 6 - valid Signal bundles still perform requested disk checks after admission
+  ---
+  duration_ms: 18.620452
+  type: 'test'
+  ...
+# Subtest: Signal explains an invalid key context without claiming no key was supplied
+ok 7 - Signal explains an invalid key context without claiming no key was supplied
+  ---
+  duration_ms: 2.651641
+  type: 'test'
+  ...
+# Subtest: invalid signatures and Merkle data cause zero disk resolution or reads
+ok 8 - invalid signatures and Merkle data cause zero disk resolution or reads
+  ---
+  duration_ms: 1.263368
+  type: 'test'
+  ...
+# Subtest: signed Windows device and ADS paths fail before disk resolution on every host
+ok 9 - signed Windows device and ADS paths fail before disk resolution on every host
+  ---
+  duration_ms: 11.212368
+  type: 'test'
+  ...
+# Subtest: Git rejects real cwd executables and linked or case aliases, and allows an outside executable
+ok 10 - Git rejects real cwd executables and linked or case aliases, and allows an outside executable
+  ---
+  duration_ms: 7.335195
+  type: 'test'
+  ...
+# Subtest: CLI escapes human display, preserves JSON, and rejects disguised JSON key files
+ok 11 - CLI escapes human display, preserves JSON, and rejects disguised JSON key files
+  ---
+  duration_ms: 10.053755
+  type: 'test'
+  ...
+# Subtest: disk verification accepts in-root filename artifact.txt
+ok 12 - disk verification accepts in-root filename artifact.txt
+  ---
+  duration_ms: 12.456288
+  type: 'test'
+  ...
+# Subtest: disk verification accepts in-root filename .cache/artifact.txt
+ok 13 - disk verification accepts in-root filename .cache/artifact.txt
+  ---
+  duration_ms: 2.987027
+  type: 'test'
+  ...
+# Subtest: disk verification accepts in-root filename ..notes.txt
+ok 14 - disk verification accepts in-root filename ..notes.txt
+  ---
+  duration_ms: 5.79284
+  type: 'test'
+  ...
+# Subtest: disk verification accepts in-root filename ..cache/artifact.txt
+ok 15 - disk verification accepts in-root filename ..cache/artifact.txt
+  ---
+  duration_ms: 4.86869
+  type: 'test'
+  ...
+# Subtest: disk verification accepts in-root filename ...cache/artifact.txt
+ok 16 - disk verification accepts in-root filename ...cache/artifact.txt
+  ---
+  duration_ms: 4.867587
+  type: 'test'
+  ...
+# Subtest: disk verification accepts in-root filename nested/..notes.txt
+ok 17 - disk verification accepts in-root filename nested/..notes.txt
+  ---
+  duration_ms: 3.10396
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path ".." without reading
+ok 18 - disk verification refuses boundary path ".." without reading
+  ---
+  duration_ms: 0.869226
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "../outside.txt" without reading
+ok 19 - disk verification refuses boundary path "../outside.txt" without reading
+  ---
+  duration_ms: 0.335877
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "..\\\\outside.txt" without reading
+ok 20 - disk verification refuses boundary path "..\\\\outside.txt" without reading
+  ---
+  duration_ms: 0.321515
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "/" without reading
+ok 21 - disk verification refuses boundary path "/" without reading
+  ---
+  duration_ms: 0.401233
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "/outside.txt" without reading
+ok 22 - disk verification refuses boundary path "/outside.txt" without reading
+  ---
+  duration_ms: 0.208889
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "\\\\outside.txt" without reading
+ok 23 - disk verification refuses boundary path "\\\\outside.txt" without reading
+  ---
+  duration_ms: 0.190571
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "C:/outside.txt" without reading
+ok 24 - disk verification refuses boundary path "C:/outside.txt" without reading
+  ---
+  duration_ms: 0.185945
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "C:outside.txt" without reading
+ok 25 - disk verification refuses boundary path "C:outside.txt" without reading
+  ---
+  duration_ms: 0.262148
+  type: 'test'
+  ...
+# Subtest: disk verification refuses boundary path "//attacker.invalid/share/artifact.txt" without reading
+ok 26 - disk verification refuses boundary path "//attacker.invalid/share/artifact.txt" without reading
+  ---
+  duration_ms: 0.264181
+  type: 'test'
+  ...
+# Subtest: disk verification accepts an in-root dot-prefixed directory symlink
+ok 27 - disk verification accepts an in-root dot-prefixed directory symlink
+  ---
+  duration_ms: 7.761286
+  type: 'test'
+  ...
+# Subtest: disk verification refuses an escaping dot-prefixed directory symlink
+ok 28 - disk verification refuses an escaping dot-prefixed directory symlink
+  ---
+  duration_ms: 11.407237
+  type: 'test'
+  ...
+# Subtest: authentication context: integrity only
+ok 29 - authentication context: integrity only
+  ---
+  duration_ms: 4.044751
+  type: 'test'
+  ...
+# Subtest: authentication context: authenticated HMAC
+ok 30 - authentication context: authenticated HMAC
+  ---
+  duration_ms: 1.044284
+  type: 'test'
+  ...
+# Subtest: authentication context: missing expected algorithm
+ok 31 - authentication context: missing expected algorithm
+  ---
+  duration_ms: 0.302397
+  type: 'test'
+  ...
+# Subtest: authentication context: missing verification key
+ok 32 - authentication context: missing verification key
+  ---
+  duration_ms: 0.176811
+  type: 'test'
+  ...
+# Subtest: authentication context: wrong expected algorithm
+ok 33 - authentication context: wrong expected algorithm
+  ---
+  duration_ms: 0.222209
+  type: 'test'
+  ...
+# Subtest: authentication context: wrong key
+ok 34 - authentication context: wrong key
+  ---
+  duration_ms: 0.486559
+  type: 'test'
+  ...
+# Subtest: authentication context: empty key
+ok 35 - authentication context: empty key
+  ---
+  duration_ms: 0.145365
+  type: 'test'
+  ...
+# Subtest: authentication context: numeric key
+ok 36 - authentication context: numeric key
+  ---
+  duration_ms: 0.217772
+  type: 'test'
+  ...
+# Subtest: authentication context: unknown algorithm
+ok 37 - authentication context: unknown algorithm
+  ---
+  duration_ms: 0.225313
+  type: 'test'
+  ...
+# Subtest: authentication context: empty algorithm
+ok 38 - authentication context: empty algorithm
+  ---
+  duration_ms: 0.313924
+  type: 'test'
+  ...
+# Subtest: authentication context: null key with algorithm
+ok 39 - authentication context: null key with algorithm
+  ---
+  duration_ms: 0.171294
+  type: 'test'
+  ...
+# Subtest: authentication context: null algorithm with key
+ok 40 - authentication context: null algorithm with key
+  ---
+  duration_ms: 0.131685
+  type: 'test'
+  ...
+# Subtest: authentication context: null context means omitted
+ok 41 - authentication context: null context means omitted
+  ---
+  duration_ms: 0.29059
+  type: 'test'
+  ...
+# Subtest: authentication context: null receipt
+ok 42 - authentication context: null receipt
+  ---
+  duration_ms: 0.129531
+  type: 'test'
+  ...
+# Subtest: authentication context: legacy integrity
+ok 43 - authentication context: legacy integrity
+  ---
+  duration_ms: 0.490736
+  type: 'test'
+  ...
+# Subtest: authentication context: legacy authenticated
+ok 44 - authentication context: legacy authenticated
+  ---
+  duration_ms: 0.37822
+  type: 'test'
+  ...
+# Subtest: authentication context: legacy missing expected algorithm
+ok 45 - authentication context: legacy missing expected algorithm
+  ---
+  duration_ms: 0.123553
+  type: 'test'
+  ...
+# Subtest: authentication context: signature.value suffix '\\n'
+ok 46 - authentication context: signature.value suffix '\\n'
+  ---
+  duration_ms: 0.208828
+  type: 'test'
+  ...
+# Subtest: authentication context: signature.value suffix '\\r'
+ok 47 - authentication context: signature.value suffix '\\r'
+  ---
+  duration_ms: 0.154819
+  type: 'test'
+  ...
+# Subtest: authentication context: signature.value suffix 'g'
+ok 48 - authentication context: signature.value suffix 'g'
+  ---
+  duration_ms: 0.173527
+  type: 'test'
+  ...
+# Subtest: authentication context: merkle.root suffix '\\n'
+ok 49 - authentication context: merkle.root suffix '\\n'
+  ---
+  duration_ms: 0.15566
+  type: 'test'
+  ...
+# Subtest: authentication context: merkle.root suffix '\\r'
+ok 50 - authentication context: merkle.root suffix '\\r'
+  ---
+  duration_ms: 0.139917
+  type: 'test'
+  ...
+# Subtest: authentication context: merkle.root suffix 'g'
+ok 51 - authentication context: merkle.root suffix 'g'
+  ---
+  duration_ms: 0.121069
+  type: 'test'
+  ...
+# Subtest: authentication context: artifacts.0.sha256 suffix '\\n'
+ok 52 - authentication context: artifacts.0.sha256 suffix '\\n'
+  ---
+  duration_ms: 0.122501
+  type: 'test'
+  ...
+# Subtest: authentication context: artifacts.0.sha256 suffix '\\r'
+ok 53 - authentication context: artifacts.0.sha256 suffix '\\r'
+  ---
+  duration_ms: 0.116792
+  type: 'test'
+  ...
+# Subtest: authentication context: artifacts.0.sha256 suffix 'g'
+ok 54 - authentication context: artifacts.0.sha256 suffix 'g'
+  ---
+  duration_ms: 0.167087
+  type: 'test'
+  ...
+# Subtest: authentication context: short signature
+ok 55 - authentication context: short signature
+  ---
+  duration_ms: 0.152265
+  type: 'test'
+  ...
+# Subtest: authentication context: oversized HMAC signature
+ok 56 - authentication context: oversized HMAC signature
+  ---
+  duration_ms: 0.145756
+  type: 'test'
+  ...
+# Subtest: authentication context: invalid signature hex
+ok 57 - authentication context: invalid signature hex
+  ---
+  duration_ms: 0.119127
+  type: 'test'
+  ...
+# Subtest: authentication context: timestamp newline
+ok 58 - authentication context: timestamp newline
+  ---
+  duration_ms: 0.144103
+  type: 'test'
+  ...
+# Subtest: authentication context: timestamp Unicode digits
+ok 59 - authentication context: timestamp Unicode digits
+  ---
+  duration_ms: 0.185975
+  type: 'test'
+  ...
+# Subtest: authentication context: metadata tampering authenticated
+ok 60 - authentication context: metadata tampering authenticated
+  ---
+  duration_ms: 0.37226
+  type: 'test'
+  ...
+# Subtest: authentication context: metadata change integrity only
+ok 61 - authentication context: metadata change integrity only
+  ---
+  duration_ms: 0.251061
+  type: 'test'
+  ...
+# Subtest: authentication context: missing signature
+ok 62 - authentication context: missing signature
+  ---
+  duration_ms: 0.117624
+  type: 'test'
+  ...
+# Subtest: authentication context: artifact size 7.0
+ok 63 - authentication context: artifact size 7.0
+  ---
+  duration_ms: 0.285893
+  type: 'test'
+  ...
+# Subtest: authentication context: artifact size 7.5
+ok 64 - authentication context: artifact size 7.5
+  ---
+  duration_ms: 0.132105
+  type: 'test'
+  ...
+# Subtest: authentication context: artifact size True
+ok 65 - authentication context: artifact size True
+  ---
+  duration_ms: 0.098646
+  type: 'test'
+  ...
+# Subtest: authentication context: artifact size -1
+ok 66 - authentication context: artifact size -1
+  ---
+  duration_ms: 0.137033
+  type: 'test'
+  ...
+# Subtest: authentication context: artifact size 9007199254740992
+ok 67 - authentication context: artifact size 9007199254740992
+  ---
+  duration_ms: 0.13517
+  type: 'test'
+  ...
+# Subtest: authentication context: nonempty Unicode proof identifier '\\x1f'
+ok 68 - authentication context: nonempty Unicode proof identifier '\\x1f'
+  ---
+  duration_ms: 0.228198
+  type: 'test'
+  ...
+# Subtest: authentication context: Unicode identifier signed mismatch '\\x1f'
+ok 69 - authentication context: Unicode identifier signed mismatch '\\x1f'
+  ---
+  duration_ms: 0.246945
+  type: 'test'
+  ...
+# Subtest: authentication context: nonempty Unicode proof identifier '\\x85'
+ok 70 - authentication context: nonempty Unicode proof identifier '\\x85'
+  ---
+  duration_ms: 0.191052
+  type: 'test'
+  ...
+# Subtest: authentication context: Unicode identifier signed mismatch '\\x85'
+ok 71 - authentication context: Unicode identifier signed mismatch '\\x85'
+  ---
+  duration_ms: 0.293133
+  type: 'test'
+  ...
+# Subtest: authentication context: nonempty Unicode proof identifier '\\ufeff'
+ok 72 - authentication context: nonempty Unicode proof identifier '\\ufeff'
+  ---
+  duration_ms: 0.196931
+  type: 'test'
+  ...
+# Subtest: authentication context: Unicode identifier signed mismatch '\\ufeff'
+ok 73 - authentication context: Unicode identifier signed mismatch '\\ufeff'
+  ---
+  duration_ms: 0.362026
+  type: 'test'
+  ...
+# Subtest: authentication context: legacy artifact relabel remains limited authentication
+ok 74 - authentication context: legacy artifact relabel remains limited authentication
+  ---
+  duration_ms: 0.445489
+  type: 'test'
+  ...
+# Subtest: authentication context: legacy duplicate artifact remains limited authentication
+ok 75 - authentication context: legacy duplicate artifact remains limited authentication
+  ---
+  duration_ms: 0.360573
+  type: 'test'
+  ...
+# Subtest: public facades cannot authenticate a forged HMAC under an Ed25519 public key
+ok 76 - public facades cannot authenticate a forged HMAC under an Ed25519 public key
+  ---
+  duration_ms: 1.455222
+  type: 'test'
+  ...
+# Subtest: Git context is disabled by default and requires explicit opt-in
+ok 77 - Git context is disabled by default and requires explicit opt-in
+  ---
+  duration_ms: 2.675717
+  type: 'test'
+  ...
+# Subtest: verification CLI requires trusted algorithm configuration
+ok 78 - verification CLI requires trusted algorithm configuration
+  ---
+  duration_ms: 32.658067
+  type: 'test'
+  ...
+# Subtest: the shipped CLI entry point resolves its built module
+ok 79 - the shipped CLI entry point resolves its built module
+  ---
+  duration_ms: 95.46483
+  type: 'test'
+  ...
+# Subtest: envelope preserves non-empty Unicode labels and accepts integral JSON floats
+ok 80 - envelope preserves non-empty Unicode labels and accepts integral JSON floats
+  ---
+  duration_ms: 0.215459
+  type: 'test'
+  ...
+# Subtest: unsupported metadata returns an invalid verdict
+ok 81 - unsupported metadata returns an invalid verdict
+  ---
+  duration_ms: 0.476284
+  type: 'test'
+  ...
+# Subtest: CLI refuses a key file whose algorithm conflicts with the flag
+ok 82 - CLI refuses a key file whose algorithm conflicts with the flag
+  ---
+  duration_ms: 19.713413
+  type: 'test'
+  ...
+# Subtest: network, drive and escaping artifact paths fail before filesystem resolution
+ok 83 - network, drive and escaping artifact paths fail before filesystem resolution
+  ---
+  duration_ms: 1.737709
+  type: 'test'
+  ...
+# Subtest: Visual Badge & Certificate Generation
+    # Subtest: defaults to an offline, explicitly unverified receipt presentation
+    ok 1 - defaults to an offline, explicitly unverified receipt presentation
+      ---
+      duration_ms: 5.876689
+      type: 'test'
+      ...
+    # Subtest: shows trusted only from a consistent authenticated verification result
+    ok 2 - shows trusted only from a consistent authenticated verification result
+      ---
+      duration_ms: 1.861792
+      type: 'test'
+      ...
+    # Subtest: keeps task outcome distinct from receipt trust
+    ok 3 - keeps task outcome distinct from receipt trust
+      ---
+      duration_ms: 2.047577
+      type: 'test'
+      ...
+    # Subtest: rejects malformed receipts and unsafe verifier URLs before rendering
+    ok 4 - rejects malformed receipts and unsafe verifier URLs before rendering
+      ---
+      duration_ms: 0.930816
+      type: 'test'
+      ...
+    # Subtest: generates safe standalone HTML and honest JSON-LD metadata
+    ok 5 - generates safe standalone HTML and honest JSON-LD metadata
+      ---
+      duration_ms: 2.539665
+      type: 'test'
+      ...
+    1..5
+ok 84 - Visual Badge & Certificate Generation
+  ---
+  duration_ms: 14.994319
+  type: 'suite'
+  ...
+# Subtest: Canonical JSON (RFC 8785)
+    # Subtest: matches shared cross-runtime RFC 8785 vectors
+    ok 1 - matches shared cross-runtime RFC 8785 vectors
+      ---
+      duration_ms: 0.924757
+      type: 'test'
+      ...
+    # Subtest: sorts Unicode object keys by UTF-16 code units
+    ok 2 - sorts Unicode object keys by UTF-16 code units
+      ---
+      duration_ms: 0.174308
+      type: 'test'
+      ...
+    # Subtest: rejects values outside the I-JSON data model
+    ok 3 - rejects values outside the I-JSON data model
+      ---
+      duration_ms: 1.489021
+      type: 'test'
+      ...
+    # Subtest: retains the frozen v1 serializer as an explicit profile
+    ok 4 - retains the frozen v1 serializer as an explicit profile
+      ---
+      duration_ms: 0.674618
+      type: 'test'
+      ...
+    # Subtest: hashes insertion-order variants identically
+    ok 5 - hashes insertion-order variants identically
+      ---
+      duration_ms: 2.300652
+      type: 'test'
+      ...
+    1..5
+ok 85 - Canonical JSON (RFC 8785)
+  ---
+  duration_ms: 6.938399
+  type: 'suite'
+  ...
+# Subtest: CLI policy: default integrity remains successful
+ok 86 - CLI policy: default integrity remains successful
+  ---
+  duration_ms: 92.373997
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects integrity only
+ok 87 - CLI policy: gate rejects integrity only
+  ---
+  duration_ms: 109.291383
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate accepts Ed25519 public key
+ok 88 - CLI policy: gate accepts Ed25519 public key
+  ---
+  duration_ms: 122.820479
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate accepts public-only key file
+ok 89 - CLI policy: gate accepts public-only key file
+  ---
+  duration_ms: 108.835419
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate accepts configured HMAC
+ok 90 - CLI policy: gate accepts configured HMAC
+  ---
+  duration_ms: 113.169819
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects wrong Ed25519 key
+ok 91 - CLI policy: gate rejects wrong Ed25519 key
+  ---
+  duration_ms: 96.147381
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects missing algorithm
+ok 92 - CLI policy: gate rejects missing algorithm
+  ---
+  duration_ms: 91.04152
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects wrong algorithm
+ok 93 - CLI policy: gate rejects wrong algorithm
+  ---
+  duration_ms: 88.393415
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects signed metadata tampering
+ok 94 - CLI policy: gate rejects signed metadata tampering
+  ---
+  duration_ms: 100.681805
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects artifact tampering
+ok 95 - CLI policy: gate rejects artifact tampering
+  ---
+  duration_ms: 106.977973
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate checks matching disk artifact
+ok 96 - CLI policy: gate checks matching disk artifact
+  ---
+  duration_ms: 99.05495
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects missing requested artifact
+ok 97 - CLI policy: gate rejects missing requested artifact
+  ---
+  duration_ms: 94.888193
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects changed requested artifact
+ok 98 - CLI policy: gate rejects changed requested artifact
+  ---
+  duration_ms: 94.620337
+  type: 'test'
+  ...
+# Subtest: CLI policy: default legacy authentication remains successful
+ok 99 - CLI policy: default legacy authentication remains successful
+  ---
+  duration_ms: 48.055928
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects authenticated legacy
+ok 100 - CLI policy: gate rejects authenticated legacy
+  ---
+  duration_ms: 91.461952
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects unkeyed legacy
+ok 101 - CLI policy: gate rejects unkeyed legacy
+  ---
+  duration_ms: 90.812708
+  type: 'test'
+  ...
+# Subtest: CLI policy: gate rejects malformed envelope
+ok 102 - CLI policy: gate rejects malformed envelope
+  ---
+  duration_ms: 86.012515
+  type: 'test'
+  ...
+# Subtest: CLI policy rejects explicit values and extra positional arguments
+ok 103 - CLI policy rejects explicit values and extra positional arguments
+  ---
+  duration_ms: 191.863513
+  type: 'test'
+  ...
+# {
+#   "algorithm": "HMAC-SHA256",
+#   "secretKey": "0aab8286ae16d1e3874ebfbb49a4b8f1e3c4ca6085f8cd55ac58892af3800b32"
+# }
+# [32m✓ Attestation generated successfully![0m
+#   Proof ID:    [1mprf_mvk37olf_78ea874d1cf6[0m
+#   Merkle Root: [33ma4527a9e6b762c0c7e9d00eda3b98ba8c95258f05c7275993c5f5bb9951948b0[0m
+#   Receipt:     /workspace/proofgraph-astra-pr31/.tmp-nymrel-proof-test-k6ZA9f/proof.json
+#   SVG Badge:   /workspace/proofgraph-astra-pr31/.tmp-nymrel-proof-test-k6ZA9f/badge.svg
+#   Certificate: /workspace/proofgraph-astra-pr31/.tmp-nymrel-proof-test-k6ZA9f/cert.html
+# [1m--- PROOF VERIFICATION REPORT ---[0m
+# Proof ID:    prf_mvk37olf_78ea874d1cf6
+# Task:        CLI Integration Test
+# Merkle Root: a4527a9e6b762c0c7e9d00eda3b98ba8c95258f05c7275993c5f5bb9951948b0
+# Merkle Math: [32mVALID ✓[0m
+# Signature:   [32mVALID ✓[0m
+# Disk Files:  [32mALL MATCHED ✓[0m (1 checked)
+# Overall:     [1m[32mPASSED (TRUSTED)[0m
+# [1m╔══════════════════════════════════════════════════════════════════╗[0m
+# [1m║               NYMREL PROOF LEDGER AUDIT INSPECTOR                ║[0m
+# [1m╚══════════════════════════════════════════════════════════════════╝[0m
+#   Protocol:     [32mnymrel-proof-ledger v2.0.0[0m
+#   Parent Org:   [36mNymrel[0m
+#   Proof ID:     prf_mvk37olf_78ea874d1cf6
+#   Timestamp:    2026-10-22T22:03:03.363Z
+#   Task:         [1mCLI Integration Test[0m (SUCCESS)
+#   Runner:       nymrel-agent
+#   Platform:     linux (node v24.19.0)
+# [1m--- CRYPTOGRAPHIC PROOFS ---[0m
+#   Merkle Root:  [33ma4527a9e6b762c0c7e9d00eda3b98ba8c95258f05c7275993c5f5bb9951948b0[0m
+#   Leaf Count:   3
+#   Signer:       nymrel-agent [hmac-default]
+#   Algorithm:    HMAC-SHA256
+#   Signature:    27bebf92894db280d0fa035054d2708b...
+# [1m--- ATTESTED ARTIFACTS (1) ---[0m
+#   [1] .tmp-nymrel-proof-test-k6ZA9f/artifact.txt
+#       SHA256: [37m3dacdc415ce8899396f5656fab11a9a6da9443722bf8dce12cb7c9876c93543c[0m (31 bytes)
+# [32m✓ Exported markdown to /workspace/proofgraph-astra-pr31/.tmp-nymrel-proof-test-k6ZA9f/report.md[0m
+# [32m✓ HMAC-SHA256 key saved to /workspace/proofgraph-astra-pr31/.tmp-nymrel-proof-test-k6ZA9f/secret.key[0m
+# [32m✓ Attestation generated successfully![0m
+#   Proof ID:    [1mprf_mvk37olu_33b04af1cf70[0m
+#   Merkle Root: [33mb6dbfc4a2ac9231fcdf87e3fef0d569cff2613d73e29758c8782733188711ad5[0m
+#   Receipt:     /workspace/proofgraph-astra-pr31/.tmp-nymrel-proof-test-k6ZA9f/proof-keyed.json
+# [1m--- PROOF VERIFICATION REPORT ---[0m
+# Proof ID:    prf_mvk37olu_33b04af1cf70
+# Task:        Key File Round-Trip
+# Merkle Root: b6dbfc4a2ac9231fcdf87e3fef0d569cff2613d73e29758c8782733188711ad5
+# Merkle Math: [32mVALID ✓[0m
+# Signature:   [32mVALID ✓[0m
+# Overall:     [1m[32mPASSED (TRUSTED)[0m
+# [1m--- PROOF VERIFICATION REPORT ---[0m
+# Proof ID:    prf_mvk37olu_33b04af1cf70
+# Task:        Key File Round-Trip
+# Merkle Root: b6dbfc4a2ac9231fcdf87e3fef0d569cff2613d73e29758c8782733188711ad5
+# Merkle Math: [32mVALID ✓[0m
+# Signature:   [31mINVALID ✗[0m
+# [31mErrors:[0m
+#   ✗ Cryptographic signature verification failed with provided key
+# Overall:     [1m[31mFAILED (UNVERIFIED)[0m
+# Subtest: CLI Driver End-to-End
+    # Subtest: executes keygen, attest, verify, badge, inspect, and export commands
+    ok 1 - executes keygen, attest, verify, badge, inspect, and export commands
+      ---
+      duration_ms: 29.794284
+      type: 'test'
+      ...
+    1..1
+ok 104 - CLI Driver End-to-End
+  ---
+  duration_ms: 30.799781
+  type: 'suite'
+  ...
+# Subtest: Receipt Envelope Interop Validator
+    # Subtest: accepts the portable valid envelope vector
+    ok 1 - accepts the portable valid envelope vector
+      ---
+      duration_ms: 2.388322
+      type: 'test'
+      ...
+    # Subtest: accepts a receipt produced by createReceipt unchanged
+    ok 2 - accepts a receipt produced by createReceipt unchanged
+      ---
+      duration_ms: 2.960117
+      type: 'test'
+      ...
+    # Subtest: accepts an envelope round-tripped through JSON serialization
+    ok 3 - accepts an envelope round-tripped through JSON serialization
+      ---
+      duration_ms: 0.246985
+      type: 'test'
+      ...
+    # Subtest: rejects a non-object envelope with ENVELOPE_NOT_OBJECT
+    ok 4 - rejects a non-object envelope with ENVELOPE_NOT_OBJECT
+      ---
+      duration_ms: 0.253415
+      type: 'test'
+      ...
+    # Subtest: rejects an unsupported protocol identifier
+    ok 5 - rejects an unsupported protocol identifier
+      ---
+      duration_ms: 0.265002
+      type: 'test'
+      ...
+    # Subtest: renders Unicode protocol values without ASCII escapes
+    ok 6 - renders Unicode protocol values without ASCII escapes
+      ---
+      duration_ms: 0.173197
+      type: 'test'
+      ...
+    # Subtest: rejects a missing protocol identifier
+    ok 7 - rejects a missing protocol identifier
+      ---
+      duration_ms: 0.249469
+      type: 'test'
+      ...
+    # Subtest: rejects an unsupported version
+    ok 8 - rejects an unsupported version
+      ---
+      duration_ms: 0.28437
+      type: 'test'
+      ...
+    # Subtest: accepts the legacy v1 envelope and algorithm for verification
+    ok 9 - accepts the legacy v1 envelope and algorithm for verification
+      ---
+      duration_ms: 0.258092
+      type: 'test'
+      ...
+    # Subtest: rejects a Merkle algorithm that does not match the receipt era
+    ok 10 - rejects a Merkle algorithm that does not match the receipt era
+      ---
+      duration_ms: 0.309868
+      type: 'test'
+      ...
+    # Subtest: rejects a missing proofId
+    ok 11 - rejects a missing proofId
+      ---
+      duration_ms: 0.279023
+      type: 'test'
+      ...
+    # Subtest: rejects a malformed timestamp shape
+    ok 12 - rejects a malformed timestamp shape
+      ---
+      duration_ms: 0.241306
+      type: 'test'
+      ...
+    # Subtest: rejects a tampered merkle root that is not a SHA-256 hex digest
+    ok 13 - rejects a tampered merkle root that is not a SHA-256 hex digest
+      ---
+      duration_ms: 0.177232
+      type: 'test'
+      ...
+    # Subtest: rejects a tampered artifact digest
+    ok 14 - rejects a tampered artifact digest
+      ---
+      duration_ms: 0.171153
+      type: 'test'
+      ...
+    # Subtest: rejects artifacts that are not an array
+    ok 15 - rejects artifacts that are not an array
+      ---
+      duration_ms: 0.196681
+      type: 'test'
+      ...
+    # Subtest: rejects an empty task name
+    ok 16 - rejects an empty task name
+      ---
+      duration_ms: 0.161139
+      type: 'test'
+      ...
+    # Subtest: rejects non-object metadata
+    ok 17 - rejects non-object metadata
+      ---
+      duration_ms: 0.17578
+      type: 'test'
+      ...
+    # Subtest: reports multiple errors in a stable field order
+    ok 18 - reports multiple errors in a stable field order
+      ---
+      duration_ms: 0.225283
+      type: 'test'
+      ...
+    1..18
+ok 105 - Receipt Envelope Interop Validator
+  ---
+  duration_ms: 10.979916
+  type: 'suite'
+  ...
+# Subtest: attest requires a supplied HMAC-SHA256 key before producing any output files
+ok 106 - attest requires a supplied HMAC-SHA256 key before producing any output files
+  ---
+  duration_ms: 10.457076
+  type: 'test'
+  ...
+# Subtest: explicit keygen exports HMAC-SHA256 key material to stdout
+ok 107 - explicit keygen exports HMAC-SHA256 key material to stdout
+  ---
+  duration_ms: 0.78496
+  type: 'test'
+  ...
+# Subtest: keygen creates a HMAC-SHA256 file without logging the private material
+ok 108 - keygen creates a HMAC-SHA256 file without logging the private material
+  ---
+  duration_ms: 4.304345
+  type: 'test'
+  ...
+# Subtest: keygen refuses to replace an existing HMAC-SHA256 key file
+ok 109 - keygen refuses to replace an existing HMAC-SHA256 key file
+  ---
+  duration_ms: 1.885318
+  type: 'test'
+  ...
+# Subtest: keygen refuses existing and dangling symlinks for HMAC-SHA256
+ok 110 - keygen refuses existing and dangling symlinks for HMAC-SHA256
+  ---
+  duration_ms: 4.481296
+  type: 'test'
+  ...
+# Subtest: keygen HMAC-SHA256 output stays owner-only under a permissive umask
+ok 111 - keygen HMAC-SHA256 output stays owner-only under a permissive umask
+  ---
+  duration_ms: 1.766041
+  type: 'test'
+  ...
+# Subtest: attest requires a supplied Ed25519 key before producing any output files
+ok 112 - attest requires a supplied Ed25519 key before producing any output files
+  ---
+  duration_ms: 1.538555
+  type: 'test'
+  ...
+# Subtest: explicit keygen exports Ed25519 key material to stdout
+ok 113 - explicit keygen exports Ed25519 key material to stdout
+  ---
+  duration_ms: 5.812364
+  type: 'test'
+  ...
+# Subtest: keygen creates a Ed25519 file without logging the private material
+ok 114 - keygen creates a Ed25519 file without logging the private material
+  ---
+  duration_ms: 4.997279
+  type: 'test'
+  ...
+# Subtest: keygen refuses to replace an existing Ed25519 key file
+ok 115 - keygen refuses to replace an existing Ed25519 key file
+  ---
+  duration_ms: 2.16403
+  type: 'test'
+  ...
+# Subtest: keygen refuses existing and dangling symlinks for Ed25519
+ok 116 - keygen refuses existing and dangling symlinks for Ed25519
+  ---
+  duration_ms: 7.445228
+  type: 'test'
+  ...
+# Subtest: keygen Ed25519 output stays owner-only under a permissive umask
+ok 117 - keygen Ed25519 output stays owner-only under a permissive umask
+  ---
+  duration_ms: 1.744169
+  type: 'test'
+  ...
+# Subtest: keygen rejects unsupported or incomplete algorithm and output flags without exporting a key
+ok 118 - keygen rejects unsupported or incomplete algorithm and output flags without exporting a key
+  ---
+  duration_ms: 0.620017
+  type: 'test'
+  ...
+# Subtest: equals-form keygen flags save the selected Ed25519 private key to a file
+ok 119 - equals-form keygen flags save the selected Ed25519 private key to a file
+  ---
+  duration_ms: 2.627976
+  type: 'test'
+  ...
+# Subtest: misspelled keygen flags fail without exporting secrets or creating an output file
+ok 120 - misspelled keygen flags fail without exporting secrets or creating an output file
+  ---
+  duration_ms: 1.976642
+  type: 'test'
+  ...
+# Subtest: keygen stdout retains usable default, explicit, and equals-form key envelopes
+ok 121 - keygen stdout retains usable default, explicit, and equals-form key envelopes
+  ---
+  duration_ms: 8.431987
+  type: 'test'
+  ...
+# Subtest: keygen accepts explicit output and equals-form output without printing private keys
+ok 122 - keygen accepts explicit output and equals-form output without printing private keys
+  ---
+  duration_ms: 13.009105
+  type: 'test'
+  ...
+# Subtest: keygen creates owner-only files even with an unrestricted POSIX umask
+ok 123 - keygen creates owner-only files even with an unrestricted POSIX umask
+  ---
+  duration_ms: 103.639908
+  type: 'test'
+  ...
+# Subtest: keygen preserves existing file contents and permissions, and refuses directories
+ok 124 - keygen preserves existing file contents and permissions, and refuses directories
+  ---
+  duration_ms: 4.698257
+  type: 'test'
+  ...
+# Subtest: keygen refuses live and dangling destination symlinks without modifying either path
+ok 125 - keygen refuses live and dangling destination symlinks without modifying either path
+  ---
+  duration_ms: 5.847336
+  type: 'test'
+  ...
+# Subtest: keygen rejects malformed arguments before key generation or output writes
+ok 126 - keygen rejects malformed arguments before key generation or output writes
+  ---
+  duration_ms: 2.652602
+  type: 'test'
+  ...
+# Subtest: keygen help and version return without generating a key
+ok 127 - keygen help and version return without generating a key
+  ---
+  duration_ms: 0.377989
+  type: 'test'
+  ...
+# Subtest: keygen escapes terminal controls in filesystem failure messages
+ok 128 - keygen escapes terminal controls in filesystem failure messages
+  ---
+  duration_ms: 1.337207
+  type: 'test'
+  ...
+# Subtest: RFC 6962 Merkle Tree
+    # Subtest: matches the RFC empty-tree and three-leaf shared vectors
+    ok 1 - matches the RFC empty-tree and three-leaf shared vectors
+      ---
+      duration_ms: 2.366729
+      type: 'test'
+      ...
+    # Subtest: promotes odd nodes and produces valid RFC audit paths
+    ok 2 - promotes odd nodes and produces valid RFC audit paths
+      ---
+      duration_ms: 0.564495
+      type: 'test'
+      ...
+    # Subtest: retains duplicated-odd v1 roots only behind the legacy profile
+    ok 3 - retains duplicated-odd v1 roots only behind the legacy profile
+      ---
+      duration_ms: 0.353022
+      type: 'test'
+      ...
+    # Subtest: enforces exact hash encodings and rejects malformed proofs
+    ok 4 - enforces exact hash encodings and rejects malformed proofs
+      ---
+      duration_ms: 0.627018
+      type: 'test'
+      ...
+    # Subtest: keeps leaf and interior domains distinct
+    ok 5 - keeps leaf and interior domains distinct
+      ---
+      duration_ms: 1.470654
+      type: 'test'
+      ...
+    1..5
+ok 129 - RFC 6962 Merkle Tree
+  ---
+  duration_ms: 6.755028
+  type: 'suite'
+  ...
+# Subtest: Proof Receipt Engine
+    # Subtest: emits and cryptographically verifies protocol v2 receipts
+    ok 1 - emits and cryptographically verifies protocol v2 receipts
+      ---
+      duration_ms: 4.979934
+      type: 'test'
+      ...
+    # Subtest: reports integrity-only verification honestly when no key is supplied
+    ok 2 - reports integrity-only verification honestly when no key is supplied
+      ---
+      duration_ms: 0.707816
+      type: 'test'
+      ...
+    # Subtest: detects task, artifact-record, and signature tampering
+    ok 3 - detects task, artifact-record, and signature tampering
+      ---
+      duration_ms: 1.703975
+      type: 'test'
+      ...
+    # Subtest: verifies the frozen protocol v1 compatibility vector
+    ok 4 - verifies the frozen protocol v1 compatibility vector
+      ---
+      duration_ms: 0.3923
+      type: 'test'
+      ...
+    # Subtest: verifies the shared cross-runtime protocol v2 receipt vector
+    ok 5 - verifies the shared cross-runtime protocol v2 receipt vector
+      ---
+      duration_ms: 0.29056
+      type: 'test'
+      ...
+    # Subtest: supports cross-runtime raw-hex Ed25519 receipts
+    ok 6 - supports cross-runtime raw-hex Ed25519 receipts
+      ---
+      duration_ms: 3.633392
+      type: 'test'
+      ...
+    # Subtest: sanitizes credential-bearing remotes and fences artifact traversal
+    ok 7 - sanitizes credential-bearing remotes and fences artifact traversal
+      ---
+      duration_ms: 1.387471
+      type: 'test'
+      ...
+    # Subtest: rejects malformed envelopes before cryptographic work
+    ok 8 - rejects malformed envelopes before cryptographic work
+      ---
+      duration_ms: 0.496865
+      type: 'test'
+      ...
+    1..8
+ok 130 - Proof Receipt Engine
+  ---
+  duration_ms: 14.978813
+  type: 'suite'
+  ...
+# Subtest: Signal verification binds the configured algorithm and rejects missing context
+ok 131 - Signal verification binds the configured algorithm and rejects missing context
+  ---
+  duration_ms: 10.559283
+  type: 'test'
+  ...
+# Subtest: Signal blank fields use a shared Unicode whitespace definition
+ok 132 - Signal blank fields use a shared Unicode whitespace definition
+  ---
+  duration_ms: 0.314705
+  type: 'test'
+  ...
+# Subtest: Nymrel Signal proof profile
+    # Subtest: canonicalizes deterministically with the cross-language fixture digest
+    ok 1 - canonicalizes deterministically with the cross-language fixture digest
+      ---
+      duration_ms: 0.733985
+      type: 'test'
+      ...
+    # Subtest: creates and verifies a bound HMAC Signal bundle without publishing private evidence
+    ok 2 - creates and verifies a bound HMAC Signal bundle without publishing private evidence
+      ---
+      duration_ms: 2.127435
+      type: 'test'
+      ...
+    # Subtest: does not call an unchecked signature a valid Signal proof
+    ok 3 - does not call an unchecked signature a valid Signal proof
+      ---
+      duration_ms: 1.279652
+      type: 'test'
+      ...
+    # Subtest: supports asymmetric verification without claiming signer authority
+    ok 4 - supports asymmetric verification without claiming signer authority
+      ---
+      duration_ms: 2.67799
+      type: 'test'
+      ...
+    # Subtest: rejects portable-envelope tampering even when the core receipt remains unchanged
+    ok 5 - rejects portable-envelope tampering even when the core receipt remains unchanged
+      ---
+      duration_ms: 1.130952
+      type: 'test'
+      ...
+    # Subtest: rejects a signed metadata mirror that disagrees with the envelope
+    ok 6 - rejects a signed metadata mirror that disagrees with the envelope
+      ---
+      duration_ms: 2.01613
+      type: 'test'
+      ...
+    # Subtest: is total and exposes no authoritative data for arbitrary malformed bundles
+    ok 7 - is total and exposes no authoritative data for arbitrary malformed bundles
+      ---
+      duration_ms: 0.77769
+      type: 'test'
+      ...
+    # Subtest: is total for hostile objects with throwing property access
+    ok 8 - is total for hostile objects with throwing property access
+      ---
+      duration_ms: 0.37863
+      type: 'test'
+      ...
+    # Subtest: snapshots time-varying receipts before core and Signal verification
+    ok 9 - snapshots time-varying receipts before core and Signal verification
+      ---
+      duration_ms: 27.908004
+      type: 'test'
+      ...
+    # Subtest: fails closed when an unchecked metadata mirror is outside canonical JSON
+    ok 10 - fails closed when an unchecked metadata mirror is outside canonical JSON
+      ---
+      duration_ms: 0.844399
+      type: 'test'
+      ...
+    # Subtest: fails closed on unsupported versions and reserved artifact-path collisions
+    ok 11 - fails closed on unsupported versions and reserved artifact-path collisions
+      ---
+      duration_ms: 0.850027
+      type: 'test'
+      ...
+    # Subtest: rejects uppercase digests and unknown envelope claims instead of dropping them
+    ok 12 - rejects uppercase digests and unknown envelope claims instead of dropping them
+      ---
+      duration_ms: 0.328105
+      type: 'test'
+      ...
+    # Subtest: requires an offset timestamp with a real calendar date
+    ok 13 - requires an offset timestamp with a real calendar date
+      ---
+      duration_ms: 0.234617
+      type: 'test'
+      ...
+    1..13
+ok 133 - Nymrel Signal proof profile
+  ---
+  duration_ms: 42.08189
+  type: 'suite'
+  ...
+# Subtest: ProofSigner
+    # Subtest: signs and verifies HMAC-SHA256 in constant-time-compatible form
+    ok 1 - signs and verifies HMAC-SHA256 in constant-time-compatible form
+      ---
+      duration_ms: 2.23826
+      type: 'test'
+      ...
+    # Subtest: matches RFC 8032 test vector 1 exactly
+    ok 2 - matches RFC 8032 test vector 1 exactly
+      ---
+      duration_ms: 2.383384
+      type: 'test'
+      ...
+    # Subtest: generates portable raw-hex Ed25519 keypairs
+    ok 3 - generates portable raw-hex Ed25519 keypairs
+      ---
+      duration_ms: 2.138642
+      type: 'test'
+      ...
+    # Subtest: fails closed on malformed Ed25519 material
+    ok 4 - fails closed on malformed Ed25519 material
+      ---
+      duration_ms: 0.689379
+      type: 'test'
+      ...
+    1..4
+ok 134 - ProofSigner
+  ---
+  duration_ms: 9.88166
+  type: 'suite'
+  ...
+# Subtest: file hashing matches in-memory bytes for empty
+ok 135 - file hashing matches in-memory bytes for empty
+  ---
+  duration_ms: 6.976896
+  type: 'test'
+  ...
+# Subtest: file hashing matches in-memory bytes for binary
+ok 136 - file hashing matches in-memory bytes for binary
+  ---
+  duration_ms: 1.92129
+  type: 'test'
+  ...
+# Subtest: file hashing matches in-memory bytes for Unicode
+ok 137 - file hashing matches in-memory bytes for Unicode
+  ---
+  duration_ms: 1.540427
+  type: 'test'
+  ...
+# Subtest: file hashing matches in-memory bytes for multiple chunks and a partial tail
+ok 138 - file hashing matches in-memory bytes for multiple chunks and a partial tail
+  ---
+  duration_ms: 19.263873
+  type: 'test'
+  ...
+# Subtest: receipt creation and trusted disk verification bound each artifact read
+ok 139 - receipt creation and trusted disk verification bound each artifact read
+  ---
+  duration_ms: 22.627396
+  type: 'test'
+  ...
+# Subtest: missing artifacts reject hashing and fail trusted disk verification closed
+ok 140 - missing artifacts reject hashing and fail trusted disk verification closed
+  ---
+  duration_ms: 2.210388
+  type: 'test'
+  ...
+# Subtest: disk verification detects a change in the final partial chunk
+ok 141 - disk verification detects a change in the final partial chunk
+  ---
+  duration_ms: 21.89262
+  type: 'test'
+  ...
+# Subtest: read failure after a partial artifact closes the handle and fails closed
+ok 142 - read failure after a partial artifact closes the handle and fails closed
+  ---
+  duration_ms: 11.199078
+  type: 'test'
+  ...
+# Subtest: bad signatures trigger no artifact resolution or reads
+ok 143 - bad signatures trigger no artifact resolution or reads
+  ---
+  duration_ms: 4.083248
+  type: 'test'
+  ...
+# Subtest: streamed verification refuses traversal and escaping directory symlinks before opening artifacts
+ok 144 - streamed verification refuses traversal and escaping directory symlinks before opening artifacts
+  ---
+  duration_ms: 12.750773
+  type: 'test'
+  ...
+1..144
+# tests 195
+# suites 8
+# pass 195
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2135.98547
+Verified 195 executed TypeScript tests.

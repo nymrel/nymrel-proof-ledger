@@ -1,0 +1,614 @@
+{
+  "status": "PASS",
+  "cases": [
+    {
+      "name": "retained artifact authenticated",
+      "expected": {
+        "valid": true,
+        "trusted": true,
+        "signatureValid": true,
+        "artifactsValid": true,
+        "checkedArtifacts": 1,
+        "contextAccepted": true
+      },
+      "observed": {
+        "valid": true,
+        "trusted": true,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": true,
+        "artifactsValid": true,
+        "errors": [],
+        "warnings": [],
+        "checkedArtifacts": 1,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": true
+      }
+    },
+    {
+      "name": "no verification key",
+      "expected": {
+        "valid": true,
+        "trusted": false,
+        "signatureChecked": false,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": true,
+        "trusted": false,
+        "merkleValid": true,
+        "signatureChecked": false,
+        "signatureValid": null,
+        "artifactsValid": true,
+        "errors": [],
+        "warnings": [
+          "Signature was not cryptographically verified (no public key or secret provided)"
+        ],
+        "checkedArtifacts": 1,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "untrusted public key",
+      "expected": {
+        "valid": false,
+        "trusted": false,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": false,
+        "trusted": false,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": false,
+        "artifactsValid": false,
+        "errors": [
+          "Cryptographic signature verification failed with provided key"
+        ],
+        "warnings": [],
+        "checkedArtifacts": 0,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "wrong expected algorithm",
+      "expected": {
+        "valid": false,
+        "trusted": false,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": false,
+        "trusted": false,
+        "merkleValid": false,
+        "signatureChecked": false,
+        "signatureValid": null,
+        "artifactsValid": false,
+        "checkedArtifacts": 0,
+        "receipt": null,
+        "errors": [
+          "Receipt signature algorithm does not match expectedAlgorithm"
+        ],
+        "warnings": [],
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "missing expected algorithm",
+      "expected": {
+        "valid": false,
+        "trusted": false,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": false,
+        "trusted": false,
+        "merkleValid": false,
+        "signatureChecked": false,
+        "signatureValid": null,
+        "artifactsValid": false,
+        "checkedArtifacts": 0,
+        "receipt": null,
+        "errors": [
+          "A non-empty verification key and explicit expectedAlgorithm must be supplied together"
+        ],
+        "warnings": [],
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "signed metadata tamper",
+      "expected": {
+        "valid": false,
+        "trusted": false,
+        "signatureValid": false,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": false,
+        "trusted": false,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": false,
+        "artifactsValid": false,
+        "errors": [
+          "Cryptographic signature verification failed with provided key"
+        ],
+        "warnings": [],
+        "checkedArtifacts": 0,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "forged-purpose",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "authentic receipt presented for wrong task",
+      "expected": {
+        "valid": true,
+        "trusted": true,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": true,
+        "trusted": true,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": true,
+        "artifactsValid": true,
+        "errors": [],
+        "warnings": [],
+        "checkedArtifacts": 1,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "authentic receipt presented for wrong purpose",
+      "expected": {
+        "valid": true,
+        "trusted": true,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": true,
+        "trusted": true,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": true,
+        "artifactsValid": true,
+        "errors": [],
+        "warnings": [],
+        "checkedArtifacts": 1,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "retained artifact tamper",
+      "expected": {
+        "valid": false,
+        "trusted": false,
+        "signatureValid": true,
+        "artifactsValid": false,
+        "contextAccepted": false
+      },
+      "observed": {
+        "valid": false,
+        "trusted": false,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": true,
+        "artifactsValid": false,
+        "errors": [
+          "Artifact tampered: 'build-manifest.json' (hash mismatch)"
+        ],
+        "warnings": [],
+        "checkedArtifacts": 1,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": false
+      }
+    },
+    {
+      "name": "restored retained artifact authenticated",
+      "expected": {
+        "valid": true,
+        "trusted": true,
+        "contextAccepted": true
+      },
+      "observed": {
+        "valid": true,
+        "trusted": true,
+        "merkleValid": true,
+        "signatureChecked": true,
+        "signatureValid": true,
+        "artifactsValid": true,
+        "errors": [],
+        "warnings": [],
+        "checkedArtifacts": 1,
+        "receipt": {
+          "protocol": "nymrel-proof-ledger",
+          "version": "2.0.0",
+          "proofId": "prf_mvk3b4je_5733df38aeb8",
+          "timestamp": "2026-10-22T22:05:43.994Z",
+          "parentOrganization": "Nymrel",
+          "task": {
+            "name": "Node artifact handoff",
+            "runner": "nymrel-agent",
+            "status": "ATTESTED",
+            "exitCode": 0
+          },
+          "merkle": {
+            "algorithm": "RFC6962-SHA256",
+            "leaves": [
+              "07e23f435446b1e2a779ec93743ee62b6c335b2d24bbc8563c90258f1f0feaed",
+              "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+              "0afd2d9020f6854131211e8bd3e73fb27f2a5224a67a8cece9ec08ec1fdf165c"
+            ],
+            "root": "3c0dca013d8c5172aae8d596461c68e5c11f88696317e15fd0fe9c1c7aa4c897"
+          },
+          "metadata": {
+            "purpose": "cross-runtime-demo",
+            "label": "Release café 🚀"
+          },
+          "environment": {
+            "platform": "linux",
+            "arch": "x64",
+            "runtime": "node v24.19.0"
+          },
+          "artifacts": [
+            {
+              "path": "build-manifest.json",
+              "sha256": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+              "sizeBytes": 93
+            }
+          ],
+          "signature": {
+            "algorithm": "Ed25519",
+            "keyId": "ed25519-primary",
+            "signerIdentity": "node-demo-signer",
+            "timestamp": "2026-10-22T22:05:43.997Z",
+            "value": "fcbc511ee7e8991d9932e89c282db9c174e88ec5d56ec056989f21fcba36dab7e2ade08e8086ddbed1fc69fe38abf1aa482d3aca20baf6cd2a0f837e2e441f09"
+          }
+        },
+        "contextAccepted": true
+      }
+    }
+  ],
+  "pythonModule": "/workspace/proofgraph-astra-pr31/python/nymrel_proof_ledger/__init__.py",
+  "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+  "optimization": 1,
+  "signerDirectoryRemoved": true,
+  "sourceHeads": {
+    "pr30": "6c2b9878f0503aea4ac3e682aaf45ce1b398364f",
+    "pr31": "59a2c48a01e910ce2420160dae5a335513f5dc8e"
+  },
+  "observedAt": "2026-10-22T22:05:44.298273+00:00",
+  "sourceHashes": {
+    "pr30/examples/cross-runtime-worker.mjs": "16a513edf3cc4ce3f5ae2e552c28735ae25d32c0ef7520a07ab5df41894f40f9",
+    "pr30/dist/src/core/receipt.js": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+    "pr31/python/nymrel_proof_ledger/receipt.py": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a",
+    "run_adoption.py": "f08dffbde4d38a5c9b48a3e65939891e0fe31bc132e97e81fbb501018c338345"
+  },
+  "artifactHashes": {
+    "expected-context.json": "e3af1e2bbf85c774e8cbae70c008e805b2be285c635a4d2cd54f6d9dcd3fb0de",
+    "recipient/build-manifest.json": "0ca1f8dc7f1cde53b1a3d97faccf6c82a07ee82384f22f91764c602ce835914a",
+    "recipient/proof.json": "0482ec9f365d89921b25ba0eea0b3de14fa6c7baaa874e6e3e257f9bccff9337",
+    "trusted-config.json": "ba218d613f2d241b07720770356c7aa944e7643c689c66edf23a47ed376b3fef"
+  },
+  "limits": [
+    "Synthetic input; same local environment and operator",
+    "Public-key trust provisioning is simulated, not authenticated externally",
+    "Signature authenticates signer assertions; no execution, identity or authority proof",
+    "Task/purpose check is application policy; no freshness or replay ledger",
+    "No human adoption, host verification, cross-team approval or release"
+  ]
+}

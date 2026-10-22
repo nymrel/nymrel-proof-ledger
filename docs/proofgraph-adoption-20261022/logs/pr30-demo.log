@@ -1,0 +1,12 @@
+Node -> Python
+  Original receipt + public key + disk check: valid=true, trusted=true, signatureChecked=true
+  Original receipt without a verification key: valid=true, trusted=false, signatureChecked=false
+  Changed signed metadata: valid=false, trusted=false, signatureChecked=true
+  Changed artifact bytes: valid=false, trusted=false, signatureChecked=true
+Python -> Node
+  Original receipt + public key + disk check: valid=true, trusted=true, signatureChecked=true
+  Original receipt without a verification key: valid=true, trusted=false, signatureChecked=false
+  Changed signed metadata: valid=false, trusted=false, signatureChecked=true
+  Changed artifact bytes: valid=false, trusted=false, signatureChecked=true
+All 8 expectations passed. Temporary files removed; no private key was saved.
+Trust checks the signed fields under the configured key; it does not prove execution or signer identity.

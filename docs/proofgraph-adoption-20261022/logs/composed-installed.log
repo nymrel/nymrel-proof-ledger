@@ -1,0 +1,5 @@
+
+> @nymrel/proof-ledger@2.0.0 test:installed
+> python3 test/installed_consumers.py --output /workspace/proofgraph-astra/adoption-evidence/composed-installed
+
+{"status": "PASS", "report": "/workspace/proofgraph-astra/adoption-evidence/composed-installed/acceptance.json", "elapsed_seconds": 20.1242}

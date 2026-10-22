@@ -1,0 +1,828 @@
+{
+  "started_utc": "2026-10-22T22:06:57.236980+00:00",
+  "kind": "automated-clean-environment-acceptance",
+  "human_adoption_trials": 0,
+  "registry_publication_performed": false,
+  "artifact_mode": "build-local",
+  "artifact_provenance": "Archives built from the recorded stable checkout snapshot.",
+  "host": {
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "python": "3.12.14",
+    "node": "v24.19.0",
+    "npm": "11.9.0",
+    "uv": "uv 0.12.19 (x86_64-unknown-linux-gnu)"
+  },
+  "packaged_markdown_links_checked": 21,
+  "version": "2.0.0",
+  "artifacts": [
+    {
+      "filename": "nymrel-proof-ledger-2.0.0.tgz",
+      "bytes": 98593,
+      "sha256": "78273e8d1388e3a92fc218aa2f9c97044419d7ddcd6a1e7b2003bdd46acb64f0"
+    },
+    {
+      "filename": "nymrel_proof_ledger-2.0.0-py3-none-any.whl",
+      "bytes": 40701,
+      "sha256": "2551455a64a53b39e90a43251b9874459c5130ab06f20e7c920de07f5cb5ffeb"
+    },
+    {
+      "filename": "nymrel_proof_ledger-2.0.0.tar.gz",
+      "bytes": 76358,
+      "sha256": "8ca0c9baeb987e61e617bbb6f2609a1fc960d918a4e144918f4090bdb58e919b"
+    }
+  ],
+  "cli_gate_checks": [
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "node",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "node",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "node",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "wheel",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "wheel",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "wheel",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "node",
+      "signer": "sdist",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "wheel",
+      "signer": "sdist",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "trusted-v2-public-only",
+      "accepted": true
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "integrity-only-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "wrong-key-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "wrong-algorithm-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "signed-metadata-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "artifact-tampering-rejected",
+      "accepted": false
+    },
+    {
+      "consumer": "sdist",
+      "signer": "sdist",
+      "case": "missing-artifact-rejected",
+      "accepted": false
+    }
+  ],
+  "consumer_environments_removed": true,
+  "status": "PASS",
+  "elapsed_seconds": 20.1242,
+  "timing_categories_seconds": {
+    "build": 3.3232,
+    "environment_setup": 0.0193,
+    "installation": 1.6797,
+    "reference_consumer_runs": 1.5551,
+    "installed_cli_checks": 13.3884
+  },
+  "source": {
+    "revision": "eaebdd48ce431ec9cafda27cc88d4374b86980e7",
+    "status": "",
+    "tree": "d1f6eea6d80dcedc015c0da95b7290716492bdc6"
+  },
+  "raw_acceptance_sha256": "7f63e6bcd09093e182e03c8baac09d92bb357cd7f87a4f948a606851da670ac6",
+  "step_results": [
+    {
+      "label": "node-version",
+      "exit_code": 0
+    },
+    {
+      "label": "npm-version",
+      "exit_code": 0
+    },
+    {
+      "label": "uv-version",
+      "exit_code": 0
+    },
+    {
+      "label": "npm-build",
+      "exit_code": 0
+    },
+    {
+      "label": "npm-pack",
+      "exit_code": 0
+    },
+    {
+      "label": "python-build-sdist-and-wheel",
+      "exit_code": 0
+    },
+    {
+      "label": "node-install-exact-tarball",
+      "exit_code": 0
+    },
+    {
+      "label": "node-installed-cli-help",
+      "exit_code": 0
+    },
+    {
+      "label": "node-create",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-environment",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-install-exact-archive",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-installed-dependencies",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-installed-cli-help",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-create",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-verify-node-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-verify-node-optimized",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-verify-node-optimized-tampering",
+      "exit_code": 1
+    },
+    {
+      "label": "node-verify-wheel-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-environment",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-install-exact-archive",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-installed-dependencies",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-installed-cli-help",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-create",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-verify-node-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-verify-node-optimized",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-verify-node-optimized-tampering",
+      "exit_code": 1
+    },
+    {
+      "label": "node-verify-sdist-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-node-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-node-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-default-integrity-only-node",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-node-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-node-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-node-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-node-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-node-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-node-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-gate-node-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-default-integrity-only-node",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-gate-node-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-node-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-node-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-node-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-node-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-node-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-gate-node-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-default-integrity-only-node",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-gate-node-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-node-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-node-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-node-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-node-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-wheel-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-wheel-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-default-integrity-only-wheel",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-wheel-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-wheel-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-wheel-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-wheel-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-wheel-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-wheel-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-gate-wheel-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-default-integrity-only-wheel",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-gate-wheel-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-wheel-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-wheel-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-wheel-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-wheel-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-wheel-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-gate-wheel-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-default-integrity-only-wheel",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-gate-wheel-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-wheel-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-wheel-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-wheel-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-wheel-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-sdist-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-sdist-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-default-integrity-only-sdist",
+      "exit_code": 0
+    },
+    {
+      "label": "node-gate-sdist-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-sdist-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-sdist-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-sdist-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "node-gate-sdist-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-sdist-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-gate-sdist-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-default-integrity-only-sdist",
+      "exit_code": 0
+    },
+    {
+      "label": "wheel-gate-sdist-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-sdist-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-sdist-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-sdist-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "wheel-gate-sdist-missing-artifact-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-sdist-trusted-v2-public-only",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-gate-sdist-integrity-only-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-default-integrity-only-sdist",
+      "exit_code": 0
+    },
+    {
+      "label": "sdist-gate-sdist-wrong-key-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-sdist-wrong-algorithm-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-sdist-signed-metadata-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-sdist-artifact-tampering-rejected",
+      "exit_code": 1
+    },
+    {
+      "label": "sdist-gate-sdist-missing-artifact-rejected",
+      "exit_code": 1
+    }
+  ]
+}
