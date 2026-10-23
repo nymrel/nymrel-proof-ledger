@@ -1,5 +1,18 @@
 # PR #31 source and release-assurance review — October 20, 2026
 
+## Direct integration review scope — October 23, 2026
+
+For the current operator-directed integration of PR30 and PR31, the authenticated
+operator assigned review to Codex and Astra. The provider-specific other-team
+review requirement recorded below is superseded for this direct session; no
+additional model or provider review is required. This clarification preserves
+configured GitHub review requirements, branch protections, executable checks,
+and exact-source review. It grants no tag, registry publication, deployment, or
+unattended-work authorization. The earlier findings and evidence remain historical
+records, not approvals of a later source revision.
+
+## Historical review
+
 Reviewed candidate: `3bf1349c2026db773f41840ea3e7c005d69d6402`, against
 main `232849c4e833da992cbcdcc6fa4b7bd0f56cbde3`. This is a new current-session
 Codex investigation and execution, not the required other-team security approval.
