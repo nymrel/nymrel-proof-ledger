@@ -21,6 +21,7 @@ Run the local release gate:
 
 ~~~powershell
 npm run test:release
+npm run test:installed
 npm audit --audit-level=high
 npm pack --dry-run
 ~~~

@@ -1,0 +1,269 @@
+{
+  "purpose": "Bounded quiet-window follow-up of the two throughput misses. Core code unchanged. These experiments investigate repeatability and do not replace the full-case five-run acceptance comparison.",
+  "comparisons": [
+    {
+      "measuredAt": "2026-10-18T12:55:33.882417+00:00",
+      "code": {
+        "baseline": {
+          "nodeModule": "/workspace/scratch/proof-ledger-bench/baseline-code/node/core/receipt.js",
+          "pythonRoot": "/workspace/scratch/proof-ledger-bench/baseline-code",
+          "nodeModuleSha256": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+          "pythonModuleSha256": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4"
+        },
+        "candidate": {
+          "nodeModule": "/workspace/nymrel-proof-ledger/dist/src/core/receipt.js",
+          "pythonRoot": "/workspace/nymrel-proof-ledger/python",
+          "nodeModuleSha256": "d8e16befa20140341494d1d06d0d6de78fd6bf80b7fb0ae0cd333e9bda1b8b7d",
+          "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+        }
+      },
+      "runsPerCase": 5,
+      "variantOrder": "Alternate baseline then candidate within each repetition",
+      "rawEvidence": {
+        "path": "/workspace/scratch/proof-ledger-bench/quiet-node-1mib.json",
+        "sha256": "b83a90c4d5724a3c0bf29275be8679c77d7d0cd1a7c884f5772c490ed036f2e5"
+      },
+      "results": [
+        {
+          "variant": "baseline",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "create",
+          "median": {
+            "elapsedSeconds": 0.006178121000000004,
+            "idleRssBytes": 34603008,
+            "peakRssBytes": 36438016,
+            "peakIncrementBytes": 1835008,
+            "throughputMiBPerSecond": 161.86151096749307
+          }
+        },
+        {
+          "variant": "candidate",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "create",
+          "median": {
+            "elapsedSeconds": 0.006900076999999996,
+            "idleRssBytes": 34471936,
+            "peakRssBytes": 36306944,
+            "peakIncrementBytes": 1966080,
+            "throughputMiBPerSecond": 144.92591894264376
+          }
+        },
+        {
+          "variant": "baseline",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "verify",
+          "median": {
+            "elapsedSeconds": 0.00641656900000001,
+            "idleRssBytes": 34603008,
+            "peakRssBytes": 36306944,
+            "peakIncrementBytes": 1572864,
+            "throughputMiBPerSecond": 155.84652794974986
+          }
+        },
+        {
+          "variant": "candidate",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "verify",
+          "median": {
+            "elapsedSeconds": 0.0064685079999999995,
+            "idleRssBytes": 34471936,
+            "peakRssBytes": 36175872,
+            "peakIncrementBytes": 1572864,
+            "throughputMiBPerSecond": 154.59515548253168
+          }
+        }
+      ]
+    },
+    {
+      "measuredAt": "2026-10-18T12:57:15.118355+00:00",
+      "code": {
+        "baseline": {
+          "nodeModule": "/workspace/scratch/proof-ledger-bench/baseline-code/node/core/receipt.js",
+          "pythonRoot": "/workspace/scratch/proof-ledger-bench/baseline-code",
+          "nodeModuleSha256": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+          "pythonModuleSha256": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4"
+        },
+        "candidate": {
+          "nodeModule": "/workspace/nymrel-proof-ledger/dist/src/core/receipt.js",
+          "pythonRoot": "/workspace/nymrel-proof-ledger/python",
+          "nodeModuleSha256": "d8e16befa20140341494d1d06d0d6de78fd6bf80b7fb0ae0cd333e9bda1b8b7d",
+          "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+        }
+      },
+      "runsPerCase": 5,
+      "variantOrder": "Alternate baseline then candidate within each repetition",
+      "rawEvidence": {
+        "path": "/workspace/scratch/proof-ledger-bench/quiet-node-1mib-repeat2.json",
+        "sha256": "36858d7b6188cae74104a396801dc74fefd1218ec90bde8d1aac0beb6e21a6ad"
+      },
+      "results": [
+        {
+          "variant": "baseline",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "create",
+          "median": {
+            "elapsedSeconds": 0.011647793000000007,
+            "idleRssBytes": 34734080,
+            "peakRssBytes": 36569088,
+            "peakIncrementBytes": 1835008,
+            "throughputMiBPerSecond": 85.85317407340595
+          }
+        },
+        {
+          "variant": "candidate",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "create",
+          "median": {
+            "elapsedSeconds": 0.007506478999999991,
+            "idleRssBytes": 34471936,
+            "peakRssBytes": 36438016,
+            "peakIncrementBytes": 1966080,
+            "throughputMiBPerSecond": 133.21825052731128
+          }
+        },
+        {
+          "variant": "baseline",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "verify",
+          "median": {
+            "elapsedSeconds": 0.0061905050000000015,
+            "idleRssBytes": 34734080,
+            "peakRssBytes": 36175872,
+            "peakIncrementBytes": 1441792,
+            "throughputMiBPerSecond": 161.5377097668122
+          }
+        },
+        {
+          "variant": "candidate",
+          "runtime": "node",
+          "case": "1MiB",
+          "operation": "verify",
+          "median": {
+            "elapsedSeconds": 0.005931280000000001,
+            "idleRssBytes": 34471936,
+            "peakRssBytes": 36175872,
+            "peakIncrementBytes": 1703936,
+            "throughputMiBPerSecond": 168.59767200334497
+          }
+        }
+      ]
+    },
+    {
+      "measuredAt": "2026-10-18T12:55:35.908416+00:00",
+      "code": {
+        "baseline": {
+          "nodeModule": "/workspace/scratch/proof-ledger-bench/baseline-code/node/core/receipt.js",
+          "pythonRoot": "/workspace/scratch/proof-ledger-bench/baseline-code",
+          "nodeModuleSha256": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+          "pythonModuleSha256": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4"
+        },
+        "candidate": {
+          "nodeModule": "/workspace/nymrel-proof-ledger/dist/src/core/receipt.js",
+          "pythonRoot": "/workspace/nymrel-proof-ledger/python",
+          "nodeModuleSha256": "d8e16befa20140341494d1d06d0d6de78fd6bf80b7fb0ae0cd333e9bda1b8b7d",
+          "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+        }
+      },
+      "runsPerCase": 5,
+      "variantOrder": "Alternate baseline then candidate within each repetition",
+      "rawEvidence": {
+        "path": "/workspace/scratch/proof-ledger-bench/quiet-python-1file.json",
+        "sha256": "483b1bdfd7db7da160947ad4280433c0563a2a98d48ae4bdd4fe0dcfae787713"
+      },
+      "results": [
+        {
+          "variant": "baseline",
+          "runtime": "python",
+          "case": "1-files",
+          "operation": "create",
+          "median": {
+            "elapsedSeconds": 0.0008303910001359327,
+            "idleRssBytes": 20029440,
+            "peakRssBytes": 19992576,
+            "peakIncrementBytes": 0,
+            "throughputMiBPerSecond": 4.7041092682369605
+          }
+        },
+        {
+          "variant": "candidate",
+          "runtime": "python",
+          "case": "1-files",
+          "operation": "create",
+          "median": {
+            "elapsedSeconds": 0.0007713809998222132,
+            "idleRssBytes": 20029440,
+            "peakRssBytes": 20115456,
+            "peakIncrementBytes": 86016,
+            "throughputMiBPerSecond": 5.0639696867051525
+          }
+        },
+        {
+          "variant": "baseline",
+          "runtime": "python",
+          "case": "1-files",
+          "operation": "verify",
+          "median": {
+            "elapsedSeconds": 0.0008038109999688459,
+            "idleRssBytes": 20037632,
+            "peakRssBytes": 19996672,
+            "peakIncrementBytes": 0,
+            "throughputMiBPerSecond": 4.85966228398392
+          }
+        },
+        {
+          "variant": "candidate",
+          "runtime": "python",
+          "case": "1-files",
+          "operation": "verify",
+          "median": {
+            "elapsedSeconds": 0.0011053400000946567,
+            "idleRssBytes": 20029440,
+            "peakRssBytes": 19984384,
+            "peakIncrementBytes": 0,
+            "throughputMiBPerSecond": 3.5339804943867814
+          }
+        }
+      ]
+    }
+  ],
+  "ioSpanProfile": {
+    "purpose": "Exploratory fresh-process outer creation/hash and artifact I/O spans; fs wrappers add overhead, not acceptance evidence. Five paired runs per operation. Warm input pages from prior benchmark.",
+    "rawEvidence": {
+      "path": "/workspace/scratch/proof-ledger-bench/profile-node-results.json",
+      "sha256": "68cbea4765361f0a6209663d7dc469a6d1855f6c8342de2655e123a1e57e08b7"
+    },
+    "medians": [
+      {
+        "mode": "create",
+        "variant": "baseline",
+        "totalMs": 5.781814999999995,
+        "ioMs": 1.649290999999998
+      },
+      {
+        "mode": "create",
+        "variant": "candidate",
+        "totalMs": 5.632605000000005,
+        "ioMs": 1.5642270000000167
+      },
+      {
+        "mode": "hash",
+        "variant": "baseline",
+        "totalMs": 3.374391000000003,
+        "ioMs": 1.6819660000000027
+      },
+      {
+        "mode": "hash",
+        "variant": "candidate",
+        "totalMs": 3.394788999999996,
+        "ioMs": 1.579022000000009
+      }
+    ]
+  }
+}

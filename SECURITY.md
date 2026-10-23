@@ -83,7 +83,24 @@ runtime matrix, and receive security-audit review.
 
 ## Key custody
 
+CLI `keygen --out` uses exclusive creation and requests mode `0600` at creation on
+POSIX, before writing any secret bytes. Existing destinations, including live or
+dangling symlinks, are refused without changing their contents or permissions.
+Use a directory you control; parent directories and Windows ACLs remain the
+operator's responsibility. Omitting `--out` intentionally writes keys to stdout,
+and shell redirection does not inherit the CLI's file protections.
+
 Do not place production keys in source control, command history, receipts,
 badges, or logs. HMAC keys are symmetric and should not be distributed as
 public verification material. Prefer Ed25519 when verifiers must not gain
 signing capability. Obtain public keys through an authenticated channel.
+
+CLI attestation requires a supplied key and never generates or prints a fallback
+secret. Explicit `keygen` without `--out` exports private key material to stdout
+and must not run in a captured-log context.
+
+Use `verify --require-trusted-v2` when the CLI exit code controls an authenticated
+v2 gate. Default exit zero also permits integrity-only verification. The gate's
+JSON `policy` verdict is separate from the core cryptographic verdict and does
+not establish signer authorization or execution. Add `--check-files` when local
+artifact checks are required.
