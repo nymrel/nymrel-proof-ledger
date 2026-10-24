@@ -25,6 +25,23 @@ const vectors = JSON.parse(
 ) as ReceiptVectors;
 
 describe('Proof Receipt Engine', () => {
+  it('rejects unsupported runtime algorithms without treating them as authenticated', async () => {
+    const secret = 'fixture-secret';
+    const receipt = await createReceipt({ task: { name: 'algorithm boundary' }, signingKey: secret, signerIdentity: 'test' });
+    for (const value of ['hmac-sha256', 'constructor', { toString: () => 'HMAC-SHA256' }]) {
+      const wrongContext = await verifyReceipt(receipt, { publicKeyOrSecret: secret, expectedAlgorithm: value as any });
+      assert.strictEqual(wrongContext.valid, false);
+      assert.strictEqual(wrongContext.trusted, false);
+      assert.strictEqual(wrongContext.signatureChecked, false);
+      const wrongReceipt = structuredClone(receipt);
+      wrongReceipt.signature.algorithm = value as any;
+      const result = await verifyReceipt(wrongReceipt, { publicKeyOrSecret: secret, expectedAlgorithm: 'HMAC-SHA256' });
+      assert.strictEqual(result.valid, false);
+      assert.strictEqual(result.trusted, false);
+      assert.strictEqual(result.signatureChecked, false);
+    }
+    assert.strictEqual((await verifyReceipt(receipt, { publicKeyOrSecret: secret, expectedAlgorithm: 'HMAC-SHA256' })).trusted, true);
+  });
   it('emits and cryptographically verifies protocol v2 receipts', async () => {
     const secret = ProofSigner.generateSecretKey();
     const receipt = await createReceipt({
