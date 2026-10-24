@@ -61,6 +61,30 @@ for (const artifactPath of cases.rejectedPaths) {
   });
 }
 
+test('portable device-name check handles long ASCII spaces without broad whitespace trimming', async () => {
+  const originalOpen = fs.open;
+  let opens = 0;
+  fs.open = (async () => { opens++; throw new Error('mock missing file'); }) as typeof originalOpen;
+  try {
+    for (const [artifactPath, rejectedByPolicy] of [
+      [`CON${' '.repeat(30_000)}.txt`, true],
+      [`CON${' '.repeat(30_000)}x.txt`, false],
+      ['CON\u00a0.txt', false],
+    ] as const) {
+      const receipt = structuredClone(legacy.receipt);
+      receipt.artifacts[0].path = artifactPath;
+      const result = await verifyReceipt(receipt, {
+        publicKeyOrSecret: legacy.secret, expectedAlgorithm: 'HMAC-SHA256', checkFilesOnDisk: true,
+      });
+      assert.equal(result.valid, false);
+      assert.equal(result.signatureValid, true);
+      assert.equal(result.checkedArtifacts, 0);
+      assert.match(result.errors.join('; '), rejectedByPolicy ? /escapes verification root/ : /Artifact missing on disk/);
+    }
+    assert.equal(opens, 2);
+  } finally { fs.open = originalOpen; }
+});
+
 for (const outside of [false, true]) {
   test(`disk verification ${outside ? 'refuses an escaping' : 'accepts an in-root'} dot-prefixed directory symlink`, async () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'proof-link-'));
