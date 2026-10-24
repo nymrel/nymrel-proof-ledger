@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { canonicalHash, type CanonicalizationProfile } from './canonical.js';
 import { RECEIPT_PROTOCOL, validateReceiptEnvelope } from './envelope.js';
 import { MerkleTree, type MerkleProfile } from './merkle.js';
-import { ProofSigner, type SignatureAlgorithm, type SignatureRecord } from './signer.js';
+import { ProofSigner, decodeSignatureAlgorithm, type SignatureAlgorithm, type SignatureRecord } from './signer.js';
 
 export const RECEIPT_VERSION = '2.0.0' as const;
 export const LEGACY_RECEIPT_VERSION = '1.0.0' as const;
@@ -378,9 +378,10 @@ export async function verifyReceipt(
   }
   const hasKey = options.publicKeyOrSecret != null;
   const hasAlgorithm = options.expectedAlgorithm != null;
+  const expectedAlgorithm = decodeSignatureAlgorithm(options.expectedAlgorithm);
   if (hasKey !== hasAlgorithm || (hasKey && (
     typeof options.publicKeyOrSecret !== 'string' || options.publicKeyOrSecret.length === 0 ||
-    !['HMAC-SHA256', 'Ed25519'].includes(options.expectedAlgorithm as string)
+    expectedAlgorithm === undefined
   ))) {
     return invalidContext('A non-empty verification key and explicit expectedAlgorithm must be supplied together');
   }
@@ -403,7 +404,9 @@ export async function verifyReceipt(
   }
 
   const receipt = receiptInput as ProofReceipt;
-  if (hasKey && options.expectedAlgorithm !== receipt.signature.algorithm) {
+  const receiptAlgorithm = decodeSignatureAlgorithm(receipt.signature.algorithm);
+  if (receiptAlgorithm === undefined) return invalidContext('Unsupported receipt signature algorithm');
+  if (hasKey && expectedAlgorithm !== receiptAlgorithm) {
     return invalidContext('Receipt signature algorithm does not match expectedAlgorithm');
   }
   const errors: string[] = [];
@@ -445,7 +448,7 @@ export async function verifyReceipt(
       signingPayload(receipt, receipt.signature),
       receipt.signature.value,
       options.publicKeyOrSecret as string,
-      options.expectedAlgorithm as SignatureAlgorithm,
+      receiptAlgorithm,
       profiles.canonical
     );
     if (!signatureValid) errors.push('Cryptographic signature verification failed with provided key');
