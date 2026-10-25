@@ -77,7 +77,9 @@ class TestCliReceiptInputRecovery(unittest.TestCase):
             ('invalid-metadata-utf8.json', encoded_receipt.replace(
                 b'fixture metadata', b'fixture \xffmetadata',
             )),
-            ('deep.json', b'[' * 10_000 + b'null' + b']' * 10_000),
+            # Valid deeply nested JSON can parse on newer Python versions.
+            # Missing closers guarantee malformed input on every supported parser.
+            ('deep.json', b'[' * 10_000 + b'null'),
         ):
             path = self.directory / name
             path.write_bytes(content)
@@ -172,6 +174,18 @@ class TestCliReceiptInputRecovery(unittest.TestCase):
                         self.assertNotIn('Traceback', output)
                     load_key.assert_not_called()
                     verify.assert_not_called()
+        self.assert_inputs_unchanged()
+
+    def test_parser_recursion_failure_returns_structured_error_without_verification(self):
+        with patch('nymrel_proof_ledger.cli.json.loads', side_effect=RecursionError('parser limit')), \
+                patch('nymrel_proof_ledger.cli.verify_receipt') as verify, \
+                patch('nymrel_proof_ledger.cli._load_key_material') as load_key:
+            code, output, errors = self.in_process(self.verification_arguments(self.proof))
+            load_key.assert_not_called()
+            verify.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertEqual(errors, '')
+        self.assertEqual(json.loads(output), failed_loading_result(JSON_ERROR))
         self.assert_inputs_unchanged()
 
     def test_authenticated_v2_policy_fails_before_key_or_artifact_access(self):
