@@ -173,19 +173,3 @@ Human trials, the full performance target, an authorized hosted release run,
 provenance, and actual npm/PyPI publication remain separate incomplete outcomes.
 PR22's QR repair remains in its own pending lane.
 
-## CLI and certificate handoff continuation — October 25, 2026
-
-The next existing handoff is [PR24](https://github.com/nymrel/nymrel-proof-ledger/pull/24)
-with its [stacked PR26](https://github.com/nymrel/nymrel-proof-ledger/pull/26)
-recovery fix. This continuation reuses their published reconciliation candidate
-`89ef3cfd62fee3cd05f854c5d8a223ec199e53e5`, preserves their original commits,
-and composes the CLI/certificate changes with current main. The unified parser
-retains strict keygen handling and the authenticated-v2 gate. New shared policy
-cases cover missing receipts, malformed JSON, invalid UTF-8, and BOM rejection;
-focused checks verify that failed loading skips key and artifact work even when
-the policy is enabled. The original PR24 lane records final source, Astra review,
-validation and integration; a prepared candidate alone does not close the handoff.
-
-Human trials, the full performance target, an authorized hosted release run,
-provenance, and actual npm/PyPI publication remain separate incomplete outcomes.
-PR22's QR repair remains in its own pending lane.
