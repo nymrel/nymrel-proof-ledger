@@ -174,6 +174,27 @@ class TestCliReceiptInputRecovery(unittest.TestCase):
                     verify.assert_not_called()
         self.assert_inputs_unchanged()
 
+    def test_authenticated_v2_policy_fails_before_key_or_artifact_access(self):
+        with patch('builtins.open', side_effect=PermissionError(errno.EACCES, 'Permission denied')) as read, \
+                patch('nymrel_proof_ledger.cli.verify_receipt') as verify, \
+                patch('nymrel_proof_ledger.cli._load_key_material') as load_key:
+            code, output, errors = self.in_process([
+                'verify', '--require-trusted-v2', str(self.proof), '--key-file', str(self.key),
+                '--algo', 'HMAC-SHA256', '--check-files', '--json',
+            ])
+            self.assertEqual(code, 1)
+            self.assertEqual(errors, '')
+            result = json.loads(output)
+            policy = result.pop('policy')
+            self.assertEqual(result, failed_loading_result(READ_ERROR))
+            self.assertEqual(policy['name'], 'authenticated-v2')
+            self.assertFalse(policy['passed'])
+            self.assertEqual(len(policy['errors']), 3)
+            read.assert_called_once()
+            load_key.assert_not_called()
+            verify.assert_not_called()
+        self.assert_inputs_unchanged()
+
     def test_parsed_invalid_envelopes_keep_the_verifiers_existing_results(self):
         for value in (None, [], 7, {}, {'task': {'name': 'Incomplete receipt'}}):
             with self.subTest(receipt=value):

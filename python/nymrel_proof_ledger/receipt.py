@@ -96,31 +96,57 @@ def get_git_context(cwd: str | None = None) -> dict[str, Any] | None:
         return None
 
 
-def hash_artifact(
+_FILE_HASH_CHUNK_SIZE = 64 * 1024
+
+
+def _hash_file(file_path: str, state: dict[str, bytearray]) -> tuple[str, int]:
+    """Hash exact bytes using bounded memory; close the file on read failures."""
+    digest = hashlib.sha256()
+    size_bytes = 0
+    buffer = state.get("buffer")
+    if buffer is None:
+        buffer = state["buffer"] = bytearray(_FILE_HASH_CHUNK_SIZE)
+    view = memoryview(buffer)
+    with open(file_path, "rb") as file:
+        while count := file.readinto(buffer):
+            digest.update(view[:count])
+            size_bytes += count
+    return digest.hexdigest(), size_bytes
+
+
+def _hash_artifact(
     artifact_path: str,
-    data: str | bytes | None = None,
-    cwd: str | None = None,
+    data: str | bytes | None,
+    cwd: str,
+    state: dict[str, bytearray],
 ) -> dict[str, Any]:
-    cwd = cwd or os.getcwd()
     resolved = (
         artifact_path
         if os.path.isabs(artifact_path)
         else os.path.abspath(os.path.join(cwd, artifact_path))
     )
     if data is None:
-        with open(resolved, "rb") as file:
-            buffer = file.read()
+        sha256, size_bytes = _hash_file(resolved, state)
     else:
         buffer = data.encode("utf-8") if isinstance(data, str) else bytes(data)
+        sha256, size_bytes = hashlib.sha256(buffer).hexdigest(), len(buffer)
     try:
         relative = os.path.relpath(resolved, cwd).replace("\\", "/")
     except ValueError:
         relative = artifact_path
     return {
         "path": relative or artifact_path,
-        "sha256": hashlib.sha256(buffer).hexdigest(),
-        "sizeBytes": len(buffer),
+        "sha256": sha256,
+        "sizeBytes": size_bytes,
     }
+
+
+def hash_artifact(
+    artifact_path: str,
+    data: str | bytes | None = None,
+    cwd: str | None = None,
+) -> dict[str, Any]:
+    return _hash_artifact(artifact_path, data, cwd or os.getcwd(), {})
 
 
 def _profiles(version: str) -> tuple[str, str]:
@@ -198,8 +224,9 @@ def create_receipt(
     proof_id = f"prf_{int(now.timestamp()):x}_{os.urandom(6).hex()}"
     timestamp = now.isoformat().replace("+00:00", "Z")
     processed_artifacts: list[dict[str, Any]] = []
+    file_hash_state: dict[str, bytearray] = {}
     for item in artifacts or []:
-        artifact = hash_artifact(item["path"], item.get("data"), cwd)
+        artifact = _hash_artifact(item["path"], item.get("data"), cwd, file_hash_state)
         if "mimeType" in item:
             artifact["mimeType"] = item["mimeType"]
         processed_artifacts.append(artifact)
@@ -392,6 +419,7 @@ def verify_receipt(
     artifacts_valid = not check_files_on_disk or not errors
     checked_artifacts = 0
     if check_files_on_disk and not errors:
+        file_hash_state: dict[str, bytearray] = {}
         for artifact in receipt["artifacts"]:
             full_path = _artifact_path_within(cwd, artifact["path"])
             if full_path is None:
@@ -401,8 +429,7 @@ def verify_receipt(
                 )
                 continue
             try:
-                with open(full_path, "rb") as file:
-                    actual_hash = hashlib.sha256(file.read()).hexdigest()
+                actual_hash, _ = _hash_file(full_path, file_hash_state)
                 checked_artifacts += 1
                 if actual_hash != artifact["sha256"].lower():
                     artifacts_valid = False

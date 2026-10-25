@@ -60,3 +60,5 @@ for algorithm in ('HMAC-SHA256', 'Ed25519'):
 
 print(json.dumps({'shared_cases': len(CASES), 'bidirectional_authentication_checks': checks, 'status': 'PASS'}))
 subprocess.run([sys.executable, str(ROOT / 'test/cross_runtime_signal.py')], cwd=ROOT, check=True)
+subprocess.run([sys.executable, str(ROOT / 'test/cross_runtime_keygen.py')], cwd=ROOT, check=True)
+subprocess.run([sys.executable, str(ROOT / 'test/cross_runtime_cli_gate.py')], cwd=ROOT, check=True)

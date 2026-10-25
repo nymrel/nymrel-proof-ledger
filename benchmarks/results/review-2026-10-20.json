@@ -1,0 +1,452 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-20T07:39:22.704467+00:00",
+  "sourceRevision": "3bf1349c2026db773f41840ea3e7c005d69d6402",
+  "host": {
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpuCount": 9,
+    "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+    "memoryTotal": "MemTotal:       10206484 kB"
+  },
+  "runtimes": {
+    "node": "v24.19.0",
+    "python": "Python 3.13.16"
+  },
+  "code": {
+    "baseline": {
+      "nodeModule": "/workspace/scratch/2c6568fc2491/proof-baseline/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/scratch/2c6568fc2491/proof-baseline/python",
+      "nodeModuleSha256": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+      "pythonModuleSha256": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4"
+    },
+    "candidate": {
+      "nodeModule": "/workspace/scratch/2c6568fc2491/proof-ledger/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/scratch/2c6568fc2491/proof-ledger/python",
+      "nodeModuleSha256": "d8e16befa20140341494d1d06d0d6de78fd6bf80b7fb0ae0cd333e9bda1b8b7d",
+      "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+    }
+  },
+  "cacheConditions": "Warm page cache: sequentially read all artifact bytes immediately before every fresh-process worker; no cache drop. Generation and warming excluded from timings. Host may have concurrent activity.",
+  "measurement": "Fresh process per run and operation. Timed createReceipt/create_receipt or trusted verifyReceipt/verify_receipt with disk checks; import, fixture loading and GC excluded. Peak incremental RSS=max(0, process lifetime peak RSS minus current RSS after imports, receipt fixture loading and GC). Linux getrusage maxRSS; current RSS from Node memoryUsage or Python /proc. Manifests contain deterministic 4 KiB files.",
+  "runsPerCase": 5,
+  "variantOrder": "Alternate baseline then candidate within each repetition",
+  "results": [
+    {
+      "variant": "baseline",
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "create",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 1.251651644,
+          "idleRssBytes": 41861120,
+          "peakRssBytes": 1116647424,
+          "peakIncrementBytes": 1074786304,
+          "throughputMiBPerSecond": 818.1190069207466
+        },
+        {
+          "elapsedSeconds": 1.273538545,
+          "idleRssBytes": 41709568,
+          "peakRssBytes": 1116581888,
+          "peakIncrementBytes": 1074872320,
+          "throughputMiBPerSecond": 804.058898743422
+        },
+        {
+          "elapsedSeconds": 1.1924769940000002,
+          "idleRssBytes": 41844736,
+          "peakRssBytes": 1116745728,
+          "peakIncrementBytes": 1074900992,
+          "throughputMiBPerSecond": 858.7167762164809
+        },
+        {
+          "elapsedSeconds": 1.352825481,
+          "idleRssBytes": 41517056,
+          "peakRssBytes": 1116807168,
+          "peakIncrementBytes": 1075290112,
+          "throughputMiBPerSecond": 756.9342937294955
+        },
+        {
+          "elapsedSeconds": 1.2417934380000002,
+          "idleRssBytes": 41828352,
+          "peakRssBytes": 1116651520,
+          "peakIncrementBytes": 1074823168,
+          "throughputMiBPerSecond": 824.6137953903408
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 1.251651644,
+        "idleRssBytes": 41828352,
+        "peakRssBytes": 1116651520,
+        "peakIncrementBytes": 1074872320,
+        "throughputMiBPerSecond": 818.1190069207466
+      }
+    },
+    {
+      "variant": "candidate",
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "create",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 0.942735939,
+          "idleRssBytes": 41971712,
+          "peakRssBytes": 45117440,
+          "peakIncrementBytes": 3145728,
+          "throughputMiBPerSecond": 1086.2002366072945
+        },
+        {
+          "elapsedSeconds": 0.899778398,
+          "idleRssBytes": 41848832,
+          "peakRssBytes": 44994560,
+          "peakIncrementBytes": 3145728,
+          "throughputMiBPerSecond": 1138.0579954754592
+        },
+        {
+          "elapsedSeconds": 1.013431344,
+          "idleRssBytes": 41910272,
+          "peakRssBytes": 44924928,
+          "peakIncrementBytes": 3014656,
+          "throughputMiBPerSecond": 1010.4285860730197
+        },
+        {
+          "elapsedSeconds": 0.8625598749999999,
+          "idleRssBytes": 41709568,
+          "peakRssBytes": 45117440,
+          "peakIncrementBytes": 3407872,
+          "throughputMiBPerSecond": 1187.1639635451395
+        },
+        {
+          "elapsedSeconds": 0.953349446,
+          "idleRssBytes": 41644032,
+          "peakRssBytes": 45051904,
+          "peakIncrementBytes": 3407872,
+          "throughputMiBPerSecond": 1074.107720203154
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 0.942735939,
+        "idleRssBytes": 41848832,
+        "peakRssBytes": 45051904,
+        "peakIncrementBytes": 3145728,
+        "throughputMiBPerSecond": 1086.2002366072945
+      }
+    },
+    {
+      "variant": "baseline",
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "verify",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 1.183680304,
+          "idleRssBytes": 41521152,
+          "peakRssBytes": 1116217344,
+          "peakIncrementBytes": 1074696192,
+          "throughputMiBPerSecond": 865.0984531377318
+        },
+        {
+          "elapsedSeconds": 1.1349195120000002,
+          "idleRssBytes": 42041344,
+          "peakRssBytes": 1116282880,
+          "peakIncrementBytes": 1074241536,
+          "throughputMiBPerSecond": 902.2666269923112
+        },
+        {
+          "elapsedSeconds": 1.261525302,
+          "idleRssBytes": 41910272,
+          "peakRssBytes": 1116446720,
+          "peakIncrementBytes": 1074536448,
+          "throughputMiBPerSecond": 811.7157843576887
+        },
+        {
+          "elapsedSeconds": 1.150155785,
+          "idleRssBytes": 41762816,
+          "peakRssBytes": 1116094464,
+          "peakIncrementBytes": 1074331648,
+          "throughputMiBPerSecond": 890.3141760052966
+        },
+        {
+          "elapsedSeconds": 1.297575054,
+          "idleRssBytes": 41811968,
+          "peakRssBytes": 1116250112,
+          "peakIncrementBytes": 1074438144,
+          "throughputMiBPerSecond": 789.1643699864162
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 1.183680304,
+        "idleRssBytes": 41811968,
+        "peakRssBytes": 1116250112,
+        "peakIncrementBytes": 1074438144,
+        "throughputMiBPerSecond": 865.0984531377318
+      }
+    },
+    {
+      "variant": "candidate",
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "verify",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 0.9547977089999999,
+          "idleRssBytes": 41865216,
+          "peakRssBytes": 44748800,
+          "peakIncrementBytes": 2883584,
+          "throughputMiBPerSecond": 1072.4784845498618
+        },
+        {
+          "elapsedSeconds": 0.945380406,
+          "idleRssBytes": 41897984,
+          "peakRssBytes": 44781568,
+          "peakIncrementBytes": 2883584,
+          "throughputMiBPerSecond": 1083.1618610889636
+        },
+        {
+          "elapsedSeconds": 0.9037757399999999,
+          "idleRssBytes": 41779200,
+          "peakRssBytes": 45056000,
+          "peakIncrementBytes": 3276800,
+          "throughputMiBPerSecond": 1133.0244381200143
+        },
+        {
+          "elapsedSeconds": 1.252943737,
+          "idleRssBytes": 41779200,
+          "peakRssBytes": 45056000,
+          "peakIncrementBytes": 3276800,
+          "throughputMiBPerSecond": 817.2753251090315
+        },
+        {
+          "elapsedSeconds": 0.855149011,
+          "idleRssBytes": 41988096,
+          "peakRssBytes": 44347392,
+          "peakIncrementBytes": 2359296,
+          "throughputMiBPerSecond": 1197.4521245163435
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 0.945380406,
+        "idleRssBytes": 41865216,
+        "peakRssBytes": 44781568,
+        "peakIncrementBytes": 2883584,
+        "throughputMiBPerSecond": 1083.1618610889636
+      }
+    },
+    {
+      "variant": "baseline",
+      "runtime": "python",
+      "case": "1024MiB",
+      "operation": "create",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 0.9922813090015552,
+          "idleRssBytes": 31350784,
+          "peakRssBytes": 1104982016,
+          "peakIncrementBytes": 1073631232,
+          "throughputMiBPerSecond": 1031.9654222151585
+        },
+        {
+          "elapsedSeconds": 1.028497787003289,
+          "idleRssBytes": 29552640,
+          "peakRssBytes": 1103245312,
+          "peakIncrementBytes": 1073692672,
+          "throughputMiBPerSecond": 995.6268384238394
+        },
+        {
+          "elapsedSeconds": 1.1380299100019329,
+          "idleRssBytes": 29032448,
+          "peakRssBytes": 1102663680,
+          "peakIncrementBytes": 1073631232,
+          "throughputMiBPerSecond": 899.800603657474
+        },
+        {
+          "elapsedSeconds": 1.0540869639989978,
+          "idleRssBytes": 29483008,
+          "peakRssBytes": 1103179776,
+          "peakIncrementBytes": 1073696768,
+          "throughputMiBPerSecond": 971.4568484132905
+        },
+        {
+          "elapsedSeconds": 1.029700186001719,
+          "idleRssBytes": 29589504,
+          "peakRssBytes": 1103286272,
+          "peakIncrementBytes": 1073696768,
+          "throughputMiBPerSecond": 994.4642274720251
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 1.029700186001719,
+        "idleRssBytes": 29552640,
+        "peakRssBytes": 1103245312,
+        "peakIncrementBytes": 1073692672,
+        "throughputMiBPerSecond": 994.4642274720251
+      }
+    },
+    {
+      "variant": "candidate",
+      "runtime": "python",
+      "case": "1024MiB",
+      "operation": "create",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 0.7309661469989805,
+          "idleRssBytes": 29519872,
+          "peakRssBytes": 29843456,
+          "peakIncrementBytes": 323584,
+          "throughputMiBPerSecond": 1400.8856691983412
+        },
+        {
+          "elapsedSeconds": 0.770557096999255,
+          "idleRssBytes": 29155328,
+          "peakRssBytes": 29478912,
+          "peakIncrementBytes": 323584,
+          "throughputMiBPerSecond": 1328.9086610034688
+        },
+        {
+          "elapsedSeconds": 0.7265931170004478,
+          "idleRssBytes": 29171712,
+          "peakRssBytes": 29491200,
+          "peakIncrementBytes": 319488,
+          "throughputMiBPerSecond": 1409.316956135395
+        },
+        {
+          "elapsedSeconds": 0.7322877910009993,
+          "idleRssBytes": 29417472,
+          "peakRssBytes": 29741056,
+          "peakIncrementBytes": 323584,
+          "throughputMiBPerSecond": 1398.357329705368
+        },
+        {
+          "elapsedSeconds": 0.7108970480003336,
+          "idleRssBytes": 29171712,
+          "peakRssBytes": 29491200,
+          "peakIncrementBytes": 319488,
+          "throughputMiBPerSecond": 1440.4336083268129
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 0.7309661469989805,
+        "idleRssBytes": 29171712,
+        "peakRssBytes": 29491200,
+        "peakIncrementBytes": 323584,
+        "throughputMiBPerSecond": 1400.8856691983412
+      }
+    },
+    {
+      "variant": "baseline",
+      "runtime": "python",
+      "case": "1024MiB",
+      "operation": "verify",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 1.0704062020013225,
+          "idleRssBytes": 28991488,
+          "peakRssBytes": 1103077376,
+          "peakIncrementBytes": 1074085888,
+          "throughputMiBPerSecond": 956.6461760829136
+        },
+        {
+          "elapsedSeconds": 0.9809834879997652,
+          "idleRssBytes": 29270016,
+          "peakRssBytes": 1103351808,
+          "peakIncrementBytes": 1074081792,
+          "throughputMiBPerSecond": 1043.8503935351102
+        },
+        {
+          "elapsedSeconds": 1.1837300919978588,
+          "idleRssBytes": 29147136,
+          "peakRssBytes": 1103233024,
+          "peakIncrementBytes": 1074085888,
+          "throughputMiBPerSecond": 865.0620668700989
+        },
+        {
+          "elapsedSeconds": 1.0193292860021756,
+          "idleRssBytes": 29474816,
+          "peakRssBytes": 1103556608,
+          "peakIncrementBytes": 1074081792,
+          "throughputMiBPerSecond": 1004.5821444178681
+        },
+        {
+          "elapsedSeconds": 1.003885497997544,
+          "idleRssBytes": 29270016,
+          "peakRssBytes": 1103355904,
+          "peakIncrementBytes": 1074085888,
+          "throughputMiBPerSecond": 1020.0366496404007
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 1.0193292860021756,
+        "idleRssBytes": 29270016,
+        "peakRssBytes": 1103351808,
+        "peakIncrementBytes": 1074085888,
+        "throughputMiBPerSecond": 1004.5821444178681
+      }
+    },
+    {
+      "variant": "candidate",
+      "runtime": "python",
+      "case": "1024MiB",
+      "operation": "verify",
+      "totalBytes": 1073741824,
+      "fileCount": 1,
+      "runs": [
+        {
+          "elapsedSeconds": 0.7178201579990855,
+          "idleRssBytes": 29204480,
+          "peakRssBytes": 29691904,
+          "peakIncrementBytes": 487424,
+          "throughputMiBPerSecond": 1426.5411587971935
+        },
+        {
+          "elapsedSeconds": 0.7187287589986227,
+          "idleRssBytes": 29392896,
+          "peakRssBytes": 29880320,
+          "peakIncrementBytes": 487424,
+          "throughputMiBPerSecond": 1424.7377570179606
+        },
+        {
+          "elapsedSeconds": 0.7106545110000297,
+          "idleRssBytes": 29470720,
+          "peakRssBytes": 29958144,
+          "peakIncrementBytes": 487424,
+          "throughputMiBPerSecond": 1440.9252092961908
+        },
+        {
+          "elapsedSeconds": 0.7342850159984664,
+          "idleRssBytes": 29650944,
+          "peakRssBytes": 30138368,
+          "peakIncrementBytes": 487424,
+          "throughputMiBPerSecond": 1394.5538553685244
+        },
+        {
+          "elapsedSeconds": 0.721633417000703,
+          "idleRssBytes": 29556736,
+          "peakRssBytes": 30044160,
+          "peakIncrementBytes": 487424,
+          "throughputMiBPerSecond": 1419.0030226926178
+        }
+      ],
+      "median": {
+        "elapsedSeconds": 0.7187287589986227,
+        "idleRssBytes": 29470720,
+        "peakRssBytes": 29958144,
+        "peakIncrementBytes": 487424,
+        "throughputMiBPerSecond": 1424.7377570179606
+      }
+    }
+  ]
+}

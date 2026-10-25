@@ -21,6 +21,10 @@ audit exports that another process can verify offline with a known public key.
 The signer supplies the task record; the library does not independently observe
 execution or establish the real-world identity of the signer.
 
+The [90-day improvement goal](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/90_DAY_GOAL.md) tracks safer key handling,
+explicit automation gates, independent adoption, large-artifact efficiency,
+and release readiness through January 16, 2027.
+
 ## First run from source
 
 With Node.js 22.12 through 26.x and npm 11 installed:
@@ -48,7 +52,7 @@ when all expectations pass. It uses fresh experimental keys, saves no private ke
 removes its temporary files, and needs no account or hosted verifier.
 
 For source installation into another Node or Python project and public-key-only
-CLI verification, see the [source installation guide](docs/QUICKSTART.md).
+CLI verification, see the [source installation guide](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/QUICKSTART.md).
 Registry installs such as `npm install @nymrel/proof-ledger` and
 `pip install nymrel-proof-ledger` are not the current installation path.
 
@@ -113,7 +117,7 @@ working directory.
 
 After building this checkout, a script at the repository root can import the
 compiled API as below. A consumer that installs the local npm archive described
-in the [source installation guide](docs/QUICKSTART.md) can instead import from
+in the [source installation guide](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/QUICKSTART.md) can instead import from
 `@nymrel/proof-ledger`.
 
 ~~~typescript
@@ -182,7 +186,7 @@ does not verify the receipt or its reported task outcome.
 
 ## CLI
 
-Build the checkout first. The [source installation guide](docs/QUICKSTART.md)
+Build the checkout first. The [source installation guide](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/QUICKSTART.md)
 shows how to prepare a separate public-only verifier key file.
 
 ~~~powershell
@@ -195,12 +199,18 @@ node bin/proof-ledger.js attest --task "Build and test" --files "dist/src/index.
 # Authenticated verification.
 node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files
 
+# Automation gate: require an authenticated v2 receipt and requested disk checks.
+node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files --require-trusted-v2 --json
+
 # Integrity-only verification is explicit and is never labeled trusted.
 node bin/proof-ledger.js verify proof.json
 ~~~
 
 The Python entry point is proof-ledger-py after package installation.
 --key-file accepts raw text or the JSON envelope produced by keygen.
+Attestation requires an explicit `--key-file` or `--key`; a missing key fails
+before generating a receipt. Prefer key files so secrets stay out of shell
+history and process arguments.
 The generated Ed25519 signing envelope contains a private key. Keep it with the
 signer; share only its public key and independently configure `--algo Ed25519`
 for the verifier. Never obtain the trusted key or expected algorithm from a receipt.
@@ -210,6 +220,23 @@ when a receipt cannot be read or parsed as UTF-8 JSON. These input failures have
 `valid: false`, `trusted: false`, `receipt: null`, and no signature or disk checks;
 `errors` explains how to retry without including receipt contents. Successfully
 parsed values continue through the regular envelope and integrity checks.
+With `--require-trusted-v2`, loading failures also include the failed policy
+verdict; the policy does not trigger key or artifact reads after a load failure.
+
+`keygen --out PATH` creates a new key file exclusively, with owner-only permissions
+(`0600`) on POSIX systems. It refuses an
+existing file, directory, or destination symlink, preserving the existing key.
+Choose a new filename when generating a replacement key. On Windows, access is
+controlled by the destination directory's ACLs; use a private directory.
+
+Both CLIs accept `--algo Ed25519` / `--algo=Ed25519` and `--out PATH` /
+`--out=PATH`. HMAC-SHA256 is the default algorithm. Unsupported algorithms and
+missing or empty option values fail; an empty `--out` never selects stdout.
+Node keygen also rejects unknown or repeated options and unexpected positional
+arguments; place `keygen` before its options.
+Omitting `--out` deliberately prints the secret-bearing JSON envelope to stdout.
+Prefer `--out` for stored keys: shell redirection uses the shell's file permissions
+and overwrite behavior instead of the CLI's protections.
 
 Authenticated verification requires an independently configured algorithm together
 with the key: `expectedAlgorithm` in TypeScript, keyword-only `expected_algorithm`
@@ -219,15 +246,26 @@ A missing or mismatched pair returns an invalid, untrusted result. Existing
 key-only callers must migrate. Omitting both retains integrity-only verification.
 This applies to the public aliases, `ProofLedger.verify`, and Signal bundle APIs.
 
+Both CLIs support `verify --require-trusted-v2` for automation. Exit zero then
+requires `valid: true`, `trusted: true`, and receipt version `2.0.0`. With `--json`,
+the result adds `policy: { name: 'authenticated-v2', passed, errors }`; the core
+verification fields retain their original meanings. A rejected legacy receipt
+can still have `valid: true` and `trusted: true` while `policy.passed` is false
+and the command exits one. File checks remain explicit through `--check-files`.
+Default verification behavior is unchanged.
+
 Git collection is disabled by default. Set `includeGitContext: true`,
 `include_git_context=True`, or `attest --include-git-context` only for a trusted
 working directory and Git installation; this opt-in executes Git commands.
 Signal bundles retain the safe default. See [verification migration and trust
-boundaries](docs/VERIFICATION_SECURITY.md) for the complete contract.
+boundaries](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/VERIFICATION_SECURITY.md) for the complete contract.
 
 Disk checks are confined to the verification working directory after real-path
 resolution. Receipts cannot use parent traversal, absolute external paths, or
 symlink indirection to make verification read outside that root.
+File-backed artifacts are hashed in bounded chunks during creation and disk
+verification; file size does not determine the hashing buffer size. In-memory
+artifact inputs keep their existing behavior.
 
 ## Protocol v2
 
@@ -291,13 +329,21 @@ The shared fixture at test/fixtures/protocol-v2-vectors.json contains:
 
 ~~~powershell
 npm run test:release
+npm run test:installed
 npm audit --audit-level=high
 npm pack --dry-run
-uvx ruff check python test/python
+uvx ruff@0.16.5 check --select E4,E7,E9,F python test
 uvx pip-audit .
 ~~~
 
 See SECURITY.md before using receipts as an authorization or release gate.
+
+`npm run test:installed` builds and installs the exact npm archive, Python wheel,
+and source archive outside the checkout, then checks public-only bidirectional
+verification and installed CLI gates. See the
+[installed consumer guide](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/INSTALLED_CONSUMERS.md) for dependencies and
+retained artifact evidence. These checks demonstrate installation and integration,
+not publication or independent human adoption.
 
 `npm run test:release` includes both runtime suites and actual bidirectional
 authentication and Signal checks. Run `npm run test:cross` for the cross-runtime

@@ -159,6 +159,28 @@ describe('CLI receipt input recovery', () => {
     } finally { context.mock.restoreAll(); }
   });
 
+  it('keeps the authenticated-v2 policy fail-closed before key or artifact access on input failure', async context => {
+    const output: string[] = [];
+    context.mock.method(console, 'log', (message: unknown) => { output.push(String(message)); });
+    const read = context.mock.method(fs, 'readFile', async () => {
+      throw Object.assign(new Error('Permission denied'), { code: 'EACCES' });
+    });
+    const signature = context.mock.method(ProofSigner, 'verifySignature');
+    try {
+      assert.equal(await runCli([
+        'verify', '--require-trusted-v2', 'denied.json', '--key-file', 'must-not-read.key',
+        '--algo', 'HMAC-SHA256', '--check-files', '--json',
+      ]), 1);
+      const { policy, ...verification } = JSON.parse(output.join('\n'));
+      assert.deepEqual(verification, failedLoadingResult(readError));
+      assert.equal(policy.name, 'authenticated-v2');
+      assert.equal(policy.passed, false);
+      assert.equal(policy.errors.length, 3);
+      assert.equal(read.mock.callCount(), 1);
+      assert.equal(signature.mock.callCount(), 0);
+    } finally { context.mock.restoreAll(); }
+  });
+
   it('keeps successfully parsed invalid envelopes on the existing verifier path', async () => {
     await withInputs(async (directory, _failures, originals) => {
       for (const value of [null, [], 7, {}, { task: { name: 'Incomplete receipt' } }]) {

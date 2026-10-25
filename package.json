@@ -66,6 +66,10 @@
     "bin",
     "LICENSE",
     "README.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "docs",
+    "examples",
     "llms.txt"
   ],
   "scripts": {
@@ -75,10 +79,12 @@
     "test": "npm run build && npm run test:ts",
     "test:ts": "node dist/test/ts/run-tests.js",
     "test:py": "uv run --isolated --no-project --python 3.13 --with \"cryptography>=50.0.1,<51\" --with \"rfc8785==0.1.4\" python -m unittest discover -s test/python -p \"test_*.py\"",
-    "test:cross": "npm run build && uv run --isolated --no-project --python 3.13 --with \"cryptography>=50.0.1,<51\" --with \"rfc8785==0.1.4\" python test/cross_runtime_auth.py",
-    "test:all": "npm run test && npm run test:py && npm run test:cross",
+    "test:cross": "npm run build && npm run test:cross:built",
+    "test:cross:built": "uv run --isolated --no-project --python 3.13 --with \"cryptography>=50.0.1,<51\" --with \"rfc8785==0.1.4\" python test/cross_runtime_auth.py",
+    "test:all": "npm run test && npm run test:py && npm run test:cross:built",
     "test:release": "npm run typecheck && npm run test:all",
-    "prepublishOnly": "npm run test:release"
+    "prepublishOnly": "npm run test:release",
+    "test:installed": "python3 test/installed_consumers.py"
   },
   "devDependencies": {
     "@types/node": "26.6.3",
