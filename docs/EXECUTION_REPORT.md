@@ -1,5 +1,30 @@
 # Goal execution — October 18, 2026
 
+## Current disposition — October 25, 2026
+
+**Engineering implementation and source integration complete; the full 90-day
+outcome remains in progress.** [PR31](https://github.com/nymrel/nymrel-proof-ledger/pull/31)
+and the PR30 portable handoff demo integrated on October 23 as
+`10a9412eae1d49c02eb6a90e8510451d4d0532ed`. The
+[integration receipt](https://github.com/nymrel/nymrel-proof-ledger/pull/31#issuecomment-6367931810)
+records the reviewed tree and eight passing post-merge jobs. The
+[current review disposition](PR31_REVIEW.md) resolves the earlier source-review
+handoff without rewriting its historical findings.
+
+Current remote main and the local checkout were both observed at
+`3656374615fc32c4c8da87688a5c53416e9a86be`. Its ancestry includes PR31, the
+workflow optimization and action updates in PR33/34, algorithm validation in
+PR35, linear-time path normalization in PR36, and Signal scope correction in
+PR18. Earlier statements below about pending integration describe their dated
+sessions, not current main.
+
+Still open: two independent human trials, universal throughput acceptance, and
+the exact hosted release-candidate build/installation/provenance milestone.
+Registry publication has no observed completion evidence in this closeout.
+The [90-day goal](90_DAY_GOAL.md) keeps those acceptance boxes open.
+
+## Historical execution record
+
 The local implementation covers the five engineering workstreams in the
 [90-day goal](90_DAY_GOAL.md). Independent human adoption, hosted release
 execution, and registry publication remain separate outcomes.

@@ -1,5 +1,25 @@
 # PR #31 source and release-assurance review — October 20, 2026
 
+## Current disposition — October 25, 2026
+
+**Source integration complete.** [PR31](https://github.com/nymrel/nymrel-proof-ledger/pull/31)
+merged on October 23 as `10a9412eae1d49c02eb6a90e8510451d4d0532ed`, retaining
+PR30's contributor ancestry. That merge is an ancestor of the inspected main
+`3656374615fc32c4c8da87688a5c53416e9a86be`.
+
+The [final review](https://github.com/nymrel/nymrel-proof-ledger/pull/31#pullrequestreview-5630108376)
+records the operator's Codex and Astra scope and exact head/base. The
+[integration receipt](https://github.com/nymrel/nymrel-proof-ledger/pull/31#issuecomment-6367931810)
+records the matching merged tree and all eight successful post-merge jobs in
+[CI39974075051](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/39974075051).
+The source-review and integration handoff is complete. The earlier provider
+review request below is historical and was superseded by the direct-operator
+scope; it is not an outstanding dependency for this completed integration.
+
+Release-workflow execution, package publication, and the independent human
+integration trials remain separate outcomes. The historical investigation below
+preserves its original source identities, findings, and limitations.
+
 ## Direct integration review scope — October 23, 2026
 
 For the current operator-directed integration of PR30 and PR31, the authenticated
@@ -114,7 +134,11 @@ establish these integration boundaries:
 No pending lane was silently merged, overwritten, closed, or represented as
 already included. The correction deliberately avoids their CLI/QR hunks.
 
-## Remaining release requirements
+## Historical outstanding requirements — October 20, 2026
+
+The following describes the requirements at that review date. Source review
+and integration were subsequently completed as recorded above; release and
+human-adoption evidence remain separate.
 
 An independent Claude-team reviewer who did not participate in this work must
 review the final source/base and record approval or concrete findings in the
