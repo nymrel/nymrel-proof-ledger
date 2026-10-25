@@ -4,7 +4,9 @@
 
 **Focus:** Nymrel Proof Ledger, TypeScript and Python.
 
-**Status:** Execution in progress; see the progress record for verified results.
+**Status — October 25, 2026:** Engineering implementation and source integration
+complete. Human trials, universal throughput acceptance, and hosted release
+evidence remain open; see the progress record for verified results.
 
 **Tracking:** This file is the working goal. No background execution or daily
 check-in is scheduled by creating it.
@@ -132,3 +134,4 @@ and the quickstart documents the behavior and migration.
 | October 18, 2026 | Set the scoped goal and prioritized its milestones after source inspection. | Baseline revision above. Implementation, fresh release tests, benchmarks, and independent trials remain pending. Start with safe CLI key handling. |
 | October 18, 2026 | Implemented safe CLI keys, the authenticated-v2 gate, installed reference consumers, and bounded artifact hashing. | Release tests and supported-runtime suites passed. Exact built archives passed clean-consumer checks. See the execution report for measured performance, review results, and remaining external milestones. |
 | October 20, 2026 | Reconciled the existing keygen candidate, completed warmed performance diagnostics, and prepared the two-person trial protocol. | All eight warmed medians met the threshold; cold-call limitations remain explicit. The delivery candidate preserves the required other-team review gate and records hosted checks in its PR. |
+| October 25, 2026 | Reconciled the completed source handoffs and plans with current main. | PR31/30 integrated as `10a9412eae1d49c02eb6a90e8510451d4d0532ed`; the [integration receipt](https://github.com/nymrel/nymrel-proof-ledger/pull/31#issuecomment-6367931810) records Codex/Astra review and eight passing post-merge jobs. Inspected main is `3656374615fc32c4c8da87688a5c53416e9a86be`. Earlier other-team review holds are historical for that integration. The human, throughput, and hosted-release criteria above remain open. |

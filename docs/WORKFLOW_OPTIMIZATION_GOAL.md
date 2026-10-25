@@ -1,6 +1,10 @@
 # Workflow optimization goal
 
-Canonical continuation: [goal 32](https://github.com/nymrel/nymrel-proof-ledger/issues/32).
+Canonical record: [goal 32](https://github.com/nymrel/nymrel-proof-ledger/issues/32).
+
+**Status — October 25, 2026:** The workflow implementation and action-update
+milestones are complete and integrated. The source and hosted-CI receipts below
+support closing goal 32; actual release-run and registry outcomes remain separate.
 
 Make development, CI, and release workflows efficient, verifiable, and recoverable
 while preserving runtime coverage and publication controls. This goal covers
@@ -39,12 +43,31 @@ Measure compiler invocations and observed check outcomes. Timing improvements
 need comparable measurements; removing duplicate commands alone does not prove
 a wall-clock speedup. This goal does not configure a background worker or timer.
 
-## Current milestone
+## Completed milestones
 
-The candidate builds on main `232849c4e833da992cbcdcc6fa4b7bd0f56cbde3`
-and preserves the prior compiler/cache/preflight-order improvements. The next
-slice makes preflight independently testable and verifies downloaded archives.
-The current execution receipt and remaining gates are recorded in goal 32.
+- [PR33](https://github.com/nymrel/nymrel-proof-ledger/pull/33) integrated the
+  compiler reuse, testable preflight, and complete archive guards as
+  `87c5ce622f4f9f27a677844f98ac568ee84fed88`.
+  [Merged-main CI](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/39540253054)
+  passed all eight jobs. Goal 32 retains the independent review and failure-path
+  evidence for this revision.
+- [PR34](https://github.com/nymrel/nymrel-proof-ledger/pull/34) integrated the
+  reviewed action updates as `92c8788b659d0a893aea6bb41033e882620a4675`.
+  [Merged-main CI](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/39711816908)
+  passed all eight jobs. The action update preserved the workflow commands,
+  matrices, permissions, checksum guards, provenance, and publication controls.
+- [PR31](https://github.com/nymrel/nymrel-proof-ledger/pull/31) subsequently
+  integrated installed-distribution acceptance and the PR30 portable demo as
+  `10a9412eae1d49c02eb6a90e8510451d4d0532ed`. Its earlier separate-lane handoff is
+  complete; see the [review disposition](PR31_REVIEW.md).
 
-PR31's installed-distribution acceptance and PR29's action updates remain separate
-work. Preserve their additions when integrating overlapping workflow files.
+All three merges are ancestors of the inspected current main,
+`3656374615fc32c4c8da87688a5c53416e9a86be`. The closeout adds persistent tests
+that execute the actual archive guards in all three consuming jobs against
+valid and rejected distribution sets. These tests run through the existing
+Python suite; they do not exercise hosted artifact transfer or publishing.
+
+Reuse goal 32 if a demonstrated new workflow problem appears. There is no
+remaining implementation increment merely to keep this goal open. Acceptance
+of the artifact-transfer actions during a real release, provenance generation,
+and npm/PyPI publication retain the existing release process and authority.
