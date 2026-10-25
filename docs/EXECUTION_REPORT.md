@@ -1,5 +1,30 @@
 # Goal execution — October 18, 2026
 
+## Current disposition — October 25, 2026
+
+**Engineering implementation and source integration complete; the full 90-day
+outcome remains in progress.** [PR31](https://github.com/nymrel/nymrel-proof-ledger/pull/31)
+and the PR30 portable handoff demo integrated on October 23 as
+`10a9412eae1d49c02eb6a90e8510451d4d0532ed`. The
+[integration receipt](https://github.com/nymrel/nymrel-proof-ledger/pull/31#issuecomment-6367931810)
+records the reviewed tree and eight passing post-merge jobs. The
+[current review disposition](PR31_REVIEW.md) resolves the earlier source-review
+handoff without rewriting its historical findings.
+
+Current remote main and the local checkout were both observed at
+`3656374615fc32c4c8da87688a5c53416e9a86be`. Its ancestry includes PR31, the
+workflow optimization and action updates in PR33/34, algorithm validation in
+PR35, linear-time path normalization in PR36, and Signal scope correction in
+PR18. Earlier statements below about pending integration describe their dated
+sessions, not current main.
+
+Still open: two independent human trials, universal throughput acceptance, and
+the exact hosted release-candidate build/installation/provenance milestone.
+Registry publication has no observed completion evidence in this closeout.
+The [90-day goal](90_DAY_GOAL.md) keeps those acceptance boxes open.
+
+## Historical execution record
+
 The local implementation covers the five engineering workstreams in the
 [90-day goal](90_DAY_GOAL.md). Independent human adoption, hosted release
 execution, and registry publication remain separate outcomes.
@@ -132,6 +157,23 @@ hashing are integrated, together with the original PR21 and PR30 commits.
 PR33/34's workflow improvements and PR35/36's source hardening are also present.
 The earlier other-team hold is historical for the operator-directed integration;
 the [review record](PR31_REVIEW.md) preserves its scope and dated evidence.
+
+The next existing handoff is [PR24](https://github.com/nymrel/nymrel-proof-ledger/pull/24)
+with its [stacked PR26](https://github.com/nymrel/nymrel-proof-ledger/pull/26)
+recovery fix. This continuation reuses their published reconciliation candidate
+`89ef3cfd62fee3cd05f854c5d8a223ec199e53e5`, preserves their original commits,
+and composes the CLI/certificate changes with current main. The unified parser
+retains strict keygen handling and the authenticated-v2 gate. New shared policy
+cases cover missing receipts, malformed JSON, invalid UTF-8, and BOM rejection;
+focused checks verify that failed loading skips key and artifact work even when
+the policy is enabled. The original PR24 lane records final source, Astra review,
+validation and integration; a prepared candidate alone does not close the handoff.
+
+Human trials, the full performance target, an authorized hosted release run,
+provenance, and actual npm/PyPI publication remain separate incomplete outcomes.
+PR22's QR repair remains in its own pending lane.
+
+## CLI and certificate handoff continuation — October 25, 2026
 
 The next existing handoff is [PR24](https://github.com/nymrel/nymrel-proof-ledger/pull/24)
 with its [stacked PR26](https://github.com/nymrel/nymrel-proof-ledger/pull/26)
