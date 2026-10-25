@@ -108,6 +108,11 @@ To install the Python package from this checkout:
 python -m pip install .
 ~~~
 
+The API examples below use an inline artifact, so no files need to be prepared.
+For artifacts already on disk, omit `data`, set `path` to your file, and enable
+`checkFilesOnDisk: true` or `check_files_on_disk=True` when verifying from that
+working directory.
+
 ## TypeScript API
 
 After building this checkout, a script at the repository root can import the
@@ -130,7 +135,7 @@ const receipt = await attestExecution({
     status: 'SUCCESS',
     exitCode: 0,
   },
-  artifacts: [{ path: 'README.md' }],
+  artifacts: [{ path: 'dist/manifest.json', data: '{"build":"example"}' }],
   signingKey: secret,
   signerIdentity: 'nymrel-release',
   metadata: { environment: 'local-acceptance' },
@@ -138,7 +143,6 @@ const receipt = await attestExecution({
 
 const result = await verifyProof(receipt, {
   expectedAlgorithm: 'HMAC-SHA256', publicKeyOrSecret: secret,
-  checkFilesOnDisk: true,
 });
 
 if (!result.trusted) {
@@ -155,7 +159,7 @@ secret = ProofSigner.generate_secret_key()
 
 receipt = create_receipt(
     task={"name": "Release acceptance", "status": "SUCCESS", "exitCode": 0},
-    artifacts=[{"path": "README.md"}],
+    artifacts=[{"path": "dist/manifest.json", "data": '{"build":"example"}'}],
     signing_key=secret,
     signer_identity="nymrel-release",
     metadata={"environment": "local-acceptance"},
@@ -164,12 +168,21 @@ receipt = create_receipt(
 result = verify_receipt(
     receipt,
     expected_algorithm='HMAC-SHA256', public_key_or_secret=secret,
-    check_files_on_disk=True,
 )
 
 if not result["trusted"]:
     raise RuntimeError(result["errors"] or ["Signature was not checked"])
 ~~~
+
+## HTML certificates
+
+Use `node bin/proof-ledger.js badge proof.json --format html --out certificate.html`
+or either runtime's HTML certificate API to create a portable receipt view. It adapts to phone widths
+and keeps the original receipt JSON available. Copy Merkle Root reports success
+after the browser accepts the copy; if the clipboard is unavailable, it selects
+the root for manual copying. Without JavaScript, select the root directly and
+use the browser's Print command. Generating, copying, or printing a certificate
+does not verify the receipt or its reported task outcome.
 
 ## CLI
 
@@ -201,6 +214,14 @@ history and process arguments.
 The generated Ed25519 signing envelope contains a private key. Keep it with the
 signer; share only its public key and independently configure `--algo Ed25519`
 for the verifier. Never obtain the trusted key or expected algorithm from a receipt.
+
+`verify --json` returns the verification-result JSON object with exit code 1
+when a receipt cannot be read or parsed as UTF-8 JSON. These input failures have
+`valid: false`, `trusted: false`, `receipt: null`, and no signature or disk checks;
+`errors` explains how to retry without including receipt contents. Successfully
+parsed values continue through the regular envelope and integrity checks.
+With `--require-trusted-v2`, loading failures also include the failed policy
+verdict; the policy does not trigger key or artifact reads after a load failure.
 
 `keygen --out PATH` creates a new key file exclusively, with owner-only permissions
 (`0600`) on POSIX systems. It refuses an

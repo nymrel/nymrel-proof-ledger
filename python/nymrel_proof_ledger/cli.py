@@ -11,6 +11,7 @@ import sys
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
 from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
+from .envelope import validate_receipt_envelope
 
 
 def _display_copy(value, markdown=False):
@@ -24,6 +25,42 @@ def _display_copy(value, markdown=False):
     if isinstance(value, list):
         return [_display_copy(item, markdown) for item in value]
     return value
+
+
+def _terminal_error_message(message):
+    """Bound terminal diagnostics only; verifier errors and JSON keep full detail."""
+    safe = _display_copy(message)
+    limit = 800
+    if len(safe) <= limit:
+        return safe
+    marker = ' … [details shortened; check the receipt or options and retry] … '
+    tail_length = 200
+    head_length = limit - len(marker) - tail_length
+    return safe[:head_length] + marker + safe[-tail_length:]
+
+
+def _invalid_receipt_input(message):
+    return {
+        'valid': False, 'trusted': False, 'merkleValid': False,
+        'signatureChecked': False, 'signatureValid': None, 'artifactsValid': False,
+        'checkedArtifacts': 0, 'receipt': None, 'errors': [message], 'warnings': [],
+    }
+
+
+def _read_receipt_for_verification(proof_path):
+    try:
+        with open(proof_path, 'rb') as file:
+            data = file.read()
+    except OSError:
+        return None, _invalid_receipt_input(
+            'Receipt file could not be read. Check the receipt path and read permissions, then retry.',
+        )
+    try:
+        return json.loads(data.decode('utf-8')), None
+    except (UnicodeError, ValueError, RecursionError):
+        return None, _invalid_receipt_input(
+            'Receipt file is not valid UTF-8 JSON. Supply a complete UTF-8 JSON receipt, then retry.',
+        )
 
 
 def _load_key_material(key_file, role, algorithm):
@@ -64,11 +101,25 @@ def _write_private_key_file(out_path, output):
         file.write(output)
 
 
-def main(argv=None):
+def _read_receipt_for_presentation(proof_path):
+    with open(proof_path, 'r', encoding='utf-8') as proof_file:
+        receipt = json.load(proof_file)
+    validation = validate_receipt_envelope(receipt)
+    if not validation['valid']:
+        details = '; '.join(
+            f"{error.get('path') or '<root>'}: {error['message']}"
+            for error in validation['errors']
+        )
+        raise ValueError(f'Invalid proof receipt: {details}')
+    return receipt
+
+
+def _main(argv=None):
     parser = argparse.ArgumentParser(
         prog="proof-ledger-py",
         description="Nymrel Proof Ledger (Python Engine) - Cryptographic Attestation Protocol",
     )
+    parser.add_argument('--version', '-v', action='version', version='2.0.0')
     subparsers = parser.add_subparsers(dest="command", help="Sub-command help")
 
     # keygen
@@ -254,26 +305,25 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "verify":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt, result = _read_receipt_for_verification(args.proof)
+        if result is None:
+            key = args.key
+            key_file_invalid = False
+            if not key and args.key_file:
+                try:
+                    key = _load_key_material(args.key_file, "verify", args.algo)
+                except (OSError, ValueError, TypeError, RecursionError):
+                    key = ''
+                    key_file_invalid = True
 
-        key = args.key
-        key_file_invalid = False
-        if not key and args.key_file:
-            try:
-                key = _load_key_material(args.key_file, "verify", args.algo)
-            except (OSError, ValueError, TypeError, RecursionError):
-                key = ''
-                key_file_invalid = True
-
-        result = verify_receipt(
-            receipt,
-            public_key_or_secret=key,
-            expected_algorithm=args.algo,
-            check_files_on_disk=args.check_files,
-        )
-        if key_file_invalid:
-            result['errors'] = ['Invalid verification key file or algorithm context']
+            result = verify_receipt(
+                receipt,
+                public_key_or_secret=key,
+                expected_algorithm=args.algo,
+                check_files_on_disk=args.check_files,
+            )
+            if key_file_invalid:
+                result['errors'] = ['Invalid verification key file or algorithm context']
 
         policy_errors = []
         if not result['valid']:
@@ -341,8 +391,7 @@ def main(argv=None):
         sys.exit(0 if accepted else 1)
 
     if args.command == "badge":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt = _read_receipt_for_presentation(args.proof)
 
         if args.format == "html":
             content = generate_html_certificate(receipt)
@@ -357,8 +406,7 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "inspect":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = _display_copy(json.load(f))
+        receipt = _display_copy(_read_receipt_for_presentation(args.proof))
 
         print("\n=== NYMREL PROOF LEDGER AUDIT INSPECTOR ===")
         print(f"Protocol:    {receipt.get('protocol')} v{receipt.get('version')}")
@@ -381,8 +429,7 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "export":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt = _read_receipt_for_presentation(args.proof)
 
         if args.format == "html":
             out_str = generate_html_certificate(receipt)
@@ -413,6 +460,14 @@ def main(argv=None):
         else:
             print(out_str)
         sys.exit(0)
+
+
+def main(argv=None):
+    try:
+        _main(argv)
+    except (OSError, ValueError, TypeError, RecursionError) as error:
+        print(f'Proof Ledger command failed: {_terminal_error_message(str(error))}', file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

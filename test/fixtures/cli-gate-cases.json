@@ -15,5 +15,9 @@
   {"name":"default legacy authentication remains successful","legacy":true,"key":"correct","gate":false,"valid":true,"trusted":true,"exit":0},
   {"name":"gate rejects authenticated legacy","legacy":true,"key":"correct","gate":true,"valid":true,"trusted":true,"exit":1},
   {"name":"gate rejects unkeyed legacy","legacy":true,"key":"none","gate":true,"valid":true,"trusted":false,"exit":1},
-  {"name":"gate rejects malformed envelope","malformed":true,"key":"correct","gate":true,"valid":false,"trusted":false,"exit":1}
+  {"name":"gate rejects malformed envelope","malformed":true,"key":"correct","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports missing receipt","inputFailure":"missing","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports malformed JSON","inputFailure":"json","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports invalid UTF-8","inputFailure":"utf8","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports BOM-prefixed JSON","inputFailure":"bom","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1}
 ]

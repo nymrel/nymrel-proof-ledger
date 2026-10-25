@@ -148,3 +148,27 @@ Successful candidate CI now retains the exact installed archives, checksums,
 and consumer acceptance report as a downloadable artifact for 14 days. This
 makes a source-bound human trial packet available through the existing GitHub
 workflow without pretending that an automated run is a human trial.
+
+## Handoff continuation — October 25, 2026
+
+Repository readback at `3656374615fc32c4c8da87688a5c53416e9a86be` confirms
+PR31's authenticated verification, safe keys, installed consumers, and streaming
+hashing are integrated, together with the original PR21 and PR30 commits.
+PR33/34's workflow improvements and PR35/36's source hardening are also present.
+The earlier other-team hold is historical for the operator-directed integration;
+the [review record](PR31_REVIEW.md) preserves its scope and dated evidence.
+
+The next existing handoff is [PR24](https://github.com/nymrel/nymrel-proof-ledger/pull/24)
+with its [stacked PR26](https://github.com/nymrel/nymrel-proof-ledger/pull/26)
+recovery fix. This continuation reuses their published reconciliation candidate
+`89ef3cfd62fee3cd05f854c5d8a223ec199e53e5`, preserves their original commits,
+and composes the CLI/certificate changes with current main. The unified parser
+retains strict keygen handling and the authenticated-v2 gate. New shared policy
+cases cover missing receipts, malformed JSON, invalid UTF-8, and BOM rejection;
+focused checks verify that failed loading skips key and artifact work even when
+the policy is enabled. The original PR24 lane records final source, Astra review,
+validation and integration; a prepared candidate alone does not close the handoff.
+
+Human trials, the full performance target, an authorized hosted release run,
+provenance, and actual npm/PyPI publication remain separate incomplete outcomes.
+PR22's QR repair remains in its own pending lane.

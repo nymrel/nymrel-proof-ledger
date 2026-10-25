@@ -27,6 +27,10 @@ for (const row of cases) {
       if (row.tamper === 'metadata') receipt.metadata.purpose = 'changed';
       if (row.tamper === 'artifact') receipt.artifacts[0].sha256 = '00'.repeat(32);
       await writeFile(join(directory, 'proof.json'), JSON.stringify(row.malformed ? null : receipt));
+      if (row.inputFailure === 'missing') await rm(join(directory, 'proof.json'));
+      if (row.inputFailure === 'json') await writeFile(join(directory, 'proof.json'), '{ incomplete');
+      if (row.inputFailure === 'utf8') await writeFile(join(directory, 'proof.json'), Buffer.from([0xff]));
+      if (row.inputFailure === 'bom') await writeFile(join(directory, 'proof.json'), '\ufeff' + JSON.stringify(receipt));
       if (row.disk === 'match' || row.disk === 'changed') {
         await writeFile(join(directory, 'artifact.txt'), row.disk === 'match' ? payload : 'changed');
       }
@@ -48,6 +52,13 @@ for (const row of cases) {
       const result = JSON.parse(run.stdout);
       assert.equal(result.valid, row.valid);
       assert.equal(result.trusted, row.trusted);
+      if (row.inputFailure) {
+        assert.equal(result.receipt, null);
+        assert.equal(result.signatureChecked, false);
+        assert.equal(result.signatureValid, null);
+        assert.equal(result.checkedArtifacts, 0);
+        assert.match(result.errors[0], /then retry\./);
+      }
       if (row.gate) {
         assert.equal(result.policy.name, 'authenticated-v2');
         assert.equal(result.policy.passed, row.exit === 0);

@@ -33,6 +33,14 @@ def prepare_case(row, directory):
     if row.get('tamper') == 'artifact':
         receipt['artifacts'][0]['sha256'] = '00' * 32
     (directory / 'proof.json').write_text(json.dumps(None if row.get('malformed') else receipt))
+    if row.get('inputFailure') == 'missing':
+        (directory / 'proof.json').unlink()
+    elif row.get('inputFailure') == 'json':
+        (directory / 'proof.json').write_text('{ incomplete')
+    elif row.get('inputFailure') == 'utf8':
+        (directory / 'proof.json').write_bytes(b'\xff')
+    elif row.get('inputFailure') == 'bom':
+        (directory / 'proof.json').write_text('\ufeff' + json.dumps(receipt), encoding='utf-8')
     if row.get('disk') in ('match', 'changed'):
         (directory / 'artifact.txt').write_text(PAYLOAD if row['disk'] == 'match' else 'changed')
     flags = []
@@ -63,6 +71,12 @@ class TestCliGate(unittest.TestCase):
                 result = json.loads(run.stdout)
                 self.assertEqual(result['valid'], row['valid'])
                 self.assertEqual(result['trusted'], row['trusted'])
+                if row.get('inputFailure'):
+                    self.assertIsNone(result['receipt'])
+                    self.assertFalse(result['signatureChecked'])
+                    self.assertIsNone(result['signatureValid'])
+                    self.assertEqual(result['checkedArtifacts'], 0)
+                    self.assertIn('then retry.', result['errors'][0])
                 if row['gate']:
                     self.assertEqual(result['policy']['name'], 'authenticated-v2')
                     self.assertEqual(result['policy']['passed'], row['exit'] == 0)
