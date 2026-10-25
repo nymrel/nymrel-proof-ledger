@@ -172,4 +172,3 @@ validation and integration; a prepared candidate alone does not close the handof
 Human trials, the full performance target, an authorized hosted release run,
 provenance, and actual npm/PyPI publication remain separate incomplete outcomes.
 PR22's QR repair remains in its own pending lane.
-
