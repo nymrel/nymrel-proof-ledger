@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "232849c4e833da992cbcdcc6fa4b7bd0f56cbde3",
+  "candidateRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+  "runs": [
+    {
+      "mode": "fresh",
+      "exitCode": 0,
+      "sourceFilesUnchanged": true,
+      "beforeAt": "2026-10-28T20:47:54.876997+00:00",
+      "afterAt": "2026-10-28T20:49:24.272015+00:00",
+      "variants": {
+        "baseline": {
+          "sourceRevision": "232849c4e833da992cbcdcc6fa4b7bd0f56cbde3",
+          "dirtyStatus": "",
+          "filesSha256": {
+            "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+            "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+            "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+            "dist/src/core/receipt.js": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+            "dist/src/core/signer.js": "a52cd4563dfa30bfa844dc3b3fedba4e1cbde141937cfe0523df1653ff72f291",
+            "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+            "package.json": "4d3741d9fd76f23ca1c9fe359d152b4c724424909d0536e7c278ff8d11052820",
+            "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+            "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+            "python/nymrel_proof_ledger/badge.py": "1b257c3b7f5bebe26da933de1636a58224fe044153867a796666cbfe55416de6",
+            "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+            "python/nymrel_proof_ledger/cli.py": "df5dceb362a9134fdd7bfa29b9ea5fc6841158cce798a4d03cc8b06380628bf8",
+            "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+            "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+            "python/nymrel_proof_ledger/qr.py": "50b55422edb6e62c8a1e6e130e566bb40ab86cd664e60a90f560834416eb46a0",
+            "python/nymrel_proof_ledger/receipt.py": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4",
+            "python/nymrel_proof_ledger/signal.py": "69ea149c3cc6ade68cd50b6357298c5eacfbd0dc8feafb76f62acff7d5b77de7",
+            "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+            "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+            "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+            "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+            "src/core/receipt.ts": "3485b6a2f9a06342290952496ab71c30f942c284ffbc4ea3bf5e15cce7860d23",
+            "src/core/signer.ts": "4b6ebb75ce2bb403182d3d0f17db094d69f70851498df8c2847e88f0a99919b5"
+          }
+        },
+        "candidate": {
+          "sourceRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+          "dirtyStatus": "",
+          "filesSha256": {
+            "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+            "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+            "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+            "dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+            "dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+            "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+            "package.json": "a76d2354f1b8d6d6946cf38553a09af8de862336ec4106557fb941c909401e0a",
+            "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+            "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+            "python/nymrel_proof_ledger/badge.py": "e7f201421c99de1561d56f43882c3939e65440c82ef9c76019713c9f77c162d2",
+            "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+            "python/nymrel_proof_ledger/cli.py": "36ef9184739e3a095e83a1e47f7c7e96c8680318eb5d85d2fbfe546e13f6e0b5",
+            "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+            "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+            "python/nymrel_proof_ledger/qr.py": "8f668a67be402d64de0f8ab6b42590f3054e6015365f611cbd80e80c58dc3f27",
+            "python/nymrel_proof_ledger/receipt.py": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a",
+            "python/nymrel_proof_ledger/signal.py": "af56a9f47ff624b27bbdaae0c9bd0696a8ad628f56282c26d9abd7c7ae0a376b",
+            "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+            "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+            "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+            "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+            "src/core/receipt.ts": "5cf9567336c0a1ba3fa78becfc37d6cd3e56ebf4715dddf08b0e658f55a4c874",
+            "src/core/signer.ts": "9c38cbe6595b454acc203ecb63cdf0510ade51b1da311de7136b4bf13e3b9abb"
+          }
+        }
+      },
+      "harnessSha256": {
+        "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3",
+        "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+        "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+        "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+        "warmed-artifacts.py": "4fc5f37aff5d8c3e94d9a05ef59bd6bb02fa4bc9dde6e94dc2700dfb51af28d1",
+        "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+        "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb"
+      },
+      "hostBefore": {
+        "loadAverage": [
+          0.57763671875,
+          0.30029296875,
+          0.11181640625
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cpuMax": {
+          "value": "400000 100000",
+          "error": null
+        },
+        "cpuStat": {
+          "value": "usage_usec 93603714\nuser_usec 67863959\nsystem_usec 25739755\nnice_usec 0\nnr_periods 4460\nnr_throttled 28\nthrottled_usec 1049633\nnr_bursts 0\nburst_usec 0",
+          "error": null
+        },
+        "cgroupCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+        },
+        "hostCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+        },
+        "memoryMax": {
+          "value": "17179869184",
+          "error": null
+        }
+      },
+      "hostAfter": {
+        "loadAverage": [
+          0.9384765625,
+          0.4990234375,
+          0.203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cpuMax": {
+          "value": "400000 100000",
+          "error": null
+        },
+        "cpuStat": {
+          "value": "usage_usec 184149305\nuser_usec 126126091\nsystem_usec 58023213\nnice_usec 0\nnr_periods 5354\nnr_throttled 28\nthrottled_usec 1049633\nnr_bursts 0\nburst_usec 0",
+          "error": null
+        },
+        "cgroupCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+        },
+        "hostCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+        },
+        "memoryMax": {
+          "value": "17179869184",
+          "error": null
+        }
+      },
+      "rawEvidence": {
+        "path": "/workspace/proof-ledger-results/performance/fresh-2026-10-28.json",
+        "sha256": "ab4be6915792c933351cd27fbd417e8c3fc3ce1c9a7dd7c6d131cd48c3991d2b"
+      },
+      "provenanceSha256": "15edbced73f954952b8395f113c616bb371d2211b7b3fd0bfd36aeb71faaac9d"
+    },
+    {
+      "mode": "warmed",
+      "exitCode": 0,
+      "sourceFilesUnchanged": true,
+      "beforeAt": "2026-10-28T20:49:31.076006+00:00",
+      "afterAt": "2026-10-28T20:50:37.376434+00:00",
+      "variants": {
+        "baseline": {
+          "sourceRevision": "232849c4e833da992cbcdcc6fa4b7bd0f56cbde3",
+          "dirtyStatus": "",
+          "filesSha256": {
+            "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+            "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+            "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+            "dist/src/core/receipt.js": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+            "dist/src/core/signer.js": "a52cd4563dfa30bfa844dc3b3fedba4e1cbde141937cfe0523df1653ff72f291",
+            "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+            "package.json": "4d3741d9fd76f23ca1c9fe359d152b4c724424909d0536e7c278ff8d11052820",
+            "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+            "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+            "python/nymrel_proof_ledger/badge.py": "1b257c3b7f5bebe26da933de1636a58224fe044153867a796666cbfe55416de6",
+            "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+            "python/nymrel_proof_ledger/cli.py": "df5dceb362a9134fdd7bfa29b9ea5fc6841158cce798a4d03cc8b06380628bf8",
+            "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+            "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+            "python/nymrel_proof_ledger/qr.py": "50b55422edb6e62c8a1e6e130e566bb40ab86cd664e60a90f560834416eb46a0",
+            "python/nymrel_proof_ledger/receipt.py": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4",
+            "python/nymrel_proof_ledger/signal.py": "69ea149c3cc6ade68cd50b6357298c5eacfbd0dc8feafb76f62acff7d5b77de7",
+            "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+            "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+            "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+            "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+            "src/core/receipt.ts": "3485b6a2f9a06342290952496ab71c30f942c284ffbc4ea3bf5e15cce7860d23",
+            "src/core/signer.ts": "4b6ebb75ce2bb403182d3d0f17db094d69f70851498df8c2847e88f0a99919b5"
+          }
+        },
+        "candidate": {
+          "sourceRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+          "dirtyStatus": "",
+          "filesSha256": {
+            "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+            "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+            "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+            "dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+            "dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+            "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+            "package.json": "a76d2354f1b8d6d6946cf38553a09af8de862336ec4106557fb941c909401e0a",
+            "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+            "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+            "python/nymrel_proof_ledger/badge.py": "e7f201421c99de1561d56f43882c3939e65440c82ef9c76019713c9f77c162d2",
+            "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+            "python/nymrel_proof_ledger/cli.py": "36ef9184739e3a095e83a1e47f7c7e96c8680318eb5d85d2fbfe546e13f6e0b5",
+            "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+            "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+            "python/nymrel_proof_ledger/qr.py": "8f668a67be402d64de0f8ab6b42590f3054e6015365f611cbd80e80c58dc3f27",
+            "python/nymrel_proof_ledger/receipt.py": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a",
+            "python/nymrel_proof_ledger/signal.py": "af56a9f47ff624b27bbdaae0c9bd0696a8ad628f56282c26d9abd7c7ae0a376b",
+            "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+            "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+            "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+            "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+            "src/core/receipt.ts": "5cf9567336c0a1ba3fa78becfc37d6cd3e56ebf4715dddf08b0e658f55a4c874",
+            "src/core/signer.ts": "9c38cbe6595b454acc203ecb63cdf0510ade51b1da311de7136b4bf13e3b9abb"
+          }
+        }
+      },
+      "harnessSha256": {
+        "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3",
+        "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+        "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+        "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+        "warmed-artifacts.py": "4fc5f37aff5d8c3e94d9a05ef59bd6bb02fa4bc9dde6e94dc2700dfb51af28d1",
+        "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+        "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb"
+      },
+      "hostBefore": {
+        "loadAverage": [
+          0.86328125,
+          0.49072265625,
+          0.20166015625
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cpuMax": {
+          "value": "400000 100000",
+          "error": null
+        },
+        "cpuStat": {
+          "value": "usage_usec 184489790\nuser_usec 126294191\nsystem_usec 58195599\nnice_usec 0\nnr_periods 5384\nnr_throttled 28\nthrottled_usec 1049633\nnr_bursts 0\nburst_usec 0",
+          "error": null
+        },
+        "cgroupCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+        },
+        "hostCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+        },
+        "memoryMax": {
+          "value": "17179869184",
+          "error": null
+        }
+      },
+      "hostAfter": {
+        "loadAverage": [
+          0.95703125,
+          0.58740234375,
+          0.25634765625
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cpuMax": {
+          "value": "400000 100000",
+          "error": null
+        },
+        "cpuStat": {
+          "value": "usage_usec 250826475\nuser_usec 172439992\nsystem_usec 78386483\nnice_usec 0\nnr_periods 6047\nnr_throttled 28\nthrottled_usec 1049633\nnr_bursts 0\nburst_usec 0",
+          "error": null
+        },
+        "cgroupCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+        },
+        "hostCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+        },
+        "memoryMax": {
+          "value": "17179869184",
+          "error": null
+        }
+      },
+      "rawEvidence": {
+        "path": "/workspace/proof-ledger-results/performance/warmed-2026-10-28.json",
+        "sha256": "66f0c37858e3522c40f95c0444f469b3fcd5e437705613f2d5c3e06e52cf467f"
+      },
+      "provenanceSha256": "2abaeb8378a60b9765f2cfdb99f2078580740b20a26ece1ceb956dfe45748756"
+    },
+    {
+      "mode": "warmed100",
+      "exitCode": 0,
+      "sourceFilesUnchanged": true,
+      "beforeAt": "2026-10-28T20:50:51.885060+00:00",
+      "afterAt": "2026-10-28T20:51:21.854238+00:00",
+      "variants": {
+        "baseline": {
+          "sourceRevision": "232849c4e833da992cbcdcc6fa4b7bd0f56cbde3",
+          "dirtyStatus": "",
+          "filesSha256": {
+            "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+            "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+            "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+            "dist/src/core/receipt.js": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+            "dist/src/core/signer.js": "a52cd4563dfa30bfa844dc3b3fedba4e1cbde141937cfe0523df1653ff72f291",
+            "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+            "package.json": "4d3741d9fd76f23ca1c9fe359d152b4c724424909d0536e7c278ff8d11052820",
+            "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+            "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+            "python/nymrel_proof_ledger/badge.py": "1b257c3b7f5bebe26da933de1636a58224fe044153867a796666cbfe55416de6",
+            "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+            "python/nymrel_proof_ledger/cli.py": "df5dceb362a9134fdd7bfa29b9ea5fc6841158cce798a4d03cc8b06380628bf8",
+            "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+            "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+            "python/nymrel_proof_ledger/qr.py": "50b55422edb6e62c8a1e6e130e566bb40ab86cd664e60a90f560834416eb46a0",
+            "python/nymrel_proof_ledger/receipt.py": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4",
+            "python/nymrel_proof_ledger/signal.py": "69ea149c3cc6ade68cd50b6357298c5eacfbd0dc8feafb76f62acff7d5b77de7",
+            "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+            "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+            "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+            "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+            "src/core/receipt.ts": "3485b6a2f9a06342290952496ab71c30f942c284ffbc4ea3bf5e15cce7860d23",
+            "src/core/signer.ts": "4b6ebb75ce2bb403182d3d0f17db094d69f70851498df8c2847e88f0a99919b5"
+          }
+        },
+        "candidate": {
+          "sourceRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+          "dirtyStatus": "M benchmarks/warmed-artifacts.py",
+          "filesSha256": {
+            "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+            "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+            "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+            "dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+            "dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+            "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+            "package.json": "a76d2354f1b8d6d6946cf38553a09af8de862336ec4106557fb941c909401e0a",
+            "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+            "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+            "python/nymrel_proof_ledger/badge.py": "e7f201421c99de1561d56f43882c3939e65440c82ef9c76019713c9f77c162d2",
+            "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+            "python/nymrel_proof_ledger/cli.py": "36ef9184739e3a095e83a1e47f7c7e96c8680318eb5d85d2fbfe546e13f6e0b5",
+            "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+            "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+            "python/nymrel_proof_ledger/qr.py": "8f668a67be402d64de0f8ab6b42590f3054e6015365f611cbd80e80c58dc3f27",
+            "python/nymrel_proof_ledger/receipt.py": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a",
+            "python/nymrel_proof_ledger/signal.py": "af56a9f47ff624b27bbdaae0c9bd0696a8ad628f56282c26d9abd7c7ae0a376b",
+            "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+            "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+            "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+            "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+            "src/core/receipt.ts": "5cf9567336c0a1ba3fa78becfc37d6cd3e56ebf4715dddf08b0e658f55a4c874",
+            "src/core/signer.ts": "9c38cbe6595b454acc203ecb63cdf0510ade51b1da311de7136b4bf13e3b9abb"
+          }
+        }
+      },
+      "harnessSha256": {
+        "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3",
+        "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+        "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+        "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+        "warmed-artifacts.py": "3e9394b972c12b268f474f94945e24e17e68bcc3607807e8e319b2eb8549b6ea",
+        "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+        "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb"
+      },
+      "hostBefore": {
+        "loadAverage": [
+          0.8095703125,
+          0.56787109375,
+          0.25341796875
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cpuMax": {
+          "value": "400000 100000",
+          "error": null
+        },
+        "cpuStat": {
+          "value": "usage_usec 251180022\nuser_usec 172654591\nsystem_usec 78525430\nnice_usec 0\nnr_periods 6104\nnr_throttled 28\nthrottled_usec 1049633\nnr_bursts 0\nburst_usec 0",
+          "error": null
+        },
+        "cgroupCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+        },
+        "hostCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+        },
+        "memoryMax": {
+          "value": "17179869184",
+          "error": null
+        }
+      },
+      "hostAfter": {
+        "loadAverage": [
+          1.0673828125,
+          0.6572265625,
+          0.29443359375
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "cpuMax": {
+          "value": "400000 100000",
+          "error": null
+        },
+        "cpuStat": {
+          "value": "usage_usec 280597204\nuser_usec 191510079\nsystem_usec 89087125\nnice_usec 0\nnr_periods 6404\nnr_throttled 28\nthrottled_usec 1049633\nnr_bursts 0\nburst_usec 0",
+          "error": null
+        },
+        "cgroupCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+        },
+        "hostCpuPressure": {
+          "value": null,
+          "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+        },
+        "memoryMax": {
+          "value": "17179869184",
+          "error": null
+        }
+      },
+      "rawEvidence": {
+        "path": "/workspace/proof-ledger-results/performance/warmed100-2026-10-28.json",
+        "sha256": "927090a0b33a56f7e5375d826bf64e0114674d6359473e697c98d44f3fadc329"
+      },
+      "provenanceSha256": "f6ff18dbe7cc0e85fe20463d509e0af48a20dd929307a7c4e32ffd2224ce33ba"
+    }
+  ],
+  "sourceNotes": "Complete receipt operations at baseline versus current candidate, not an isolated streaming-code experiment. Quiet project-agent window did not reserve the shared host."
+}

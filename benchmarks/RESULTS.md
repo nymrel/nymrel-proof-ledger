@@ -184,3 +184,63 @@ batch falls below 200 ms or source files change, it retains all samples and exit
 with an incomplete-diagnostic error. It does not discard pairs or silently rerun
 until a favorable result appears. Timing remains diagnostic rather than a shared
 CI pass/fail check.
+
+## Current-source repeat — October 28, 2026
+
+**The full throughput criterion remains unmet in this measurement.** A complete
+five-run fresh-process comparison passed 20 of 24 throughput medians. The four
+1 GiB operations passed the memory target, with 99.695–100% measured reduction
+in incremental peak RSS and 42.8–84.0% faster median throughput. A zero RSS
+increment remains a high-water measurement, not evidence of zero memory use.
+
+The baseline was rebuilt from
+`232849c4e833da992cbcdcc6fa4b7bd0f56cbde3`; the current candidate was
+`a4faccb082ec17233df700f3deb392a31d076374`. Both used Node 24.19.0 and Python
+3.13.5 with cryptography 50.0.2 and rfc8785 0.1.4. This compares complete receipt
+operations across those revisions, including intervening validation/path
+changes; it cannot attribute a difference solely to streaming I/O.
+
+The [fresh-process summary](results/fresh-2026-10-28.json) retains these misses:
+
+| Runtime | Input | Operation | Baseline / candidate ms | Throughput change |
+| --- | --- | --- | ---: | ---: |
+| Python | One 4 KiB file | Disk verification | 0.874 / 1.135 | -23.02% |
+| Node | 100 × 4 KiB | Creation | 38.973 / 44.069 | -11.56% |
+| Python | 100 × 4 KiB | Disk verification | 5.595 / 6.481 | -13.67% |
+| Node | 1,000 × 4 KiB | Disk verification | 283.557 / 328.879 | -13.78% |
+
+The separately planned [default warmed diagnostic](results/warmed-2026-10-28.json)
+passed four of eight throughput medians. Its misses were Node 1 MiB creation
+(-26.18%) and verification (-21.31%), Python single-file verification (-11.41%),
+and Python 1,000-file creation (-10.33%). All batches exceeded 200 ms; no sample
+was discarded or rerun. Python single-file verification decreased under both
+methods, so the current evidence does not support dismissing every miss as
+short-operation noise.
+
+The default warmed cases exclude 100-file manifests. After reading the fresh
+results, one additional five-pair comparison was declared for both runtimes and
+both operations at that manifest size, using the new optional `--case` selector.
+All four [100-file warmed medians](results/warmed100-2026-10-28.json) passed:
+Node creation +27.42%, Node verification +17.44%, Python creation -2.39%, and
+Python verification +2.80%. This diagnoses the fresh 100-file misses without
+erasing them. Every additional batch exceeded 200 ms.
+
+Other project agents paused installs, builds, and heavy tests for the timed
+window. The host remained shared: four-CPU quota, five-CPU affinity, and 16 GiB
+memory limit; there was no exclusive reservation. Cgroup throttling counters
+did not increase during any measured run. Missing pressure telemetry and host
+snapshots are retained rather than treated as zero. The original deterministic
+fixture specification was regenerated because earlier workspace raw files were
+unavailable; this is new evidence, not a reproduction of the old host session.
+
+[Source provenance](results/provenance-2026-10-28.json) records exact source,
+emitted-module and harness hashes, before/after host state, and checksums of all
+raw samples. Source and harness identities stayed unchanged within each run.
+Raw JSON, logs, and the reproduction wrapper are retained outside the checkout
+at `/workspace/proof-ledger-results/performance/`, with an exportable
+`evidence-2026-10-28.tar.gz` and `EVIDENCE_SHA256SUMS`. Preserve that bundle when
+moving the workspace; the compact tracked summaries do not contain every raw
+sample. No production source was changed to chase these timings. The next
+performance increment is controlled profiling of the current Node 1 MiB and
+Python single-file verification paths, followed by an attributable fix only if
+the measurements identify one. Universal throughput acceptance stays open.
