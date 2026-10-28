@@ -87,14 +87,35 @@ used as a trust signal. Pass the corresponding verification result to render
 unless the caller explicitly supplies an absolute HTTPS verifier base URL; this
 package does not assume that a hosted verifier exists.
 
+SVG badge QR payloads support up to 134 UTF-8 bytes. Longer receipt URNs or
+verifier URLs raise an error rather than encoding a truncated target. Generated
+badges include the four-module white margin required around a QR code.
+Long proof IDs are abbreviated in the visible label; the QR target and embedded
+metadata retain the complete identifier.
+
+## Contributing
+
+Ideas, questions, documentation improvements, and independent reports from
+trying the examples are welcome. An early idea can describe the problem, who
+it helps, and open questions; it does not need code or a finished specification.
+Check existing [issues and pull requests](https://github.com/nymrel/nymrel-proof-ledger/issues)
+for related work. See [CONTRIBUTING.md](https://github.com/nymrel/nymrel-proof-ledger/blob/main/CONTRIBUTING.md)
+for setup and validation, and the [human trial guide](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/HUMAN_TRIAL.md)
+for an independent installed-consumer trial. Report security concerns privately
+as described in [SECURITY.md](https://github.com/nymrel/nymrel-proof-ledger/blob/main/SECURITY.md).
+
 ## Local development
 
 ### Node.js
 
 ~~~powershell
-npm install --ignore-scripts
+npm ci --ignore-scripts
 npm run test:release
 ~~~
+
+The release gate builds the TypeScript files. When packing a checkout without
+running that gate, run `npm run build` before `npm pack` or `npm pack --dry-run`;
+the compiled package files are not stored in Git.
 
 ### Python
 

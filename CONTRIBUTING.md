@@ -4,6 +4,14 @@ Protocol and cryptographic changes require matched TypeScript and Python
 behavior, shared vectors, and fail-closed tests. A green test in only one
 runtime is not sufficient.
 
+Ideas, questions, documentation corrections, and independent example reports
+are welcome. For an early idea, share the problem, who could benefit, and any
+open questions; code and a finished specification are not prerequisites. Search
+existing [issues and pull requests](https://github.com/nymrel/nymrel-proof-ledger/issues)
+and use the relevant thread when one exists. For an independent installed-consumer
+trial, see the [human trial guide](docs/HUMAN_TRIAL.md). Report vulnerabilities
+privately following [SECURITY.md](SECURITY.md).
+
 ## Development requirements
 
 - Node.js 22.12 or newer, through 26.x
@@ -14,7 +22,7 @@ runtime is not sufficient.
 Install Node development dependencies without lifecycle scripts:
 
 ~~~powershell
-npm install --ignore-scripts
+npm ci --ignore-scripts
 ~~~
 
 Run the local release gate:
@@ -52,6 +60,10 @@ retrying. Recover the same immutable distributions through the existing release
 run; do not retag or rebuild merely to retry a registry failure. Trusted-publisher
 account configuration remains a separate prerequisite.
 
+The release gate builds the TypeScript files. When packing a checkout without
+running that gate, run `npm run build` before `npm pack` or `npm pack --dry-run`;
+the compiled package files are not stored in Git.
+
 Run Python checks in an isolated environment:
 
 ~~~powershell
@@ -86,6 +98,11 @@ standards correctness. New dependencies need a maintenance, provenance,
 licensing, and vulnerability review.
 
 ## Pull requests
+
+AI-assisted contributions are welcome. Disclose meaningful assistance and review
+the submitted work and its claims. Record the tested revision, environment, and
+actual command results; mark checks not run with a reason. Keep local results,
+hosted checks, and independent human observations distinct.
 
 Keep protocol changes reviewable and include:
 

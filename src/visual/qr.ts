@@ -36,8 +36,8 @@ function rsGeneratorPoly(degree: number): Uint8Array {
     const nextPoly = new Uint8Array(poly.length + 1);
     const root = GF256_EXP[i];
     for (let j = 0; j < poly.length; j++) {
-      nextPoly[j] ^= gfMul(poly[j], root);
-      nextPoly[j + 1] ^= poly[j];
+      nextPoly[j] ^= poly[j];
+      nextPoly[j + 1] ^= gfMul(poly[j], root);
     }
     poly = nextPoly;
   }
@@ -63,22 +63,28 @@ interface QRVersionSpec {
   version: number;
   totalDataCodewords: number;
   eccCodewords: number;
+  blocks: number;
   alignPos: number[];
 }
 
 const QR_SPECS: Record<number, QRVersionSpec> = {
-  1: { version: 1, totalDataCodewords: 19, eccCodewords: 7, alignPos: [] },
-  2: { version: 2, totalDataCodewords: 34, eccCodewords: 10, alignPos: [6, 18] },
-  3: { version: 3, totalDataCodewords: 55, eccCodewords: 15, alignPos: [6, 22] },
-  4: { version: 4, totalDataCodewords: 80, eccCodewords: 20, alignPos: [6, 26] },
-  5: { version: 5, totalDataCodewords: 108, eccCodewords: 26, alignPos: [6, 30] },
-  6: { version: 6, totalDataCodewords: 136, eccCodewords: 36, alignPos: [6, 34] },
+  1: { version: 1, totalDataCodewords: 19, eccCodewords: 7, blocks: 1, alignPos: [] },
+  2: { version: 2, totalDataCodewords: 34, eccCodewords: 10, blocks: 1, alignPos: [6, 18] },
+  3: { version: 3, totalDataCodewords: 55, eccCodewords: 15, blocks: 1, alignPos: [6, 22] },
+  4: { version: 4, totalDataCodewords: 80, eccCodewords: 20, blocks: 1, alignPos: [6, 26] },
+  5: { version: 5, totalDataCodewords: 108, eccCodewords: 26, blocks: 1, alignPos: [6, 30] },
+  // Version 6-L has two equal 68-data/18-ECC blocks, interleaved below.
+  6: { version: 6, totalDataCodewords: 136, eccCodewords: 18, blocks: 2, alignPos: [6, 34] },
 };
 
 /**
- * Encodes text into a boolean 2D QR matrix (true = dark module, false = light module).
+ * Encodes UTF-8 text in byte mode, ECL L, mask 0, versions 1 through 6.
+ * Returns dark modules without a quiet zone. Rejects input over 134 UTF-8 bytes.
  */
 export function generateQRMatrix(text: string): boolean[][] {
+  if (typeof text !== 'string' || /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(text)) {
+    throw new TypeError('QR payload must be a string without lone UTF-16 surrogates');
+  }
   const textBytes = Buffer.from(text, 'utf8');
 
   // Select minimum suitable version (ECL L)
@@ -96,11 +102,10 @@ export function generateQRMatrix(text: string): boolean[][] {
   }
 
   if (!chosenSpec) {
-    // Fallback: truncate if text is huge or use version 6
-    chosenSpec = QR_SPECS[6];
+    throw new RangeError('QR payload exceeds the supported capacity of 134 UTF-8 bytes');
   }
 
-  const { version, totalDataCodewords, eccCodewords, alignPos } = chosenSpec;
+  const { version, totalDataCodewords, eccCodewords, blocks, alignPos } = chosenSpec;
   const size = 17 + 4 * version;
 
   // 1. Bit Stream Construction (Byte Mode: 0100)
@@ -113,47 +118,50 @@ export function generateQRMatrix(text: string): boolean[][] {
 
   pushBits(0b0100, 4); // Byte mode indicator
   const charCountBits = version <= 9 ? 8 : 16;
-  pushBits(Math.min(textBytes.length, totalDataCodewords - 2), charCountBits);
+  pushBits(textBytes.length, charCountBits);
 
   for (let i = 0; i < textBytes.length; i++) {
-    if (bitStream.length + 8 <= totalDataCodewords * 8) {
-      pushBits(textBytes[i], 8);
-    }
+    pushBits(textBytes[i], 8);
   }
 
   // Terminator (up to 4 zeroes)
-  while (bitStream.length < totalDataCodewords * 8 && bitStream.length % 8 !== 0) {
+  pushBits(0, Math.min(4, totalDataCodewords * 8 - bitStream.length));
+  while (bitStream.length % 8 !== 0) {
     bitStream.push(0);
-  }
-  while (bitStream.length < totalDataCodewords * 8 && bitStream.length < totalDataCodewords * 8) {
-    bitStream.push(0);
-    if (bitStream.length % 8 === 0 && bitStream.length >= totalDataCodewords * 8) break;
   }
 
   // Convert bitStream to data bytes
   const dataBytes = new Uint8Array(totalDataCodewords);
-  for (let i = 0; i < totalDataCodewords; i++) {
+  const usedDataBytes = bitStream.length / 8;
+  for (let i = 0; i < usedDataBytes; i++) {
     let byteVal = 0;
     for (let b = 0; b < 8; b++) {
       const bitIndex = i * 8 + b;
-      if (bitIndex < bitStream.length) {
-        byteVal = (byteVal << 1) | bitStream[bitIndex];
-      } else {
-        // Pad bytes: 0xEC, 0x11
-        byteVal = (i % 2 === 0) ? 0xec : 0x11;
-        break;
-      }
+      byteVal = (byteVal << 1) | bitStream[bitIndex];
     }
     dataBytes[i] = byteVal;
   }
+  for (let i = usedDataBytes; i < totalDataCodewords; i++) {
+    dataBytes[i] = (i - usedDataBytes) % 2 === 0 ? 0xec : 0x11;
+  }
 
   // Calculate Reed-Solomon error correction codewords
-  const eccBytes = rsCalculateRemainder(dataBytes, eccCodewords);
-
-  // Combine data + ECC
-  const finalCodewords = new Uint8Array(totalDataCodewords + eccCodewords);
-  finalCodewords.set(dataBytes, 0);
-  finalCodewords.set(eccBytes, totalDataCodewords);
+  const dataPerBlock = totalDataCodewords / blocks;
+  const eccBlocks = Array.from({ length: blocks }, (_, block) =>
+    rsCalculateRemainder(dataBytes.subarray(block * dataPerBlock, (block + 1) * dataPerBlock), eccCodewords)
+  );
+  const finalCodewords = new Uint8Array(totalDataCodewords + blocks * eccCodewords);
+  let codewordIndex = 0;
+  for (let i = 0; i < dataPerBlock; i++) {
+    for (let block = 0; block < blocks; block++) {
+      finalCodewords[codewordIndex++] = dataBytes[block * dataPerBlock + i];
+    }
+  }
+  for (let i = 0; i < eccCodewords; i++) {
+    for (let block = 0; block < blocks; block++) {
+      finalCodewords[codewordIndex++] = eccBlocks[block][i];
+    }
+  }
 
   // Initialize Matrix
   const matrix: (boolean | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
@@ -230,7 +238,7 @@ export function generateQRMatrix(text: string): boolean[][] {
 
   for (let right = size - 1; right > 0; right -= 2) {
     if (right === 6) right--; // Skip vertical timing column
-    const upward = ((size - 1 - right) / 2) % 2 === 0;
+    const upward = ((right + 1) & 2) === 0;
 
     for (let vert = 0; vert < size; vert++) {
       const r = upward ? size - 1 - vert : vert;
@@ -254,23 +262,15 @@ export function generateQRMatrix(text: string): boolean[][] {
   }
 
   // Format Info for Mask 0, ECL L (BCH 15,5 format bits: 0b111011111000100)
-  const formatBits = [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0];
-  // Top-left
-  const positionsTL = [
-    [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 7], [8, 8],
-    [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8]
-  ];
-  positionsTL.forEach(([r, c], idx) => {
-    matrix[r][c] = formatBits[idx] === 1;
-  });
-
-  // Split around other corners
-  for (let i = 0; i < 7; i++) {
-    matrix[size - 1 - i][8] = formatBits[i] === 1;
-  }
-  for (let i = 7; i < 15; i++) {
-    matrix[8][size - 15 + i] = formatBits[i] === 1;
-  }
+  const formatBits = 0b111011111000100;
+  const formatBit = (index: number) => ((formatBits >>> index) & 1) === 1;
+  for (let i = 0; i < 6; i++) matrix[i][8] = formatBit(i);
+  matrix[7][8] = formatBit(6);
+  matrix[8][8] = formatBit(7);
+  matrix[8][7] = formatBit(8);
+  for (let i = 9; i < 15; i++) matrix[8][14 - i] = formatBit(i);
+  for (let i = 0; i < 8; i++) matrix[8][size - 1 - i] = formatBit(i);
+  for (let i = 8; i < 15; i++) matrix[size - 15 + i][8] = formatBit(i);
 
   return matrix.map((row) => row.map((cell) => cell === true));
 }
