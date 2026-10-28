@@ -11,6 +11,30 @@ hint or intervention and distinguish assisted from unassisted results.
 
 ## Prepare before the trials
 
+From a source checkout, prepare a reusable packet after the exact candidate
+archives have passed the existing installed-consumer check:
+
+```sh
+python3 tools/prepare_human_trials.py \
+  --acceptance /absolute/path/to/passing-installed-acceptance \
+  --output /absolute/path/outside/checkout/human-trial-packet
+```
+
+The output directory must be new. Preparation reuses the accepted archives and
+packaged reference consumers, checks archive hashes, creates disposable public
+fixtures, and automatically checks opposite-runtime verification. It does not
+rebuild archives. `packet.json` records preparation/source evidence; its automated
+`PASS` is not a human-trial result. The two participant directories contain the
+matching archive, reference script, opposite-runtime receipt/artifact, directions,
+checksums, and blank results. The coordinator retains all three accepted archives
+and the original acceptance report.
+
+Give each person only their `trial-a-node` or `trial-b-python` directory. The
+`public-configs` directory is kept separately for coordinator-controlled,
+authenticated delivery of each public configuration and its checksum. This
+directory separation does not itself authenticate delivery; record the actual
+channel before a trial. Both trials remain unrun until independently observed.
+
 The coordinator supplies the exact local npm archive and Python wheel, their
 SHA-256 checksums, source revision and dirty-source manifest when applicable,
 matching reference scripts, and the [installed-consumer guide](INSTALLED_CONSUMERS.md).
