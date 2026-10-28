@@ -62,6 +62,14 @@ they are not automatically achieved by implementing a feature.
 The [independent trial protocol](HUMAN_TRIAL.md) provides the two-person
 procedure and blank results templates; no human trial has been recorded.
 
+**Directed continuation — October 28, 2026:** The operator selected independent
+agents on different providers for this continuation, with the additional provider
+CLI work assigned to a local agent. Use the [provider-agent protocol](AGENT_TRIAL.md)
+and record actual provider/runtime identity, timings, failures, and recovery.
+This replaces recruiting people for the current directed work. Agent results
+remain agent integration evidence; they do not establish the original human
+adoption target above or convert its unobserved results into completed trials.
+
 ## Milestones
 
 ### Day 30 checkpoint — November 17, 2026
