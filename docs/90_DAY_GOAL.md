@@ -4,9 +4,12 @@
 
 **Focus:** Nymrel Proof Ledger, TypeScript and Python.
 
-**Status — October 25, 2026:** Engineering implementation and source integration
-complete. Human trials, universal throughput acceptance, and hosted release
-evidence remain open; see the progress record for verified results.
+**Status — October 28, 2026:** Engineering implementation and source integration
+complete. The recorded fresh CI comparison meets all stated throughput and
+large-file memory thresholds for its host/runtime environment; earlier workspace
+misses remain retained. The directed different-provider agent trial and hosted
+release/provenance evidence remain open. Human adoption is separately unobserved;
+see the operator-selected continuation and progress record below.
 
 **Tracking:** This file is the working goal. No background execution or daily
 check-in is scheduled by creating it.
@@ -88,7 +91,9 @@ adoption target above or convert its unobserved results into completed trials.
   executable success and rejection paths.
 - [x] Complete streaming hashing with matched regression tests for digests,
   filesystem boundaries, empty files, and I/O failures.
-- [ ] Compare performance against the recorded baseline and resolve regressions.
+- [x] Compare performance against the recorded baseline: all 24 throughput and
+  four 1 GiB memory targets passed in the recorded fresh CI environment. This
+  does not erase earlier workspace misses or guarantee every host/runtime.
 - [ ] Run the first independent integration trial; use its observed difficulties
   to improve the CLI and guides.
 
@@ -145,3 +150,4 @@ and the quickstart documents the behavior and migration.
 | October 25, 2026 | Reconciled the completed source handoffs and plans with current main. | PR31/30 integrated as `10a9412eae1d49c02eb6a90e8510451d4d0532ed`; the [integration receipt](https://github.com/nymrel/nymrel-proof-ledger/pull/31#issuecomment-6367931810) records Codex/Astra review and eight passing post-merge jobs. Inspected main is `3656374615fc32c4c8da87688a5c53416e9a86be`. Earlier other-team review holds are historical for that integration. The human, throughput, and hosted-release criteria above remain open. |
 | October 28, 2026 | Integrated adoption/release preparation through [PR41](https://github.com/nymrel/nymrel-proof-ledger/pull/41), reusing the merged QR repair and dependency updates. | Merge `4ef0c1a738ed4c968f8076a6f441ba6c1725d6dd` follows exact-source review and eight passing hosted jobs. The [trial protocol](HUMAN_TRIAL.md) describes public-only packets; the [release-candidate procedure](RELEASE_CANDIDATE.md) preserves archive and publication controls. No human trials or registry publication are claimed. |
 | October 28, 2026 | Continued provider-agent trials, first-call performance attribution, and reference-consumer recovery improvements. | Two independently started OpenAI agent trials passed against accepted source `d73f440d436facd8599b9e4148c883cd0b8102f3`; a different-provider trial is assigned to a local agent and remains unverified. The new hashing candidate removed a redundant Python EOF read without an observed material regression against old streaming. Final comparison against the original baseline passed 22/24 fresh throughput cases, 8/8 warmed cases, and all four 1 GiB memory targets; retained Python fresh-call misses keep the full target open. See [all performance results](https://github.com/nymrel/nymrel-proof-ledger/blob/main/benchmarks/RESULTS.md). New consumer diagnostics give matching artifact recovery guidance while preserving verification failures. |
+| October 28, 2026 | Met the stated performance thresholds in one fresh, opt-in CI job. | [Run40774966293](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293) compared baseline `232849c4e833da992cbcdcc6fa4b7bd0f56cbde3` with exact combined checkout `65c8bd113c36cd8f813bfd0447010a771771eb16`, preserving PR43's checkpoint core. On the same Node24.22.1/Python3.13.17 job VM, all 24 five-pair throughput comparisons and all four 1 GiB memory targets passed. Source/harness hashes stayed unchanged. This later bounded result updates acceptance for the recorded CI environment; it does not explain away or replace the earlier workspace misses. Raw evidence is retained for 90 days. |

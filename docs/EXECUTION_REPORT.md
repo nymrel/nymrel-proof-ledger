@@ -1,6 +1,32 @@
 # Goal execution — October 18, 2026
 
-## Current disposition — October 25, 2026
+## Current disposition — October 28, 2026
+
+Source preparation and recovery improvements integrated through
+[PR41](https://github.com/nymrel/nymrel-proof-ledger/pull/41) and
+[PR42](https://github.com/nymrel/nymrel-proof-ledger/pull/42). A separate lane's
+[PR43](https://github.com/nymrel/nymrel-proof-ledger/pull/43) adds the experimental
+checkpoint core; it does not provide a real-source adapter or pin-retention
+service. The opt-in measurement in
+[PR44](https://github.com/nymrel/nymrel-proof-ledger/pull/44) records all results
+without turning performance percentages into a CI pass/fail gate.
+
+[The fresh CI comparison](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293)
+met all 24 throughput and four 1 GiB memory targets across five paired runs on
+Node24.22.1/Python3.13.17. It measured combined checkout
+`65c8bd113c36cd8f813bfd0447010a771771eb16` against the original baseline with
+unchanged source/harness hashes. This is acceptance for that recorded host and
+runtime environment, not an all-host guarantee. Earlier workspace misses and
+their unsuccessful tuning hypotheses remain in the benchmark record.
+
+The operator selected different-provider agent trials for this continuation;
+the additional provider CLI execution is assigned to a local agent. Cloud
+OpenAI-only trials and installed-archive preflights do not complete that
+cross-provider request or establish human adoption. A new hosted release-workflow
+run, its provenance, authenticated registry setup and any publication remain
+separate unobserved outcomes. The dated October25 snapshot below is historical.
+
+## October 25 snapshot
 
 **Engineering implementation and source integration complete; the full 90-day
 outcome remains in progress.** [PR31](https://github.com/nymrel/nymrel-proof-ledger/pull/31)

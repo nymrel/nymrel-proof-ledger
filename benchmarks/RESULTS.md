@@ -399,3 +399,55 @@ wrapper are exported separately at
 `/workspace/proof-ledger-results/performance/final-2026-10-28/evidence-2026-10-28.tar.gz`,
 with `EVIDENCE_SHA256SUMS` alongside it. Preserve this final bundle in addition to
 the earlier profiling/variant evidence when moving the workspace.
+
+### Hosted acceptance — October 28, 2026
+
+**All 24 throughput medians and all four 1 GiB memory comparisons met the
+declared targets in one fresh GitHub Actions job.** The
+[source-bound hosted report](results/hosted-ci-2026-10-28.json) records the actual
+observations from [job 123121759113](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293/job/123121759113),
+not an inferred result from the job's success status. Throughput changes ranged
+from -8.27% to +73.56%; none exceeded the 10% material-regression threshold.
+
+The actual checkout was `65c8bd113c36cd8f813bfd0447010a771771eb16`, GitHub's
+test merge of PR44 head `e5b62523bed7b48d7a92e9b8965cd6af56eb1211` with main
+`b8bbf4b8278cbcc4fe80c6ad3fbdb3350d017aa5`, which includes concurrent checkpoint
+PR43. The baseline remained `232849c4e833da992cbcdcc6fa4b7bd0f56cbde3`.
+Before/after transitive source, emitted-module and harness hashes matched.
+
+Both sources ran on the same Ubuntu 24.04 job VM with Node 24.22.1, Python
+3.13.17, cryptography 50.0.2, and rfc8785 0.1.4. The four-CPU VM reported an AMD
+EPYC 9V45 CPU. The unchanged fresh-process harness ran five pairs for each case,
+baseline first in each pair, warming input bytes in the page cache before every
+worker. No other tests ran within the benchmark job during timing.
+
+| 1 GiB operation | Throughput change | Incremental peak-RSS reduction |
+| --- | ---: | ---: |
+| Node creation | +66.16% | 99.624% |
+| Node verification | +61.69% | 99.708% |
+| Python creation | +73.37% | 100% measured |
+| Python verification | +73.56% | 100% measured |
+
+Zero measured RSS growth remains a high-water observation, not zero memory use.
+The job's CPU and memory limit files were unavailable; they are not interpreted
+as unlimited resources. Effective CPUs were 0–3, throttling counters stayed at
+zero, and CPU-pressure observations were present and nonzero. A fresh job VM
+does not establish exclusive physical hardware. Runtime patches also differ
+from the workspace measurements, so this outcome cannot be attributed solely
+to the execution environment.
+
+This run satisfies the stated measured matrix criteria for its exact source,
+runtime pair, host, and method. It does not establish every-host or every-runtime
+guarantees, cold-cache performance, or an individual-operation bound. Earlier
+workspace failures, including the final Python single-file misses, remain
+recorded above; this result does not rewrite or causally fix those observations.
+No unchanged measurement was rerun after this result.
+
+The successful upload retains all raw samples, compact summary, metadata,
+before/after checksums and logs in
+[artifact 12855070119](https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293/artifacts/12855070119)
+until January 26, 2027 at 21:48:27 UTC. Its provider-reported SHA-256 digest is
+`edde42066ea25534b9ede314082fa0fdbfad96cd754466e012339e31a3b9eee4`.
+The compact report and decoded job log were inspected; the ZIP digest was not
+independently rehashed in this read. Registry publication and independent
+adoption remain separate outcomes.
