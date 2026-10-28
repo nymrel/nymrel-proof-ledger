@@ -125,7 +125,17 @@ phone browser. Staging requires npm 11.15.0+ and Node 22.14.0+; the account must
 have publish access and 2FA enabled. Staging the first package is itself a
 registry change and was not performed by this preparation. An owner-authorized
 authenticated bootstrap must use the accepted archive, rather than repacking
-the source merely to publish it.
+the source merely to publish it. The [npm stage CLI](https://docs.npmjs.com/cli/v11/commands/npm-stage)
+accepts a package specification, allowing the agent to submit the retained
+tarball after account access and publication authorization are supplied.
+
+A staged version occupies the same version slot as a published version.
+After approving the bootstrap version, do not rerun a tag publisher expecting
+it to publish that version again. Plan the initial owner-authorized upload and
+later trusted-publisher releases separately, retaining the bootstrap archive's
+original source and build evidence. Account setup alone does not make the
+current tag workflow an end-to-end first-publication path for an absent npm
+package.
 
 After the package exists, open its npm **Settings → Trusted publishing** and
 inspect the current connections before adding one with the table's values.
