@@ -379,3 +379,12 @@ separate concurrency group so normal CI cannot cancel the periodic audit.
 ## License
 
 MIT License. Copyright 2026 Nymrel.
+
+### Experimental offline checkpoints
+
+The versioned experimental checkpoint verifier compares a signed checkpoint
+against a caller-supplied source adapter and independently pinned public trust
+policy. It includes no real-source adapter, pin storage, update or recovery
+service. Its acceptance is relative to the retained checkpoint and does not
+establish signer authority, trusted time, or uncheckpointed history. See the
+[checkpoint profile](docs/CHECKPOINT_PROFILE.md) for the contract and limits.

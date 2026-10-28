@@ -2,8 +2,9 @@
 
 **Status:** proposed `0.1.0`, October 28, 2026. Tracking:
 [issue 9](https://github.com/nymrel/nymrel-proof-ledger/issues/9).
-This is a design and fixture lane, not an implemented verification API. Review
-the adapter contract and lifecycle policy before implementing either runtime.
+The experimental, text-only verification core is implemented in both runtimes.
+It requires independently provisioned pins and a caller-supplied adapter; it provides
+no real-source adapter, pin storage, update channel, or recovery mechanism.
 Existing v1 verification and v2 receipt semantics do not change.
 
 The observable outcome is offline comparison of protected evidence with an
@@ -183,7 +184,7 @@ checkpoint or another authenticated high-water mark is necessary. Interpret
 issue 9's truncation acceptance relative to the checkpoint's covered prefix,
 never as protection of an unknown later suffix.
 
-A future implementation returns separate `admission`, `keyPolicy`,
+The experimental core returns separate `admission`, `keyPolicy`,
 `authentication`, `binding`, and `sourceComparison` results; unattempted stages
 are `NOT_CHECKED`. It sets `accepted: true` only after every required stage
 passes. Core receipt `valid` / `trusted` retain their existing meanings and
@@ -221,9 +222,9 @@ adapter-output examples, not independently verified ledger evidence.
 Matched fixture tests exercise the existing runtime primitives: canonical bytes
 and hashes, public-only receipt authentication, checkpoint artifact binding,
 wrong-key rejection, signed-metadata tampering, and integrity-only trust state.
-They do not implement or certify lifecycle/source-comparison behavior.
+The experimental core tests lifecycle and source-comparison behavior against synthetic adapter observations; they do not certify a real source adapter.
 
-Before implementing the profile, review the strict schema, adapter mapping,
+Before production adoption, review the strict schema, adapter mapping,
 external pin update/recovery and the intentionally retroactive revocation
 policy. Then require matched runtime regressions for every result above,
 including duplicate-property rejection before I/O, superseded signing of new
@@ -233,3 +234,29 @@ and undetectable deletion wholly beyond the checkpoint. Reuse the configured
 release checks and independently review the exact source. No transparency
 adapter is included; any later anchor must contain only the permitted digest
 and inclusion proof, never private run contents or unrestricted metadata.
+
+## Experimental core interface
+
+Call `verifyCheckpoint(bundleJson, trustJson, options)` in TypeScript or
+`verify_checkpoint(bundle_json, trust_json, *, bundle_pin, checkpoint_pin, source, adapter)`
+in Python. Both inputs are JSON text, limited individually to 2 MiB and depth 32.
+`bundlePin`/`bundle_pin` contains `bundleId`, `revision`, and `sha256`;
+`source` contains `sourceProtocol`, `sourceVersion`, `sourceId`, and
+`sourceEpochDigest`. These are independent trusted caller inputs, never chosen
+from the bundle. Pin update, persistence, and recovery remain operator duties.
+
+The adapter is called with a copy of the authenticated checkpoint only after
+admission, key policy, signature/integrity checks, and binding succeed. It must
+validate its source rules and return `status: VALID`, the configured source
+identity and epoch fields, `eventCount` for the valid contiguous source, and
+`prefixHash` recomputed at the requested checkpoint count. For a shorter valid
+source, `prefixHash` may be absent. Return `status: UNAVAILABLE` when a source
+or historical prefix cannot be read, or `status: INVALID` for invalid evidence.
+An exception also means unavailable. The adapter is trusted code: the core
+cannot determine whether it actually validated the source or computed the
+prefix correctly. No actual source implementation is bundled.
+
+The result contains stage values, `accepted`, and, for a successful comparison,
+`suffixCount`. The interface does not establish signer authority, trusted time,
+pin freshness, external persistence, or independent execution. The absence of
+a retained newer checkpoint cannot reveal deletion of an uncheckpointed suffix.
