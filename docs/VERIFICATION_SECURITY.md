@@ -101,8 +101,29 @@ canonical core continues to accept frozen v1 receipts for compatibility; a calle
 that requires v2 must require `result.receipt.version === '2.0.0'` (Python:
 `result['receipt']['version'] == '2.0.0'`) after successful verification. Gate
 consumers must require `result.trusted`, not merely `valid` or CLI exit zero.
-No new optional version-policy or trusted-exit flags are introduced in this repair;
-the existing explicit result and version fields remain the policy boundary.
+API consumers continue to enforce policy using the explicit result and version
+fields. Both CLIs additionally offer the opt-in `--require-trusted-v2` gate:
+exit zero requires a valid, trusted receipt with version `2.0.0`. This leaves
+the default integrity-only exit behavior unchanged. The flag does not require
+local artifacts unless `--check-files` is also requested.
+
+With `--json`, this flag adds a `policy` object containing `name` (always
+`authenticated-v2`), `passed`, and `errors`. Policy rejection does not rewrite
+`valid`, `trusted`, or signature fields. Error strings in `policy.errors` are,
+in order when applicable: `Receipt verification failed`,
+`Authenticated verification is required`, and `Receipt protocol v2 is required`.
+Core filesystem errors retain native runtime diagnostic wording. Never obtain
+the verification key or expected algorithm from the receipt itself.
+
+CLI attestation now fails when no signing key is supplied. Generate an explicit
+experimental key with `keygen --out` and provide `--key-file` to migrate keyless
+scripts. New key files are created exclusively with POSIX mode `0600`; existing
+files and symlinks are refused. Windows operators must configure destination ACLs.
+Only an explicit `keygen` without `--out` exports private key material to stdout.
+The Node CLI accepts `--name=value` syntax for value options and rejects unknown
+`keygen`/`verify` options, multi-character single-dash spellings, and values on
+boolean flags. A misspelled output option cannot silently select key export,
+and a later malformed flag cannot disable an explicitly requested policy gate.
 
 Signature and Merkle failures now prevent artifact filesystem resolution and
 reads. `artifactsValid` is false when requested disk checks were skipped due to
@@ -111,6 +132,9 @@ checks remain an explicit caller capability. Portable disk paths reject Windows
 device names, alternate streams, trailing dots/spaces and reserved characters on
 all hosts, in addition to existing root confinement. A filename accepted for
 in-memory attestation can therefore be ineligible for portable disk verification.
+Names beginning with two dots, such as `..notes.txt` or `..cache/artifact.txt`,
+remain valid when their resolved paths stay within the verification root. Only
+the `..` parent component denotes traversal; symlinks are checked after resolution.
 
 Git context still requires opt-in and a trusted directory/installation. It resolves
 an executable from absolute PATH directories, excluding the selected working

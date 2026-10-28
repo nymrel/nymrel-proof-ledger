@@ -29,6 +29,9 @@ class TestBadge(unittest.TestCase):
                     receipt["proofId"] = "A" * (target_bytes - len("https://v.test/"))
                     matrix = generate_qr_matrix(f"https://v.test/{receipt['proofId']}")
                     svg = generate_svg_badge(receipt, compact=compact, verification_base_url="https://v.test")
+                    if len(receipt["proofId"]) > 18:
+                        self.assertIn("ID: AAAAAAAA...AAAAAAAA • TASK:", svg)
+                    self.assertIn(f"<nymrel:proofId>{receipt['proofId']}</nymrel:proofId>", svg)
                     group = re.search(r'<!-- QR Verification Container -->\s*<g>([\s\S]*?)</g>', svg)[1]
                     box = re.search(r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"', group)
                     module = re.search(r'M([\d.]+),([\d.]+)h([\d.]+)v', group)
@@ -151,7 +154,7 @@ class TestBadge(unittest.TestCase):
         self.assertIn("application/ld+json", html_doc)
         self.assertIn("Publisher: Nymrel", html_doc)
         self.assertIn("UNVERIFIED RECEIPT", html_doc)
-        self.assertEqual(html_doc.count("</script>"), 1)
+        self.assertEqual(html_doc.count("</script>"), 2)
         self.assertNotIn("</script><img", html_doc)
         self.assertNotIn("JalenBuilds", html_doc)
         self.assertNotIn("proofs.nymrel.com", html_doc)

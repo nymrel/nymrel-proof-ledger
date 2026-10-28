@@ -14,6 +14,18 @@ Availability:
 - PyPI package nymrel-proof-ledger is not currently published.
 - proofs.nymrel.com is reserved and is not claimed as a live verification service.
 
+Source adoption:
+- Clone https://github.com/nymrel/nymrel-proof-ledger.git.
+- From the checkout: npm ci --ignore-scripts; npm run build;
+  node examples/ed25519-demo.mjs.
+- The executable demo uses separately provisioned Ed25519 public-key/algorithm
+  configuration, disk artifact checks, integrity-only comparison, and signed
+  metadata tamper rejection. Its private key is ephemeral and never saved.
+- docs/QUICKSTART.md documents local npm archive installation, Python checkout
+  installation, and public-key-only CLI verification.
+- The library authenticates the documented signed fields; it does not independently
+  observe execution or establish a real-world signer identity.
+
 Runtime contract:
 - Node.js 22.12 through 26.x; no production dependencies.
 - Python 3.11 through 3.14.

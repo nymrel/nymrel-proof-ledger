@@ -1,0 +1,23 @@
+[
+  {"name":"default integrity remains successful","key":"none","gate":false,"valid":true,"trusted":false,"exit":0},
+  {"name":"gate rejects integrity only","key":"none","gate":true,"valid":true,"trusted":false,"exit":1},
+  {"name":"gate accepts Ed25519 public key","key":"correct","gate":true,"valid":true,"trusted":true,"exit":0},
+  {"name":"gate accepts public-only key file","key":"correct","keyFile":true,"gate":true,"valid":true,"trusted":true,"exit":0},
+  {"name":"gate accepts configured HMAC","algorithm":"HMAC-SHA256","key":"correct","gate":true,"valid":true,"trusted":true,"exit":0},
+  {"name":"gate rejects wrong Ed25519 key","key":"wrong","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate rejects missing algorithm","key":"correct","omitAlgorithm":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate rejects wrong algorithm","key":"correct","expectedAlgorithm":"HMAC-SHA256","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate rejects signed metadata tampering","key":"correct","tamper":"metadata","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate rejects artifact tampering","key":"correct","tamper":"artifact","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate checks matching disk artifact","key":"correct","disk":"match","gate":true,"valid":true,"trusted":true,"exit":0},
+  {"name":"gate rejects missing requested artifact","key":"correct","disk":"missing","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate rejects changed requested artifact","key":"correct","disk":"changed","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"default legacy authentication remains successful","legacy":true,"key":"correct","gate":false,"valid":true,"trusted":true,"exit":0},
+  {"name":"gate rejects authenticated legacy","legacy":true,"key":"correct","gate":true,"valid":true,"trusted":true,"exit":1},
+  {"name":"gate rejects unkeyed legacy","legacy":true,"key":"none","gate":true,"valid":true,"trusted":false,"exit":1},
+  {"name":"gate rejects malformed envelope","malformed":true,"key":"correct","gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports missing receipt","inputFailure":"missing","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports malformed JSON","inputFailure":"json","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports invalid UTF-8","inputFailure":"utf8","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1},
+  {"name":"gate reports BOM-prefixed JSON","inputFailure":"bom","key":"correct","keyFile":true,"gate":true,"valid":false,"trusted":false,"exit":1}
+]

@@ -21,6 +21,10 @@ describe("Visual Badge & Certificate Generation", () => {
         receipt.proofId = 'A'.repeat(targetBytes - 'https://v.test/'.length);
         const matrix = generateQRMatrix(`https://v.test/${receipt.proofId}`);
         const svg = generateSvgBadge(receipt, { compact, verificationBaseUrl: 'https://v.test' });
+        if (receipt.proofId.length > 18) {
+          assert.ok(svg.includes('ID: AAAAAAAA...AAAAAAAA • TASK:'));
+        }
+        assert.ok(svg.includes(`<nymrel:proofId>${receipt.proofId}</nymrel:proofId>`));
         const qrGroup = svg.match(/<!-- QR Verification Container -->\s*<g>([\s\S]*?)<\/g>/)?.[1];
         assert.ok(qrGroup);
         const box = qrGroup.match(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
@@ -181,7 +185,7 @@ describe("Visual Badge & Certificate Generation", () => {
     assert.ok(html.includes("UNVERIFIED RECEIPT"));
     assert.ok(html.includes(receipt.merkle.root));
     assert.ok(html.includes("bundle.tar.gz"));
-    assert.equal(html.match(/<\/script>/g)?.length, 1);
+    assert.equal(html.match(/<\/script>/g)?.length, 2);
     assert.ok(!html.includes("</script><img"));
     assert.ok(!html.includes("JalenBuilds"));
     assert.ok(!html.includes("proofs.nymrel.com"));

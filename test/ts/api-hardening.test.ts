@@ -256,9 +256,12 @@ test('CLI escapes human display, preserves JSON, and rejects disguised JSON key 
     let stderr = '';
     console.error = (...args: unknown[]) => { stderr += args.join(' '); };
     try {
+      lines = [];
       assert.equal(await runCli(['verify', proof]), 1);
-      assert(stderr.startsWith('Proof Ledger command failed:'));
-      assert(!stderr.includes('\x1b'));
+      assert.equal(stderr, '');
+      assert(lines.join('\n').includes('Supply a complete UTF-8 JSON receipt, then retry.'));
+      assert(!lines.join('\n').includes('\x1b[2J'));
+      assert(!lines.join('\n').includes('invalid JSON'));
     } finally { console.error = originalError; }
   } finally { console.log = original; await fs.rm(dir, { recursive: true, force: true }); }
 });

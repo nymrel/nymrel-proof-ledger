@@ -15,9 +15,10 @@
 
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { createReceipt, verifyReceipt, type ProofReceipt, type VerifyReceiptOptions } from './core/receipt.js';
+import { createReceipt, verifyReceipt, type ProofReceipt, type VerificationResult, type VerifyReceiptOptions } from './core/receipt.js';
 import { generateSvgBadge, generateShieldSvg, generateHtmlCertificate } from './visual/badge.js';
 import { ProofSigner, type SignatureAlgorithm } from './core/signer.js';
+import { validateReceiptEnvelope } from './core/envelope.js';
 
 /** Escape untrusted display strings without changing receipt or signature bytes. */
 function displayCopy<T>(value: T, markdown = false): T {
@@ -27,6 +28,17 @@ function displayCopy<T>(value: T, markdown = false): T {
       character => `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`);
     return markdown ? safe.replace(/[\\`*_{}\[\]()|<>~&]/g, character => `\\${character}`) : safe;
   })) as T;
+}
+
+/** Bound terminal diagnostics only; verifier errors and JSON retain full detail. */
+function terminalErrorMessage(message: string): string {
+  const characters = Array.from(displayCopy(message));
+  const limit = 800;
+  if (characters.length <= limit) return characters.join('');
+  const marker = ' … [details shortened; check the receipt or options and retry] … ';
+  const tailLength = 200;
+  const headLength = limit - Array.from(marker).length - tailLength;
+  return characters.slice(0, headLength).join('') + marker + characters.slice(-tailLength).join('');
 }
 
 function printHelp(): void {
@@ -49,6 +61,7 @@ Parent Organization: Nymrel
 \x1b[1mOPTIONS:\x1b[0m
   --help, -h       Show this help message
   --version, -v    Show version number
+  --require-trusted-v2  Verify only: require authenticated protocol v2 (exit 1 otherwise)
 
 \x1b[1mEXAMPLES:\x1b[0m
   $ proof-ledger keygen --algo HMAC-SHA256
@@ -64,6 +77,80 @@ interface ParsedArgs {
   command?: string;
   positionals: string[];
   flags: Record<string, string | boolean>;
+}
+
+const booleanFlags = new Set([
+  'help', 'h', 'version', 'v', 'json', 'compact', 'checkFiles', 'check-files', 'require-trusted-v2', 'include-git-context',
+]);
+const commonFlags = ['help', 'h', 'version', 'v'];
+const commandFlags: Record<string, string[]> = {
+  keygen: ['algo', 'out'],
+  attest: ['task', 'description', 'signer', 'algo', 'key', 'key-file', 'keyFile', 'files', 'f', 'status', 'out', 'badge', 'html', 'include-git-context'],
+  verify: ['proof', 'key', 'key-file', 'keyFile', 'algo', 'algorithm', 'checkFiles', 'check-files', 'json', 'require-trusted-v2'],
+  badge: ['proof', 'out', 'format', 'compact'],
+  inspect: ['proof'],
+  export: ['proof', 'format', 'out'],
+};
+const valueFlags = new Set(Object.values(commandFlags).flat().filter(flag => !booleanFlags.has(flag)));
+
+function validateCommandFlags(parsed: ParsedArgs): void {
+  const allowed = new Set([...commonFlags, ...(commandFlags[parsed.command ?? ''] ?? [])]);
+  for (const flag of Object.keys(parsed.flags)) {
+    if (!allowed.has(flag)) {
+      throw new Error(`Unsupported ${parsed.command ?? 'CLI'} option: --${flag}. Run proof-ledger --help for examples`);
+    }
+  }
+  if (parsed.command && commandFlags[parsed.command] && parsed.command !== 'keygen') {
+    if (parsed.positionals.length > 1) {
+      throw new Error(`${parsed.command} accepts at most one positional argument`);
+    }
+    if (parsed.flags.proof !== undefined && parsed.positionals.length > 0) {
+      throw new Error('Choose a positional receipt path or --proof, not both');
+    }
+  }
+}
+
+async function readReceiptForPresentation(proofPath: string): Promise<ProofReceipt> {
+  const receipt: unknown = JSON.parse(await fs.readFile(path.resolve(proofPath), 'utf8'));
+  const validation = validateReceiptEnvelope(receipt);
+  if (!validation.valid) {
+    throw new Error(`Invalid proof receipt: ${validation.errors.map(error => `${error.path ?? '<root>'}: ${error.message}`).join('; ')}`);
+  }
+  return receipt as ProofReceipt;
+}
+
+function invalidReceiptInput(message: string): VerificationResult {
+  return {
+    valid: false, trusted: false, merkleValid: false, signatureChecked: false,
+    signatureValid: null, artifactsValid: false, checkedArtifacts: 0, receipt: null,
+    errors: [message], warnings: [],
+  };
+}
+
+async function readReceiptForVerification(proofPath: string): Promise<
+  { loaded: true; receipt: unknown } | { loaded: false; result: VerificationResult }
+> {
+  let bytes: Uint8Array;
+  try {
+    bytes = await fs.readFile(path.resolve(proofPath));
+  } catch {
+    return {
+      loaded: false,
+      result: invalidReceiptInput('Receipt file could not be read. Check the receipt path and read permissions, then retry.'),
+    };
+  }
+  try {
+    // Retain a BOM so both runtimes apply the same strict UTF-8 JSON parser.
+    const raw = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+    return { loaded: true, receipt: JSON.parse(raw) };
+  } catch (error) {
+    if (!(error instanceof SyntaxError) && !(error instanceof TypeError &&
+        'code' in error && error.code === 'ERR_ENCODING_INVALID_ENCODED_DATA')) throw error;
+    return {
+      loaded: false,
+      result: invalidReceiptInput('Receipt file is not valid UTF-8 JSON. Supply a complete UTF-8 JSON receipt, then retry.'),
+    };
+  }
 }
 
 /**
@@ -104,27 +191,48 @@ async function loadKeyMaterial(keyFile: string, role: 'sign' | 'verify', algorit
   return raw;
 }
 
+/** Create a new private key file without replacing a file or following a symlink. */
+async function writePrivateKeyFile(outPath: string, output: string): Promise<void> {
+  const file = await fs.open(path.resolve(outPath), 'wx', 0o600);
+  try {
+    if (process.platform !== 'win32') await file.chmod(0o600);
+    await file.writeFile(output, 'utf8');
+  } finally {
+    await file.close();
+  }
+}
+
 function parseArgs(args: string[]): ParsedArgs {
   const result: ParsedArgs = {
     positionals: [],
-    flags: {},
+    flags: Object.create(null) as Record<string, string | boolean>,
   };
 
+  let positionalsOnly = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
-        result.flags[key] = args[i + 1];
-        i++;
-      } else {
-        result.flags[key] = true;
+    if (!positionalsOnly && arg === '--') {
+      positionalsOnly = true;
+      continue;
+    }
+    if (!positionalsOnly && arg.startsWith('-')) {
+      if (!arg.startsWith('--') && !['-h', '-v', '-f'].includes(arg)) {
+        throw new Error(`Unsupported short option: ${arg}`);
       }
-    } else if (arg.startsWith('-')) {
-      const key = arg.slice(1);
-      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
-        result.flags[key] = args[i + 1];
-        i++;
+      const option = arg.replace(/^-+/, '');
+      const equals = option.indexOf('=');
+      const key = equals === -1 ? option : option.slice(0, equals);
+      if (booleanFlags.has(key)) {
+        if (equals !== -1) throw new Error(`--${key} does not accept a value`);
+        result.flags[key] = true;
+      } else if (equals !== -1) {
+        const value = option.slice(equals + 1);
+        if (!value) throw new Error(`--${key} requires a value`);
+        result.flags[key] = value;
+      } else if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        result.flags[key] = args[++i];
+      } else if (valueFlags.has(key)) {
+        throw new Error(`--${key} requires a value`);
       } else {
         result.flags[key] = true;
       }
@@ -140,8 +248,54 @@ function parseArgs(args: string[]): ParsedArgs {
   return result;
 }
 
+/** Validate key output options before generating secret material. */
+function parseKeygenArgs(args: string[]): ParsedArgs {
+  if (args[0] !== 'keygen') {
+    throw new Error('Place keygen before its options');
+  }
+  const result: ParsedArgs = {
+    command: 'keygen', positionals: [],
+    flags: Object.create(null) as Record<string, string | boolean>,
+  };
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
+    if (['--help', '-h', '--version', '-v'].includes(arg)) {
+      result.flags[arg.replace(/^-+/, '')] = true;
+      continue;
+    }
+    const equals = arg.indexOf('=');
+    const option = equals === -1 ? arg : arg.slice(0, equals);
+    if (option !== '--algo' && option !== '--out') {
+      throw new Error(`Unsupported keygen argument: ${arg}`);
+    }
+    const name = option.slice(2);
+    if (Object.hasOwn(result.flags, name)) {
+      throw new Error(`Duplicate keygen option: ${option}`);
+    }
+    let value: string;
+    if (equals !== -1) {
+      value = arg.slice(equals + 1);
+    } else {
+      if (i + 1 >= args.length || args[i + 1].startsWith('-')) {
+        throw new Error(`${option} requires a value`);
+      }
+      value = args[++i];
+    }
+    if (value.length === 0) throw new Error(`${option} requires a nonempty value`);
+    result.flags[name] = value;
+  }
+  if (result.flags.algo !== undefined &&
+      result.flags.algo !== 'HMAC-SHA256' && result.flags.algo !== 'Ed25519') {
+    throw new Error('Unsupported keygen algorithm; use HMAC-SHA256 or Ed25519');
+  }
+  return result;
+}
+
 async function runCliUnchecked(argv: string[]): Promise<number> {
-  const parsed = parseArgs(argv);
+  const initial = parseArgs(argv);
+  const parsed = initial.command === 'keygen' ? parseKeygenArgs(argv) : initial;
+
+  validateCommandFlags(parsed);
 
   if (parsed.flags.help || parsed.flags.h || !parsed.command) {
     printHelp();
@@ -155,27 +309,24 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
 
   switch (parsed.command) {
     case 'keygen': {
-      const algo = (parsed.flags.algo as SignatureAlgorithm) || 'HMAC-SHA256';
-      const outPath = parsed.flags.out as string | undefined;
+      const algo = parsed.flags.algo ?? 'HMAC-SHA256';
+      if (algo !== 'HMAC-SHA256' && algo !== 'Ed25519') {
+        throw new Error('Unsupported key algorithm; use HMAC-SHA256 or Ed25519');
+      }
+      const outPath = parsed.flags.out;
+      if (outPath !== undefined && (typeof outPath !== 'string' || outPath.length === 0)) {
+        throw new Error('--out requires a non-empty file path');
+      }
 
-      if (algo === 'Ed25519') {
-        const keypair = ProofSigner.generateKeyPair();
-        const output = JSON.stringify(keypair, null, 2);
-        if (outPath) {
-          await fs.writeFile(path.resolve(outPath), output, 'utf8');
-          console.log(`\x1b[32m✓ Ed25519 keypair saved to ${outPath}\x1b[0m`);
-        } else {
-          console.log(output);
-        }
+      const material = algo === 'Ed25519'
+        ? ProofSigner.generateKeyPair()
+        : { algorithm: algo, secretKey: ProofSigner.generateSecretKey() };
+      const output = JSON.stringify(material, null, 2);
+      if (outPath !== undefined) {
+        await writePrivateKeyFile(outPath, output);
+        console.log(`\x1b[32m✓ ${algo} key saved to ${displayCopy(outPath)}\x1b[0m`);
       } else {
-        const secret = ProofSigner.generateSecretKey();
-        const output = JSON.stringify({ algorithm: 'HMAC-SHA256', secretKey: secret }, null, 2);
-        if (outPath) {
-          await fs.writeFile(path.resolve(outPath), output, 'utf8');
-          console.log(`\x1b[32m✓ HMAC-SHA256 secret key saved to ${outPath}\x1b[0m`);
-        } else {
-          console.log(output);
-        }
+        console.log(output);
       }
       return 0;
     }
@@ -185,15 +336,14 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       const description = parsed.flags.description as string | undefined;
       const signer = (parsed.flags.signer as string) || 'nymrel-agent';
       const algo = (parsed.flags.algo as SignatureAlgorithm) || 'HMAC-SHA256';
-      let key = parsed.flags.key as string | undefined;
+      let key = getFlag(parsed, 'key');
       const keyFile = getFlag(parsed, 'key-file', 'keyFile');
 
       if (!key && keyFile) {
         key = await loadKeyMaterial(keyFile, 'sign', algo);
       }
       if (!key) {
-        key = ProofSigner.generateSecretKey();
-        console.warn(`\x1b[33m! Warning: No signing key provided. Generated ephemeral secret key: ${key}\x1b[0m`);
+        throw new Error('Signing key required: supply --key or --key-file; generate one with keygen');
       }
 
       // Collect files
@@ -245,32 +395,46 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
     }
 
     case 'verify': {
+      if (parsed.positionals.length > 1) {
+        throw new Error('verify accepts one receipt path');
+      }
       const proofPath = (parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json');
-      const key = parsed.flags.key as string | undefined;
-      const keyFile = getFlag(parsed, 'key-file', 'keyFile');
-      let signingKey = key;
-      const expectedAlgorithm = getFlag(parsed, 'algo', 'algorithm');
-      let keyFileInvalid = false;
-      if (!signingKey && keyFile) {
-        try { signingKey = await loadKeyMaterial(keyFile, 'verify', expectedAlgorithm); }
-        catch { signingKey = ''; keyFileInvalid = true; }
+      const checkFiles = Boolean(parsed.flags.checkFiles || parsed.flags['check-files']);
+      const input = await readReceiptForVerification(proofPath);
+      let result: VerificationResult;
+      if (!input.loaded) {
+        result = input.result;
+      } else {
+        const key = parsed.flags.key as string | undefined;
+        const keyFile = getFlag(parsed, 'key-file', 'keyFile');
+        let signingKey = key;
+        const expectedAlgorithm = getFlag(parsed, 'algo', 'algorithm');
+        let keyFileInvalid = false;
+        if (!signingKey && keyFile) {
+          try { signingKey = await loadKeyMaterial(keyFile, 'verify', expectedAlgorithm); }
+          catch { signingKey = ''; keyFileInvalid = true; }
+        }
+        result = await verifyReceipt(input.receipt, {
+          publicKeyOrSecret: signingKey,
+          expectedAlgorithm,
+          checkFilesOnDisk: checkFiles,
+        } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
+        if (keyFileInvalid) result.errors = ['Invalid verification key file or algorithm context'];
       }
 
-      const checkFiles = Boolean(parsed.flags.checkFiles || parsed.flags['check-files']);
-
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: unknown = JSON.parse(raw);
-
-      let result = await verifyReceipt(receipt, {
-        publicKeyOrSecret: signingKey,
-        expectedAlgorithm,
-        checkFilesOnDisk: checkFiles,
-      } as VerifyReceiptOptions); // The verifier validates untrusted CLI flag values.
-      if (keyFileInvalid) result.errors = ['Invalid verification key file or algorithm context'];
+      // Policy is an explicit CLI decision, separate from cryptographic verdicts.
+      const policyErrors: string[] = [];
+      if (!result.valid) policyErrors.push('Receipt verification failed');
+      if (!result.trusted) policyErrors.push('Authenticated verification is required');
+      if (result.receipt?.version !== '2.0.0') policyErrors.push('Receipt protocol v2 is required');
+      const policy = parsed.flags['require-trusted-v2']
+        ? { name: 'authenticated-v2', passed: policyErrors.length === 0, errors: policyErrors }
+        : undefined;
+      const accepted = result.valid && (policy === undefined || policy.passed);
 
       if (parsed.flags.json) {
-        console.log(JSON.stringify(result, null, 2));
-        return result.valid ? 0 : 1;
+        console.log(JSON.stringify(policy === undefined ? result : { ...result, policy }, null, 2));
+        return accepted ? 0 : 1;
       }
 
       result = displayCopy(result);
@@ -306,13 +470,20 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
         result.warnings.forEach((w) => console.log(`  ! ${w}`));
       }
 
-      const overall = result.trusted
+      if (policy !== undefined) {
+        console.log(`Policy:      authenticated-v2 (${policy.passed ? 'PASSED' : 'FAILED'})`);
+        policy.errors.forEach((error) => console.log(`  ✗ ${error}`));
+      }
+
+      const overall = policy !== undefined && !policy.passed
+        ? '\x1b[1m\x1b[31mFAILED (POLICY)\x1b[0m'
+        : result.trusted
         ? '\x1b[1m\x1b[32mPASSED (TRUSTED)\x1b[0m'
         : result.valid
           ? '\x1b[1m\x1b[33mPASSED (INTEGRITY ONLY)\x1b[0m'
           : '\x1b[1m\x1b[31mFAILED (UNVERIFIED)\x1b[0m';
       console.log(`\nOverall:     ${overall}\n`);
-      return result.valid ? 0 : 1;
+      return accepted ? 0 : 1;
     }
 
     case 'badge': {
@@ -320,9 +491,10 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       const outPath = (parsed.flags.out as string) || 'badge.svg';
       const format = (parsed.flags.format as string) || 'svg';
       const compact = Boolean(parsed.flags.compact);
-
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: ProofReceipt = JSON.parse(raw);
+      if (!['svg', 'shield', 'html'].includes(format)) {
+        throw new Error('Unsupported badge format; use svg, shield, or html');
+      }
+      const receipt = await readReceiptForPresentation(proofPath);
 
       let content: string;
       if (format === 'html') {
@@ -340,8 +512,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
 
     case 'inspect': {
       const proofPath = parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json';
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      const receipt: ProofReceipt = displayCopy(JSON.parse(raw));
+      const receipt = displayCopy(await readReceiptForPresentation(proofPath));
 
       console.log('\n\x1b[1m╔══════════════════════════════════════════════════════════════════╗\x1b[0m');
       console.log('\x1b[1m║               NYMREL PROOF LEDGER AUDIT INSPECTOR                ║\x1b[0m');
@@ -378,9 +549,10 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       const proofPath = parsed.positionals[0] || (parsed.flags.proof as string) || 'proof.json';
       const format = (parsed.flags.format as string) || 'markdown';
       const outPath = parsed.flags.out as string | undefined;
-
-      const raw = await fs.readFile(path.resolve(proofPath), 'utf8');
-      let receipt: ProofReceipt = JSON.parse(raw);
+      if (!['markdown', 'jsonld', 'json-ld', 'html'].includes(format)) {
+        throw new Error('Unsupported export format; use markdown, jsonld, or html');
+      }
+      let receipt = await readReceiptForPresentation(proofPath);
 
       let output = '';
       if (format === 'jsonld' || format === 'json-ld') {
@@ -454,9 +626,13 @@ ${receipt.artifacts.map((a) => `| ${a.path} | ${a.sha256} | ${a.sizeBytes} |`).j
 }
 
 export async function runCli(argv: string[] = process.argv.slice(2)): Promise<number> {
+  if (argv.length === 1 && (argv[0] === '--version' || argv[0] === '-v')) {
+    console.log('2.0.0');
+    return 0;
+  }
   try { return await runCliUnchecked(argv); }
   catch (error) {
-    console.error(`Proof Ledger command failed: ${displayCopy(error instanceof Error ? error.message : String(error))}`);
+    console.error(`Proof Ledger command failed: ${terminalErrorMessage(error instanceof Error ? error.message : String(error))}`);
     return 1;
   }
 }

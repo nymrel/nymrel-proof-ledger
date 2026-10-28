@@ -21,7 +21,7 @@ if (testFiles.length === 0) {
   const result = spawnSync(
     process.execPath,
     ['--test', '--test-reporter=tap', ...testFiles.map((file) => join(testDirectory, file))],
-    { encoding: 'utf8' },
+    { encoding: 'utf8', timeout: 300_000, killSignal: 'SIGKILL' },
   );
   const output = String(result.stdout ?? '');
   const errors = String(result.stderr ?? '');

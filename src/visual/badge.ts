@@ -185,7 +185,8 @@ export function generateSvgBadge(
     : "n/a";
   const gitBranch = receipt.environment.git?.branch || "standalone";
   const truncatedRoot = truncateHash(receipt.merkle.root, 8, 8);
-  const truncatedProofId = receipt.proofId;
+  // Only abbreviate the visible label; the QR target and metadata keep the full ID.
+  const truncatedProofId = truncateHash(receipt.proofId, 8, 8);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif">
@@ -383,6 +384,8 @@ ${structuredData}
       align-items: center;
       border-bottom: 1.5px solid var(--border);
       padding-bottom: 20px;
+      gap: 16px;
+      flex-wrap: wrap;
     }
     .brand-title {
       font-size: 1.25rem;
@@ -394,6 +397,8 @@ ${structuredData}
       font-size: 0.85rem;
       color: var(--text-muted);
     }
+    .publisher { font-size: 0.85rem; color: var(--text-muted); }
+    .presentation-note { color: var(--text-muted); }
     .badge-card {
       background: var(--white);
       border-radius: 16px;
@@ -404,6 +409,7 @@ ${structuredData}
       display: flex;
       justify-content: center;
     }
+    .badge-card svg { display: block; max-width: 100%; height: auto; }
     .section-title {
       font-size: 1.1rem;
       font-weight: 700;
@@ -422,9 +428,10 @@ ${structuredData}
     }
     .grid-2 {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
     }
+    .grid-2 > div { min-width: 0; }
     .label {
       font-size: 0.75rem;
       font-weight: 700;
@@ -436,28 +443,49 @@ ${structuredData}
     .value {
       font-size: 0.95rem;
       font-weight: 600;
-      word-break: break-all;
+      overflow-wrap: anywhere;
     }
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.88rem;
     }
+    .root-value {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 12px;
+      color: var(--terracotta);
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .table-scroll { max-width: 100%; overflow-x: auto; }
+    .table-help { display: none; color: var(--text-muted); font-size: 0.85rem; }
     table {
       width: 100%;
+      min-width: 540px;
+      table-layout: fixed;
       border-collapse: collapse;
       margin-top: 10px;
       font-size: 0.9rem;
     }
+    caption { text-align: left; color: var(--text-muted); margin-bottom: 8px; }
     th, td {
       padding: 10px 12px;
       text-align: left;
       border-bottom: 1px solid var(--border);
+      overflow-wrap: anywhere;
     }
     th {
       font-size: 0.75rem;
       color: var(--text-muted);
       text-transform: uppercase;
     }
+    th:first-child { width: 35%; }
+    th:nth-child(2) { width: 50%; }
+    th:last-child { width: 15%; }
     .btn {
       background: var(--cedar);
       color: var(--bg);
@@ -471,8 +499,11 @@ ${structuredData}
       align-items: center;
       gap: 6px;
       transition: opacity 0.2s ease;
+      min-height: 44px;
     }
     .btn:hover { opacity: 0.9; }
+    .btn:disabled { cursor: wait; opacity: 0.65; }
+    :focus-visible { outline: 3px solid var(--terracotta); outline-offset: 3px; }
     .btn-secondary {
       background: transparent;
       border: 1px solid var(--border);
@@ -480,9 +511,12 @@ ${structuredData}
     }
     .actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 12px;
       margin-top: 20px;
     }
+    [hidden] { display: none !important; }
+    .copy-status { margin-top: 12px; color: var(--text-muted); }
     pre {
       background: #1C2320;
       color: #FAF8F2;
@@ -492,25 +526,45 @@ ${structuredData}
       font-size: 0.82rem;
       max-height: 300px;
     }
+    @media (max-width: 600px) {
+      body { padding: 24px 16px; }
+      .grid-2 { grid-template-columns: minmax(0, 1fr); }
+      .badge-card, .data-card { padding: 16px; }
+      .actions .btn { flex: 1 1 180px; justify-content: center; }
+      .table-help { display: block; margin-bottom: 8px; }
+    }
+    @media print {
+      body { padding: 0; background: white; }
+      .actions, .copy-status, .table-help, noscript { display: none !important; }
+      .badge-card, .data-card { box-shadow: none; }
+      .table-scroll, pre { overflow: visible; }
+      table { min-width: 0; }
+      pre { max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <main class="container">
     <header>
       <div>
-        <div class="brand-title">NYMREL PROOF LEDGER</div>
+        <h1 class="brand-title">NYMREL PROOF LEDGER</h1>
         <div class="brand-sub">Cryptographic Attestation &amp; Audit Protocol</div>
       </div>
       <div>
-        <span class="btn btn-secondary" style="font-size: 0.8rem;">Publisher: Nymrel</span>
+        <span class="publisher">Publisher: Nymrel</span>
       </div>
     </header>
 
-    <div class="badge-card">
+    <section class="data-card" aria-labelledby="receipt-state-title">
+      <h2 id="receipt-state-title" class="section-title">${presentation.label}</h2>
+      <p class="presentation-note">This certificate presents receipt data and the supplied verification state. To verify the receipt, use the original JSON and a key from a trusted source with an independently configured algorithm. Task status is a reported outcome; copying or printing does not verify it.</p>
+    </section>
+
+    <div class="badge-card" role="img" aria-label="Receipt badge: ${presentation.label}">
       ${svgBadge}
     </div>
 
-    <div class="section-title">Execution Context</div>
+    <h2 class="section-title">Execution Context</h2>
     <div class="data-card">
       <div class="grid-2">
         <div>
@@ -544,18 +598,27 @@ ${structuredData}
       </div>
     </div>
 
-    <div class="section-title">Cryptographic Merkle Tree</div>
+    <h2 class="section-title">Cryptographic Merkle Tree</h2>
     <div class="data-card">
-      <div class="label">Merkle Root (SHA-256 Domain-Separated)</div>
-      <div class="value mono" style="margin-bottom: 16px; color: var(--terracotta);">${escapeXml(receipt.merkle.root)}</div>
+      <label class="label" for="merkle-root">Merkle Root (SHA-256 Domain-Separated)</label>
+      <textarea id="merkle-root" class="value mono root-value" rows="3" readonly spellcheck="false" aria-describedby="copy-status">${escapeXml(receipt.merkle.root)}</textarea>
+      <div id="certificate-actions" class="actions" hidden>
+        <button id="copy-root-button" class="btn" type="button">Copy Merkle Root</button>
+        <button id="print-certificate-button" class="btn btn-secondary" type="button">Print Certificate</button>
+      </div>
+      <p id="copy-status" class="copy-status" role="status" aria-live="polite" aria-atomic="true">You can also select and copy the Merkle root above.</p>
+      <noscript><p class="copy-status">Select the Merkle root to copy it. Use your browser’s Print command to print this certificate.</p></noscript>
       
-      <div class="label">Attested Artifacts (${receipt.artifacts.length})</div>
+      <h3 class="label" style="margin-top: 20px;">Attested Artifacts (${receipt.artifacts.length})</h3>
+      <p id="artifact-table-help" class="table-help">Scroll the table to see all artifact details.</p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Attested artifacts" aria-describedby="artifact-table-help">
       <table>
+        <caption>File paths, SHA-256 digests, and byte sizes recorded in this receipt.</caption>
         <thead>
           <tr>
-            <th>Path</th>
-            <th>SHA-256 Hash</th>
-            <th>Size</th>
+            <th scope="col">Path</th>
+            <th scope="col">SHA-256 Hash</th>
+            <th scope="col">Size</th>
           </tr>
         </thead>
         <tbody>
@@ -568,21 +631,43 @@ ${structuredData}
             <td>${a.sizeBytes} B</td>
           </tr>`,
             )
-            .join("")}
+            .join("") || '<tr><td colspan="3">No artifacts were recorded in this receipt.</td></tr>'}
         </tbody>
       </table>
+      </div>
     </div>
 
-    <div class="section-title">Raw Proof Receipt (JSON)</div>
+    <h2 class="section-title">Raw Proof Receipt (JSON)</h2>
     <div class="data-card">
-      <pre><code>${escapeXml(jsonStr)}</code></pre>
+      <pre tabindex="0" role="region" aria-label="Raw proof receipt JSON"><code>${escapeXml(jsonStr)}</code></pre>
     </div>
-
-    <div class="actions">
-      <button class="btn" onclick="navigator.clipboard.writeText('${escapeXml(receipt.merkle.root)}'); alert('Merkle Root copied to clipboard!');">Copy Merkle Root</button>
-      <button class="btn btn-secondary" onclick="window.print()">Print Certificate</button>
-    </div>
-  </div>
+  </main>
+  <script>
+    const actions = document.getElementById('certificate-actions');
+    const copyButton = document.getElementById('copy-root-button');
+    const printButton = document.getElementById('print-certificate-button');
+    const rootField = document.getElementById('merkle-root');
+    const copyStatus = document.getElementById('copy-status');
+    actions.hidden = false;
+    copyButton.addEventListener('click', async () => {
+      copyButton.disabled = true;
+      copyStatus.textContent = 'Copying Merkle root…';
+      try {
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+          throw new Error('Clipboard unavailable');
+        }
+        await navigator.clipboard.writeText(rootField.value);
+        copyStatus.textContent = 'Merkle root copied.';
+      } catch {
+        rootField.focus();
+        rootField.select();
+        copyStatus.textContent = 'Clipboard is unavailable. The Merkle root is selected; use your device’s Copy command.';
+      } finally {
+        copyButton.disabled = false;
+      }
+    });
+    printButton.addEventListener('click', () => window.print());
+  </script>
 </body>
 </html>`;
 }

@@ -4,12 +4,14 @@ CLI Driver for Python nymrel_proof_ledger package.
 
 import argparse
 import json
+import os
 import re
 import sys
 
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
 from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
+from .envelope import validate_receipt_envelope
 
 
 def _display_copy(value, markdown=False):
@@ -23,6 +25,42 @@ def _display_copy(value, markdown=False):
     if isinstance(value, list):
         return [_display_copy(item, markdown) for item in value]
     return value
+
+
+def _terminal_error_message(message):
+    """Bound terminal diagnostics only; verifier errors and JSON keep full detail."""
+    safe = _display_copy(message)
+    limit = 800
+    if len(safe) <= limit:
+        return safe
+    marker = ' … [details shortened; check the receipt or options and retry] … '
+    tail_length = 200
+    head_length = limit - len(marker) - tail_length
+    return safe[:head_length] + marker + safe[-tail_length:]
+
+
+def _invalid_receipt_input(message):
+    return {
+        'valid': False, 'trusted': False, 'merkleValid': False,
+        'signatureChecked': False, 'signatureValid': None, 'artifactsValid': False,
+        'checkedArtifacts': 0, 'receipt': None, 'errors': [message], 'warnings': [],
+    }
+
+
+def _read_receipt_for_verification(proof_path):
+    try:
+        with open(proof_path, 'rb') as file:
+            data = file.read()
+    except OSError:
+        return None, _invalid_receipt_input(
+            'Receipt file could not be read. Check the receipt path and read permissions, then retry.',
+        )
+    try:
+        return json.loads(data.decode('utf-8')), None
+    except (UnicodeError, ValueError, RecursionError):
+        return None, _invalid_receipt_input(
+            'Receipt file is not valid UTF-8 JSON. Supply a complete UTF-8 JSON receipt, then retry.',
+        )
 
 
 def _load_key_material(key_file, role, algorithm):
@@ -54,11 +92,34 @@ def _load_key_material(key_file, role, algorithm):
     return raw
 
 
-def main(argv=None):
+def _write_private_key_file(out_path, output):
+    """Create a new private key file without replacing files or following symlinks."""
+    descriptor = os.open(out_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as file:
+        if os.name == "posix":
+            os.fchmod(file.fileno(), 0o600)
+        file.write(output)
+
+
+def _read_receipt_for_presentation(proof_path):
+    with open(proof_path, 'r', encoding='utf-8') as proof_file:
+        receipt = json.load(proof_file)
+    validation = validate_receipt_envelope(receipt)
+    if not validation['valid']:
+        details = '; '.join(
+            f"{error.get('path') or '<root>'}: {error['message']}"
+            for error in validation['errors']
+        )
+        raise ValueError(f'Invalid proof receipt: {details}')
+    return receipt
+
+
+def _main(argv=None):
     parser = argparse.ArgumentParser(
         prog="proof-ledger-py",
         description="Nymrel Proof Ledger (Python Engine) - Cryptographic Attestation Protocol",
     )
+    parser.add_argument('--version', '-v', action='version', version='2.0.0')
     subparsers = parser.add_subparsers(dest="command", help="Sub-command help")
 
     # keygen
@@ -114,6 +175,10 @@ def main(argv=None):
         "--check-files", action="store_true", help="Verify disk file hashes"
     )
     verify_parser.add_argument(
+        '--require-trusted-v2', action='store_true',
+        help='Require authenticated protocol v2 verification; exit 1 if the policy fails',
+    )
+    verify_parser.add_argument(
         "--json", action="store_true", help="Output verification result as JSON"
     )
 
@@ -163,6 +228,9 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "keygen":
+        if args.out == "":
+            keygen_parser.error("--out must be a non-empty path")
+
         if args.algo == "Ed25519":
             kp = ProofSigner.generate_key_pair()
             out_str = json.dumps(kp, indent=2)
@@ -172,10 +240,16 @@ def main(argv=None):
                 {"algorithm": "HMAC-SHA256", "secretKey": sec}, indent=2
             )
 
-        if args.out:
-            with open(args.out, "w", encoding="utf-8") as f:
-                f.write(out_str)
-            print(f"Key saved to {args.out}")
+        if args.out is not None:
+            try:
+                _write_private_key_file(args.out, out_str)
+            except (OSError, ValueError) as error:
+                print(
+                    f"Error: Cannot create key file: {_display_copy(str(error))}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(f"Key saved to {_display_copy(args.out)}")
         else:
             print(out_str)
         sys.exit(0)
@@ -185,11 +259,7 @@ def main(argv=None):
         if not key and args.key_file:
             key = _load_key_material(args.key_file, "sign", args.algo)
         if not key:
-            key = ProofSigner.generate_secret_key()
-            print(
-                f"Warning: No key provided. Generated ephemeral key: {key}",
-                file=sys.stderr,
-            )
+            parser.error('Signing key required: supply --key or --key-file; generate one with keygen')
 
         file_list = []
         if args.files:
@@ -235,30 +305,41 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "verify":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt, result = _read_receipt_for_verification(args.proof)
+        if result is None:
+            key = args.key
+            key_file_invalid = False
+            if not key and args.key_file:
+                try:
+                    key = _load_key_material(args.key_file, "verify", args.algo)
+                except (OSError, ValueError, TypeError, RecursionError):
+                    key = ''
+                    key_file_invalid = True
 
-        key = args.key
-        key_file_invalid = False
-        if not key and args.key_file:
-            try:
-                key = _load_key_material(args.key_file, "verify", args.algo)
-            except (OSError, ValueError, TypeError, RecursionError):
-                key = ''
-                key_file_invalid = True
+            result = verify_receipt(
+                receipt,
+                public_key_or_secret=key,
+                expected_algorithm=args.algo,
+                check_files_on_disk=args.check_files,
+            )
+            if key_file_invalid:
+                result['errors'] = ['Invalid verification key file or algorithm context']
 
-        result = verify_receipt(
-            receipt,
-            public_key_or_secret=key,
-            expected_algorithm=args.algo,
-            check_files_on_disk=args.check_files,
-        )
-        if key_file_invalid:
-            result['errors'] = ['Invalid verification key file or algorithm context']
+        policy_errors = []
+        if not result['valid']:
+            policy_errors.append('Receipt verification failed')
+        if not result['trusted']:
+            policy_errors.append('Authenticated verification is required')
+        if result['receipt'] is None or result['receipt']['version'] != '2.0.0':
+            policy_errors.append('Receipt protocol v2 is required')
+        policy = {
+            'name': 'authenticated-v2', 'passed': not policy_errors, 'errors': policy_errors,
+        } if args.require_trusted_v2 else None
+        accepted = result['valid'] and (policy is None or policy['passed'])
 
         if args.json:
-            print(json.dumps(result, indent=2))
-            sys.exit(0 if result["valid"] else 1)
+            print(json.dumps(result if policy is None else {**result, 'policy': policy}, indent=2))
+            sys.exit(0 if accepted else 1)
 
         result = _display_copy(result)
         receipt = result['receipt']
@@ -292,19 +373,25 @@ def main(argv=None):
             for warning in result["warnings"]:
                 print(f"  * {warning}")
 
+        if policy is not None:
+            print(f"Policy: authenticated-v2 ({'PASSED' if policy['passed'] else 'FAILED'})")
+            for error in policy['errors']:
+                print(f'  * {error}')
+
         overall = (
-            "PASSED (TRUSTED)"
+            "FAILED (POLICY)"
+            if policy is not None and not policy['passed']
+            else "PASSED (TRUSTED)"
             if result["trusted"]
             else "PASSED (INTEGRITY ONLY)"
             if result["valid"]
             else "FAILED (UNVERIFIED)"
         )
         print(f"\nOverall: {overall}\n")
-        sys.exit(0 if result["valid"] else 1)
+        sys.exit(0 if accepted else 1)
 
     if args.command == "badge":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt = _read_receipt_for_presentation(args.proof)
 
         if args.format == "html":
             content = generate_html_certificate(receipt)
@@ -319,8 +406,7 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "inspect":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = _display_copy(json.load(f))
+        receipt = _display_copy(_read_receipt_for_presentation(args.proof))
 
         print("\n=== NYMREL PROOF LEDGER AUDIT INSPECTOR ===")
         print(f"Protocol:    {receipt.get('protocol')} v{receipt.get('version')}")
@@ -343,8 +429,7 @@ def main(argv=None):
         sys.exit(0)
 
     if args.command == "export":
-        with open(args.proof, "r", encoding="utf-8") as f:
-            receipt = json.load(f)
+        receipt = _read_receipt_for_presentation(args.proof)
 
         if args.format == "html":
             out_str = generate_html_certificate(receipt)
@@ -375,6 +460,14 @@ def main(argv=None):
         else:
             print(out_str)
         sys.exit(0)
+
+
+def main(argv=None):
+    try:
+        _main(argv)
+    except (OSError, ValueError, TypeError, RecursionError) as error:
+        print(f'Proof Ledger command failed: {_terminal_error_message(str(error))}', file=sys.stderr)
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

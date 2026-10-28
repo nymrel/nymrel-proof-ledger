@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { canonicalHash, type CanonicalizationProfile } from './canonical.js';
 import { RECEIPT_PROTOCOL, validateReceiptEnvelope } from './envelope.js';
 import { MerkleTree, type MerkleProfile } from './merkle.js';
-import { ProofSigner, type SignatureAlgorithm, type SignatureRecord } from './signer.js';
+import { ProofSigner, decodeSignatureAlgorithm, type SignatureAlgorithm, type SignatureRecord } from './signer.js';
 
 export const RECEIPT_VERSION = '2.0.0' as const;
 export const LEGACY_RECEIPT_VERSION = '1.0.0' as const;
@@ -166,22 +166,51 @@ export function getGitContext(cwd: string = process.cwd()): ProofGitContext | un
   }
 }
 
+const FILE_HASH_CHUNK_SIZE = 1024 * 1024;
+type FileHashState = { buffer?: Buffer };
+
+/** Reuse one bounded buffer across a manifest, without retaining artifact bytes. */
+async function hashFile(filePath: string, state: FileHashState): Promise<Pick<ProofArtifact, 'sha256' | 'sizeBytes'>> {
+  const file = await fs.open(filePath, 'r');
+  try {
+    const buffer = state.buffer ??= Buffer.allocUnsafe(FILE_HASH_CHUNK_SIZE);
+    const hash = createHash('sha256');
+    let sizeBytes = 0;
+    while (true) {
+      const { bytesRead } = await file.read(buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      hash.update(buffer.subarray(0, bytesRead));
+      sizeBytes += bytesRead;
+    }
+    return { sha256: hash.digest('hex'), sizeBytes };
+  } finally {
+    await file.close();
+  }
+}
+
+async function hashArtifactWithState(
+  artifactPath: string,
+  data: Buffer | string | undefined,
+  cwd: string,
+  state: FileHashState,
+): Promise<ProofArtifact> {
+  const resolved = path.isAbsolute(artifactPath) ? artifactPath : path.resolve(cwd, artifactPath);
+  const buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
+  const digest = buffer === undefined
+    ? await hashFile(resolved, state)
+    : { sha256: createHash('sha256').update(buffer).digest('hex'), sizeBytes: buffer.length };
+  return {
+    path: path.relative(cwd, resolved).replace(/\\/g, '/') || artifactPath,
+    ...digest,
+  };
+}
+
 export async function hashArtifact(
   artifactPath: string,
   data?: Buffer | string,
   cwd: string = process.cwd()
 ): Promise<ProofArtifact> {
-  const resolved = path.isAbsolute(artifactPath) ? artifactPath : path.resolve(cwd, artifactPath);
-  const buffer = data === undefined
-    ? await fs.readFile(resolved)
-    : typeof data === 'string'
-      ? Buffer.from(data, 'utf8')
-      : data;
-  return {
-    path: path.relative(cwd, resolved).replace(/\\/g, '/') || artifactPath,
-    sha256: createHash('sha256').update(buffer).digest('hex'),
-    sizeBytes: buffer.length,
-  };
+  return hashArtifactWithState(artifactPath, data, cwd, {});
 }
 
 function profilesFor(version: ProofReceipt['version']): {
@@ -246,8 +275,9 @@ export async function createReceipt(options: CreateReceiptOptions): Promise<Proo
   const proofId = `prf_${Date.now().toString(36)}_${randomBytes(6).toString('hex')}`;
   const timestamp = new Date().toISOString();
   const artifacts: ProofArtifact[] = [];
+  const fileHashState: FileHashState = {};
   for (const item of options.artifacts ?? []) {
-    const artifact = await hashArtifact(item.path, item.data, cwd);
+    const artifact = await hashArtifactWithState(item.path, item.data, cwd, fileHashState);
     artifacts.push(item.mimeType === undefined ? artifact : { ...artifact, mimeType: item.mimeType });
   }
 
@@ -315,6 +345,12 @@ export async function createReceipt(options: CreateReceiptOptions): Promise<Proo
   };
 }
 
+function stripTrailingAsciiSpaces(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 0x20) end--;
+  return value.slice(0, end);
+}
+
 async function artifactPathWithin(cwd: string, artifactPath: string): Promise<string | undefined> {
   // Reject network/drive paths and lexical escapes before any filesystem lookup.
   if (path.posix.isAbsolute(artifactPath) || path.win32.isAbsolute(artifactPath) || /^[A-Za-z]:/.test(artifactPath)) return undefined;
@@ -322,7 +358,7 @@ async function artifactPathWithin(cwd: string, artifactPath: string): Promise<st
   const portablePath = artifactPath.replace(/\\/g, '/');
   // Apply the same portable filename policy on every host, before realpath.
   if (portablePath.split('/').some(part => /[\u0000-\u001f<>:"|?*]/u.test(part) ||
-    /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])$/iu.test(part.split('.')[0].replace(/ +$/, '')) ||
+    /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])$/iu.test(stripTrailingAsciiSpaces(part.split('.')[0])) ||
     (part !== '.' && part !== '..' && /[. ]$/.test(part)))) return undefined;
   const lexicalRelative = path.relative(unresolvedRoot, path.resolve(unresolvedRoot, portablePath));
   if (lexicalRelative === '..' || lexicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(lexicalRelative)) return undefined;
@@ -330,7 +366,7 @@ async function artifactPathWithin(cwd: string, artifactPath: string): Promise<st
   const unresolvedCandidate = path.resolve(root, portablePath);
   const candidate = await fs.realpath(unresolvedCandidate).catch(() => unresolvedCandidate);
   const relative = path.relative(root, candidate);
-  if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) return candidate;
+  if (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) return candidate;
   return undefined;
 }
 
@@ -348,9 +384,10 @@ export async function verifyReceipt(
   }
   const hasKey = options.publicKeyOrSecret != null;
   const hasAlgorithm = options.expectedAlgorithm != null;
+  const expectedAlgorithm = decodeSignatureAlgorithm(options.expectedAlgorithm);
   if (hasKey !== hasAlgorithm || (hasKey && (
     typeof options.publicKeyOrSecret !== 'string' || options.publicKeyOrSecret.length === 0 ||
-    !['HMAC-SHA256', 'Ed25519'].includes(options.expectedAlgorithm as string)
+    expectedAlgorithm === undefined
   ))) {
     return invalidContext('A non-empty verification key and explicit expectedAlgorithm must be supplied together');
   }
@@ -373,7 +410,9 @@ export async function verifyReceipt(
   }
 
   const receipt = receiptInput as ProofReceipt;
-  if (hasKey && options.expectedAlgorithm !== receipt.signature.algorithm) {
+  const receiptAlgorithm = decodeSignatureAlgorithm(receipt.signature.algorithm);
+  if (receiptAlgorithm === undefined) return invalidContext('Unsupported receipt signature algorithm');
+  if (hasKey && expectedAlgorithm !== receiptAlgorithm) {
     return invalidContext('Receipt signature algorithm does not match expectedAlgorithm');
   }
   const errors: string[] = [];
@@ -415,7 +454,7 @@ export async function verifyReceipt(
       signingPayload(receipt, receipt.signature),
       receipt.signature.value,
       options.publicKeyOrSecret as string,
-      options.expectedAlgorithm as SignatureAlgorithm,
+      receiptAlgorithm,
       profiles.canonical
     );
     if (!signatureValid) errors.push('Cryptographic signature verification failed with provided key');
@@ -426,6 +465,7 @@ export async function verifyReceipt(
   let artifactsValid = options.checkFilesOnDisk !== true || errors.length === 0;
   let checkedArtifacts = 0;
   if (options.checkFilesOnDisk === true && errors.length === 0) {
+    const fileHashState: FileHashState = {};
     for (const artifact of receipt.artifacts) {
       const fullPath = await artifactPathWithin(cwd, artifact.path);
       if (fullPath === undefined) {
@@ -434,9 +474,8 @@ export async function verifyReceipt(
         continue;
       }
       try {
-        const fileData = await fs.readFile(fullPath);
+        const { sha256: actualHash } = await hashFile(fullPath, fileHashState);
         checkedArtifacts++;
-        const actualHash = createHash('sha256').update(fileData).digest('hex');
         if (actualHash !== artifact.sha256.toLowerCase()) {
           artifactsValid = false;
           errors.push(`Artifact tampered: '${artifact.path}' (hash mismatch)`);

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { ProofSigner } from '../../src/core/signer.js';
+import { ProofSigner, decodeSignatureAlgorithm } from '../../src/core/signer.js';
 
 interface SignerVectors {
   ed25519: {
@@ -17,6 +17,19 @@ const vectors = JSON.parse(
 ) as SignerVectors;
 
 describe('ProofSigner', () => {
+  it('accepts only canonical runtime algorithm literals before cryptographic dispatch', () => {
+    const payload = { task: 'runtime algorithm boundary' };
+    const secret = 'fixture-secret';
+    const signature = ProofSigner.signPayload(payload, secret, 'HMAC-SHA256');
+    assert.strictEqual(decodeSignatureAlgorithm('HMAC-SHA256'), 'HMAC-SHA256');
+    assert.strictEqual(decodeSignatureAlgorithm('Ed25519'), 'Ed25519');
+    for (const value of ['hmac-sha256', 'constructor', '', null, { toString: () => 'HMAC-SHA256' }]) {
+      assert.strictEqual(decodeSignatureAlgorithm(value), undefined);
+      assert.strictEqual(ProofSigner.verifySignature(payload, signature, secret, value as any), false);
+      assert.throws(() => ProofSigner.signPayload(payload, secret, value as any), /Unsupported signature algorithm/);
+    }
+    assert.strictEqual(ProofSigner.verifySignature(payload, signature, secret, 'HMAC-SHA256'), true);
+  });
   it('signs and verifies HMAC-SHA256 in constant-time-compatible form', () => {
     const secret = ProofSigner.generateSecretKey();
     const payload = { task: 'Verify Suite', root: 'abc123' };
