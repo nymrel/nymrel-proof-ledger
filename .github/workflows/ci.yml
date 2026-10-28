@@ -20,6 +20,192 @@ permissions:
   contents: read
 
 jobs:
+  artifact-benchmark:
+    name: Opt-in artifact benchmark
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.body, '<!-- proof-ledger-artifact-benchmark -->')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      BENCHMARK_BASELINE: 232849c4e833da992cbcdcc6fa4b7bd0f56cbde3
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Prepare evidence directory
+        run: |
+          benchmark_root="$RUNNER_TEMP/proof-ledger-artifact-benchmark"
+          mkdir -p "$benchmark_root/evidence"
+          printf 'BENCHMARK_ROOT=%s\n' "$benchmark_root" >> "$GITHUB_ENV"
+
+      - name: Check out source and baseline history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@18d369b23da25a81e9458561248e1aafff6a70fa  # v10.3.1
+        with:
+          enable-cache: false
+          version: 0.12.7
+
+      - name: Build both pinned sources and prepare one Python environment
+        run: |
+          git cat-file -e "$BENCHMARK_BASELINE^{commit}"
+          git worktree add --detach "$BENCHMARK_ROOT/baseline" "$BENCHMARK_BASELINE"
+          npm ci --ignore-scripts --no-audit --no-fund 2>&1 | tee "$BENCHMARK_ROOT/evidence/candidate-install.log"
+          npm run build 2>&1 | tee "$BENCHMARK_ROOT/evidence/candidate-build.log"
+          npm ci --prefix "$BENCHMARK_ROOT/baseline" --ignore-scripts --no-audit --no-fund 2>&1 | tee "$BENCHMARK_ROOT/evidence/baseline-install.log"
+          npm run build --prefix "$BENCHMARK_ROOT/baseline" 2>&1 | tee "$BENCHMARK_ROOT/evidence/baseline-build.log"
+          python_interpreter="$(command -v python)"
+          uv venv --python "$python_interpreter" "$BENCHMARK_ROOT/venv"
+          uv pip install --python "$BENCHMARK_ROOT/venv/bin/python" "cryptography>=50.0.1,<51" "rfc8785==0.1.4" 2>&1 | tee "$BENCHMARK_ROOT/evidence/python-install.log"
+          uv pip freeze --python "$BENCHMARK_ROOT/venv/bin/python" > "$BENCHMARK_ROOT/evidence/python-dependencies.txt"
+
+      - name: Measure all cases once and retain source-bound evidence
+        run: |
+          evidence="$BENCHMARK_ROOT/evidence"
+          snapshot() {
+            local phase="$1"
+            {
+              date -u +'%Y-%m-%dT%H:%M:%SZ'
+              uname -a
+              lscpu
+              for metadata_path in /sys/fs/cgroup/cpu.max /sys/fs/cgroup/cpu.stat /sys/fs/cgroup/cpuset.cpus.effective /sys/fs/cgroup/memory.max /sys/fs/cgroup/cpu.pressure /proc/pressure/cpu; do
+                printf '\n%s\n' "$metadata_path"
+                if [[ -r "$metadata_path" ]]; then cat "$metadata_path"; else printf 'unavailable\n'; fi
+              done
+            } > "$evidence/host-$phase.log" 2>&1
+            sha256sum src/core/*.ts dist/src/core/*.js python/nymrel_proof_ledger/*.py package.json package-lock.json pyproject.toml benchmarks/*.py benchmarks/*.mjs \
+              "$BENCHMARK_ROOT"/baseline/src/core/*.ts "$BENCHMARK_ROOT"/baseline/dist/src/core/*.js "$BENCHMARK_ROOT"/baseline/python/nymrel_proof_ledger/*.py \
+              "$BENCHMARK_ROOT/baseline/package.json" "$BENCHMARK_ROOT/baseline/package-lock.json" "$BENCHMARK_ROOT/baseline/pyproject.toml" \
+              > "$evidence/source-$phase.sha256"
+          }
+          finish() {
+            local status="$?"
+            snapshot after
+            if ! cmp -s "$evidence/source-before.sha256" "$evidence/source-after.sha256"; then
+              printf 'Source or harness changed during measurement.\n' > "$evidence/source-integrity.log"
+              exit 1
+            fi
+            exit "$status"
+          }
+          trap finish EXIT
+          {
+            candidate_checkout="$(git rev-parse HEAD)"
+            baseline_checkout="$(git -C "$BENCHMARK_ROOT/baseline" rev-parse HEAD)"
+            printf 'candidate_checkout=%s\n' "$candidate_checkout"
+            printf 'candidate_pr_head=%s\n' "$PR_HEAD_SHA"
+            printf 'baseline=%s\n' "$baseline_checkout"
+            printf 'workflow_run=%s attempt=%s job=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_JOB"
+            node --version
+            npm --version
+            "$BENCHMARK_ROOT/venv/bin/python" --version
+            uv --version
+            printf 'candidate_dirty_status:\n'
+            git status --porcelain=v1
+            printf 'baseline_dirty_status:\n'
+            git -C "$BENCHMARK_ROOT/baseline" status --porcelain=v1
+            printf 'Fresh workers; warm page cache; five paired samples per case; baseline runs first in each pair.\n'
+            printf 'This dedicated job runs no tests during timing; the VM is not claimed physically exclusive.\n'
+          } > "$evidence/metadata.txt" 2>&1
+          snapshot before
+          "$BENCHMARK_ROOT/venv/bin/python" benchmarks/artifact-benchmark.py \
+            --node-module dist/src/core/receipt.js --python-root python \
+            --baseline-node-module "$BENCHMARK_ROOT/baseline/dist/src/core/receipt.js" \
+            --baseline-python-root "$BENCHMARK_ROOT/baseline/python" \
+            --python "$BENCHMARK_ROOT/venv/bin/python" --runs 5 \
+            --work-dir "$BENCHMARK_ROOT/data" --output "$evidence/raw.json" \
+            2>&1 | tee "$evidence/benchmark.log"
+          printf 'BENCHMARK_TABLE_BEGIN\n'
+          "$BENCHMARK_ROOT/venv/bin/python" benchmarks/summarize-artifacts.py \
+            "$evidence/raw.json" "$evidence/summary.json" 2>&1 | tee "$evidence/summary.log"
+          printf 'BENCHMARK_TABLE_END\n'
+          sha256sum "$evidence/raw.json" "$evidence/summary.json" > "$evidence/result-checksums.sha256"
+
+      - name: Print compact source-bound results for review
+        if: always()
+        run: |
+          if [[ ! -f "$BENCHMARK_ROOT/evidence/summary.json" ]]; then
+            printf 'Benchmark incomplete; inspect retained partial evidence and setup logs.\n'
+            exit 0
+          fi
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["BENCHMARK_ROOT"])
+          evidence = root / "evidence"
+          summary = json.loads((evidence / "summary.json").read_text())
+
+          def host_observations(phase):
+              sections = {}
+              current = None
+              for line in (evidence / f"host-{phase}.log").read_text().splitlines():
+                  if line.startswith(("/sys/fs/cgroup/", "/proc/pressure/")):
+                      current = line
+                      sections[current] = []
+                  elif current is not None and line:
+                      sections[current].append(line)
+              return {name: "\n".join(lines) for name, lines in sections.items()}
+
+          sources = {"baseline": {}, "candidate": {}}
+          for line in (evidence / "source-before.sha256").read_text().splitlines():
+              digest, name = line.split(maxsplit=1)
+              prefix = str(root / "baseline") + "/"
+              variant = "baseline" if name.startswith(prefix) else "candidate"
+              sources[variant][name.removeprefix(prefix)] = digest
+          results = [{key: row[key] for key in (
+              "runtime", "case", "operation", "throughputChangePercent",
+              "incrementalPeakMemoryReductionPercent", "throughputTargetMet", "memoryTargetMet",
+          )} for row in summary["results"]]
+          report = {
+              "candidateCheckout": summary["sourceRevision"],
+              "candidatePrHead": os.environ["PR_HEAD_SHA"],
+              "baselineRevision": os.environ["BENCHMARK_BASELINE"],
+              "runtimes": summary["runtimes"], "host": summary["host"],
+              "pythonDependencies": (evidence / "python-dependencies.txt").read_text().splitlines(),
+              "buildMetadata": (evidence / "metadata.txt").read_text(),
+              "hostObservations": {phase: host_observations(phase) for phase in ("before", "after")},
+              "runsPerCase": summary["runsPerCase"], "variantOrder": summary["variantOrder"],
+              "cacheConditions": summary["cacheConditions"],
+              "sourceFilesUnchanged": (evidence / "source-before.sha256").read_bytes() == (evidence / "source-after.sha256").read_bytes(),
+              "sourceAndHarnessSha256": sources,
+              "throughputPasses": sum(row["throughputTargetMet"] for row in results),
+              "throughputComparisons": len(results),
+              "memoryPasses": sum(row["memoryTargetMet"] is True for row in results),
+              "memoryComparisons": sum(row["memoryTargetMet"] is not None for row in results),
+              "results": results,
+          }
+          encoded = json.dumps(report, separators=(",", ":"))
+          (evidence / "report.json").write_text(encoded + "\n")
+          print("BENCHMARK_RESULT_JSON_BEGIN")
+          print(encoded)
+          print("BENCHMARK_RESULT_JSON_END")
+          PY
+
+      - name: Retain benchmark evidence even after a failed measurement
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: artifact-benchmark-evidence
+          path: ${{ runner.temp }}/proof-ledger-artifact-benchmark/evidence
+          if-no-files-found: warn
+          retention-days: 90
+
   node:
     name: Node ${{ matrix.node-version }}
     if: github.event_name != 'schedule'
