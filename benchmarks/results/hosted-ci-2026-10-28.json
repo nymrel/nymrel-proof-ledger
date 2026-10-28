@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "evidence": {
+    "mode": "Live GitHub Actions job log report and provider job/artifact metadata",
+    "recordedAt": "2026-10-28T21:55:16.652592+00:00",
+    "runId": 40774966293,
+    "runUrl": "https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293",
+    "jobId": 123121759113,
+    "jobUrl": "https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293/job/123121759113",
+    "jobConclusion": "success",
+    "attempt": 1,
+    "pullRequest": "https://github.com/nymrel/nymrel-proof-ledger/pull/44",
+    "checkoutIncludesMain": "b8bbf4b8278cbcc4fe80c6ad3fbdb3350d017aa5",
+    "checkoutNote": "GitHub pull-request test merge includes concurrent checkpoint PR43; the measured checkout is distinct from the PR head.",
+    "decodedJobLogSha256": "1cb8282729a0ff8f90538f1d421e63399b4ad380357073fbcebfb8f2ee235501",
+    "parsedReportSha256": "ca33762f71d89e67edb61719e7bc5c5fb10e0f826bebdc34d99bc5f41492f82f",
+    "artifact": {
+      "id": 12855070119,
+      "name": "artifact-benchmark-evidence",
+      "url": "https://github.com/nymrel/nymrel-proof-ledger/actions/runs/40774966293/artifacts/12855070119",
+      "sizeInBytes": 29179,
+      "providerReportedDigest": "sha256:edde42066ea25534b9ede314082fa0fdbfad96cd754466e012339e31a3b9eee4",
+      "createdAt": "2026-10-28T21:49:41Z",
+      "expiresAt": "2027-01-26T21:48:27Z",
+      "expiredAtRead": false
+    },
+    "completeness": "Compact report and decoded log inspected; provider confirms successful artifact upload. Raw samples are retained in the artifact; its ZIP was not independently downloaded or rehashed in this read."
+  },
+  "assessment": {
+    "throughputCriterion": "No median throughput decrease greater than 10 percent in the same-host five-pair 24-comparison matrix.",
+    "memoryCriterion": "At least 75 percent lower median incremental peak RSS for each 1 GiB operation.",
+    "result": "Measured throughput and memory criteria passed for this exact checkout, runtime pair, VM and warm-page-cache fresh-process method.",
+    "limitations": [
+      "Node 24.22.1 and Python 3.13.17 differ from the earlier workspace versions; the changed outcome cannot be attributed solely to VM isolation.",
+      "A dedicated Actions job VM is not proof of exclusive physical hardware. cpu.max and memory.max were unavailable; pressure observations were present and nonzero.",
+      "This does not establish all-host or all-runtime-version guarantees, cold-cache behavior, individual-operation bounds, registry publication or independent adoption.",
+      "All earlier workspace misses and rejected experiments remain retained; this new-environment result does not retroactively repair or invalidate them."
+    ]
+  },
+  "report": {
+    "candidateCheckout": "65c8bd113c36cd8f813bfd0447010a771771eb16",
+    "candidatePrHead": "e5b62523bed7b48d7a92e9b8965cd6af56eb1211",
+    "baselineRevision": "232849c4e833da992cbcdcc6fa4b7bd0f56cbde3",
+    "runtimes": {
+      "node": "v24.22.1",
+      "python": "Python 3.13.17"
+    },
+    "host": {
+      "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.39",
+      "machine": "x86_64",
+      "cpuCount": 4,
+      "cpuModel": "AMD EPYC 9V45 96-Core Processor",
+      "memoryTotal": "MemTotal:       16367520 kB"
+    },
+    "pythonDependencies": [
+      "cffi==2.1.1",
+      "cryptography==50.0.2",
+      "pycparser==3.12",
+      "rfc8785==0.1.4"
+    ],
+    "buildMetadata": "candidate_checkout=65c8bd113c36cd8f813bfd0447010a771771eb16\ncandidate_pr_head=e5b62523bed7b48d7a92e9b8965cd6af56eb1211\nbaseline=232849c4e833da992cbcdcc6fa4b7bd0f56cbde3\nworkflow_run=40774966293 attempt=1 job=artifact-benchmark\nv24.22.1\n11.19.1\nPython 3.13.17\nuv 0.12.7 (x86_64-unknown-linux-gnu)\ncandidate_dirty_status:\nbaseline_dirty_status:\nFresh workers; warm page cache; five paired samples per case; baseline runs first in each pair.\nThis dedicated job runs no tests during timing; the VM is not claimed physically exclusive.\n",
+    "hostObservations": {
+      "before": {
+        "/sys/fs/cgroup/cpu.max": "unavailable",
+        "/sys/fs/cgroup/cpu.stat": "usage_usec 21161000\nuser_usec 12541000\nsystem_usec 8620000\nnice_usec 14000\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0",
+        "/sys/fs/cgroup/cpuset.cpus.effective": "0-3",
+        "/sys/fs/cgroup/memory.max": "unavailable",
+        "/sys/fs/cgroup/cpu.pressure": "some avg10=0.08 avg60=0.54 avg300=0.30 total=1370777\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+        "/proc/pressure/cpu": "some avg10=0.08 avg60=0.54 avg300=0.30 total=1370777\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0"
+      },
+      "after": {
+        "/sys/fs/cgroup/cpu.max": "unavailable",
+        "/sys/fs/cgroup/cpu.stat": "usage_usec 79898000\nuser_usec 51577000\nsystem_usec 28321000\nnice_usec 14000\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0",
+        "/sys/fs/cgroup/cpuset.cpus.effective": "0-3",
+        "/sys/fs/cgroup/memory.max": "unavailable",
+        "/sys/fs/cgroup/cpu.pressure": "some avg10=0.62 avg60=0.37 avg300=0.28 total=1703825\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0",
+        "/proc/pressure/cpu": "some avg10=0.62 avg60=0.37 avg300=0.28 total=1703825\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0"
+      }
+    },
+    "runsPerCase": 5,
+    "variantOrder": "Alternate baseline then candidate within each repetition",
+    "cacheConditions": "Warm page cache: sequentially read all artifact bytes immediately before every fresh-process worker; no cache drop. Generation and warming excluded from timings. Host may have concurrent activity.",
+    "sourceFilesUnchanged": true,
+    "sourceAndHarnessSha256": {
+      "baseline": {
+        "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+        "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+        "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+        "src/core/receipt.ts": "3485b6a2f9a06342290952496ab71c30f942c284ffbc4ea3bf5e15cce7860d23",
+        "src/core/signer.ts": "4b6ebb75ce2bb403182d3d0f17db094d69f70851498df8c2847e88f0a99919b5",
+        "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+        "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+        "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+        "dist/src/core/receipt.js": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+        "dist/src/core/signer.js": "a52cd4563dfa30bfa844dc3b3fedba4e1cbde141937cfe0523df1653ff72f291",
+        "python/nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+        "python/nymrel_proof_ledger/badge.py": "1b257c3b7f5bebe26da933de1636a58224fe044153867a796666cbfe55416de6",
+        "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+        "python/nymrel_proof_ledger/cli.py": "df5dceb362a9134fdd7bfa29b9ea5fc6841158cce798a4d03cc8b06380628bf8",
+        "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+        "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+        "python/nymrel_proof_ledger/qr.py": "50b55422edb6e62c8a1e6e130e566bb40ab86cd664e60a90f560834416eb46a0",
+        "python/nymrel_proof_ledger/receipt.py": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4",
+        "python/nymrel_proof_ledger/signal.py": "69ea149c3cc6ade68cd50b6357298c5eacfbd0dc8feafb76f62acff7d5b77de7",
+        "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+        "package.json": "4d3741d9fd76f23ca1c9fe359d152b4c724424909d0536e7c278ff8d11052820",
+        "package-lock.json": "b7a74b1dae1ea3bd7c96b5737fe1d205b189ece38c8ecf05c6e4e5107c1741e0",
+        "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f"
+      },
+      "candidate": {
+        "src/core/canonical.ts": "85651cf524a9f35edb66a03c5a81ef9d2e83002e82f63923de109bdd051c91a5",
+        "src/core/envelope.ts": "a5dfbf49749b34b8c3f049c0e0a0c4193d00313d9bee7514bc002f2fd3a6d690",
+        "src/core/merkle.ts": "e5a74dc38f7747ade44ff82a985ea8ced202115bb1e3bd3c12670f1e7e3ead89",
+        "src/core/receipt.ts": "5cf9567336c0a1ba3fa78becfc37d6cd3e56ebf4715dddf08b0e658f55a4c874",
+        "src/core/signer.ts": "9c38cbe6595b454acc203ecb63cdf0510ade51b1da311de7136b4bf13e3b9abb",
+        "dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+        "dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+        "dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+        "dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+        "dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+        "python/nymrel_proof_ledger/__init__.py": "e38165b68a57b0410ac54439afdd2f72a08b71b2b84b80673d68d33342c8a826",
+        "python/nymrel_proof_ledger/badge.py": "e7f201421c99de1561d56f43882c3939e65440c82ef9c76019713c9f77c162d2",
+        "python/nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+        "python/nymrel_proof_ledger/checkpoint.py": "036c5090a26afb0763d668dd2ae99b5f6057111f7c809ef7eaa612d2a9a1ba49",
+        "python/nymrel_proof_ledger/cli.py": "36ef9184739e3a095e83a1e47f7c7e96c8680318eb5d85d2fbfe546e13f6e0b5",
+        "python/nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+        "python/nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+        "python/nymrel_proof_ledger/qr.py": "8f668a67be402d64de0f8ab6b42590f3054e6015365f611cbd80e80c58dc3f27",
+        "python/nymrel_proof_ledger/receipt.py": "d38bd2654023c867a3e6ddd72852d612683426431ad072f5399820bf03ac69e5",
+        "python/nymrel_proof_ledger/signal.py": "af56a9f47ff624b27bbdaae0c9bd0696a8ad628f56282c26d9abd7c7ae0a376b",
+        "python/nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa",
+        "package.json": "a60ed3f8b1507e48cdeebf6f82bb298cdf12a578ff29313bb5ac817feacd1567",
+        "package-lock.json": "05fcad2348b5eb490a59d2c005b82ee6f5d9f08fc3b4eb72fec9ce3aff319f67",
+        "pyproject.toml": "c31befa1a77622f0a637db5b1a24baa7c2adc0daa3ad564597223cfc4b53d91f",
+        "benchmarks/artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3",
+        "benchmarks/artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+        "benchmarks/summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+        "benchmarks/warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+        "benchmarks/warmed-artifacts.py": "12f7dd2ffbe1c811e0f5d3ba3678ab9397cbda49b1ac1369b3edda53f232cf38",
+        "benchmarks/artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+        "benchmarks/warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb"
+      }
+    },
+    "throughputPasses": 24,
+    "throughputComparisons": 24,
+    "memoryPasses": 4,
+    "memoryComparisons": 4,
+    "results": [
+      {
+        "runtime": "node",
+        "case": "1MiB",
+        "operation": "create",
+        "throughputChangePercent": -1.1242264769419918,
+        "incrementalPeakMemoryReductionPercent": -2.821869488536155,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "1MiB",
+        "operation": "verify",
+        "throughputChangePercent": 3.2461363982410285,
+        "incrementalPeakMemoryReductionPercent": -11.250000000000004,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "1MiB",
+        "operation": "create",
+        "throughputChangePercent": 35.63821685318127,
+        "incrementalPeakMemoryReductionPercent": 100,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "1MiB",
+        "operation": "verify",
+        "throughputChangePercent": 39.22843092289223,
+        "incrementalPeakMemoryReductionPercent": 100,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "100MiB",
+        "operation": "create",
+        "throughputChangePercent": 65.36794107824268,
+        "incrementalPeakMemoryReductionPercent": 97.74938233477455,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "100MiB",
+        "operation": "verify",
+        "throughputChangePercent": 65.35435816143827,
+        "incrementalPeakMemoryReductionPercent": 98.6162935323383,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "100MiB",
+        "operation": "create",
+        "throughputChangePercent": 72.16304925350829,
+        "incrementalPeakMemoryReductionPercent": 100,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "100MiB",
+        "operation": "verify",
+        "throughputChangePercent": 72.08706922270697,
+        "incrementalPeakMemoryReductionPercent": 100,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "1024MiB",
+        "operation": "create",
+        "throughputChangePercent": 66.15500891308186,
+        "incrementalPeakMemoryReductionPercent": 99.62430031637868,
+        "throughputTargetMet": true,
+        "memoryTargetMet": true
+      },
+      {
+        "runtime": "node",
+        "case": "1024MiB",
+        "operation": "verify",
+        "throughputChangePercent": 61.6868072862546,
+        "incrementalPeakMemoryReductionPercent": 99.70771362024084,
+        "throughputTargetMet": true,
+        "memoryTargetMet": true
+      },
+      {
+        "runtime": "python",
+        "case": "1024MiB",
+        "operation": "create",
+        "throughputChangePercent": 73.36680599804899,
+        "incrementalPeakMemoryReductionPercent": 100,
+        "throughputTargetMet": true,
+        "memoryTargetMet": true
+      },
+      {
+        "runtime": "python",
+        "case": "1024MiB",
+        "operation": "verify",
+        "throughputChangePercent": 73.55569299554435,
+        "incrementalPeakMemoryReductionPercent": 100,
+        "throughputTargetMet": true,
+        "memoryTargetMet": true
+      },
+      {
+        "runtime": "node",
+        "case": "1-files",
+        "operation": "create",
+        "throughputChangePercent": -8.274242333717751,
+        "incrementalPeakMemoryReductionPercent": 8.139534883720934,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "1-files",
+        "operation": "verify",
+        "throughputChangePercent": -4.189312594167916,
+        "incrementalPeakMemoryReductionPercent": 5.882352941176472,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "1-files",
+        "operation": "create",
+        "throughputChangePercent": -2.248636943283866,
+        "incrementalPeakMemoryReductionPercent": null,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "1-files",
+        "operation": "verify",
+        "throughputChangePercent": -2.2279886953963435,
+        "incrementalPeakMemoryReductionPercent": null,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "100-files",
+        "operation": "create",
+        "throughputChangePercent": -0.6895961324375532,
+        "incrementalPeakMemoryReductionPercent": -5.900305188199395,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "100-files",
+        "operation": "verify",
+        "throughputChangePercent": 2.6553036243101236,
+        "incrementalPeakMemoryReductionPercent": -1.8227848101265876,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "100-files",
+        "operation": "create",
+        "throughputChangePercent": 7.113217990332932,
+        "incrementalPeakMemoryReductionPercent": -66.66666666666667,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "100-files",
+        "operation": "verify",
+        "throughputChangePercent": 3.202227312501793,
+        "incrementalPeakMemoryReductionPercent": null,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "1000-files",
+        "operation": "create",
+        "throughputChangePercent": -2.527983322532945,
+        "incrementalPeakMemoryReductionPercent": -1.039501039501034,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "node",
+        "case": "1000-files",
+        "operation": "verify",
+        "throughputChangePercent": 10.335608874439917,
+        "incrementalPeakMemoryReductionPercent": -1.7373872368860566,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "1000-files",
+        "operation": "create",
+        "throughputChangePercent": 11.365250933365601,
+        "incrementalPeakMemoryReductionPercent": 0,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      },
+      {
+        "runtime": "python",
+        "case": "1000-files",
+        "operation": "verify",
+        "throughputChangePercent": 1.9851548386789597,
+        "incrementalPeakMemoryReductionPercent": 13.28125,
+        "throughputTargetMet": true,
+        "memoryTargetMet": null
+      }
+    ]
+  }
+}
