@@ -52,3 +52,13 @@ unchanged throughout a comparison, and retain the original raw JSON. The goal's
 throughput decrease greater than 10% is material. These are measurement targets,
 not timing assertions in shared CI. Cold-cache behavior and concurrent file
 mutation are outside this benchmark.
+
+The warmed diagnostic uses persistent workers and five alternating paired
+batches. Its default cases remain Node 1 MiB, Python one 4 KiB file, and 1,000
+files in both runtimes. To investigate another manifest size, add
+`--case 100-files` to `warmed-artifacts.py`; explicitly selected cases run in
+both runtimes. Available selections are `1MiB`, `1-files`, `100-files`, and
+`1000-files`; repeat `--case` for multiple cases. Keep fresh-process and warmed
+results separate, retain every sample, and declare additional cases before
+running them. The warmed diagnostic does not replace the full fresh-process
+comparison or its RSS measurements.

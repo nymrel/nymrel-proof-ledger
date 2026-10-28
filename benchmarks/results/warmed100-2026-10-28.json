@@ -1,0 +1,421 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-28T20:50:51.946110+00:00",
+  "method": "Persistent workers, warm page cache and operation warmup/calibration; five paired batches with fixed shared iteration count. Alternate which variant runs first within each pair (3:2 per case, reversed for adjacent cases). Exactly one worker active at a time. Imports, setup, receipt loading, JSON, GC and telemetry excluded from timing; unavoidable automatic GC within a batch remains included. Initial calibration chooses a count targeting 1.5x requested batch duration in the faster variant. Every measured sample must reach 200ms; otherwise this diagnostic is incomplete, with samples retained. No sample or pair is discarded or repeated.",
+  "sourceRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+  "code": {
+    "baseline": {
+      "nodeModule": "/workspace/proof-ledger-results/performance/baseline/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/proof-ledger-results/performance/baseline/python",
+      "nodeCoreFilesSha256": {
+        "canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+        "envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+        "merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+        "receipt.js": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+        "signer.js": "a52cd4563dfa30bfa844dc3b3fedba4e1cbde141937cfe0523df1653ff72f291"
+      },
+      "pythonPackageFilesSha256": {
+        "nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+        "nymrel_proof_ledger/badge.py": "1b257c3b7f5bebe26da933de1636a58224fe044153867a796666cbfe55416de6",
+        "nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+        "nymrel_proof_ledger/cli.py": "df5dceb362a9134fdd7bfa29b9ea5fc6841158cce798a4d03cc8b06380628bf8",
+        "nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+        "nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+        "nymrel_proof_ledger/qr.py": "50b55422edb6e62c8a1e6e130e566bb40ab86cd664e60a90f560834416eb46a0",
+        "nymrel_proof_ledger/receipt.py": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4",
+        "nymrel_proof_ledger/signal.py": "69ea149c3cc6ade68cd50b6357298c5eacfbd0dc8feafb76f62acff7d5b77de7",
+        "nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa"
+      }
+    },
+    "candidate": {
+      "nodeModule": "/workspace/proof-ledger-lanes/performance/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/proof-ledger-lanes/performance/python",
+      "nodeCoreFilesSha256": {
+        "canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+        "envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+        "merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+        "receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+        "signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+      },
+      "pythonPackageFilesSha256": {
+        "nymrel_proof_ledger/__init__.py": "4232f424fa166c2749c6285e7bc5df566ba4b84c75669a4753bb846cf18a36ed",
+        "nymrel_proof_ledger/badge.py": "e7f201421c99de1561d56f43882c3939e65440c82ef9c76019713c9f77c162d2",
+        "nymrel_proof_ledger/canonical.py": "59b353b08b11946c607607f8a1502f7ce9801b925ebb7165fbcf8a9063d8662a",
+        "nymrel_proof_ledger/cli.py": "36ef9184739e3a095e83a1e47f7c7e96c8680318eb5d85d2fbfe546e13f6e0b5",
+        "nymrel_proof_ledger/envelope.py": "07aa7a1559c6b8b8bb4b0705d879f30a3c07d856be99648af2a8bb4a0bde3249",
+        "nymrel_proof_ledger/merkle.py": "111ae3293169c064eabe7195d1bda0a9b1ff2beeb579b3a37026d84db064e30f",
+        "nymrel_proof_ledger/qr.py": "8f668a67be402d64de0f8ab6b42590f3054e6015365f611cbd80e80c58dc3f27",
+        "nymrel_proof_ledger/receipt.py": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a",
+        "nymrel_proof_ledger/signal.py": "af56a9f47ff624b27bbdaae0c9bd0696a8ad628f56282c26d9abd7c7ae0a376b",
+        "nymrel_proof_ledger/signer.py": "7aeb41b906817632491ddd13a82e7dcdf2b483ec775e7ffc48835ccaa41335aa"
+      }
+    }
+  },
+  "workers": {
+    "node": {
+      "baseline": {
+        "ready": true,
+        "pid": 6239,
+        "runtime": "v24.19.0"
+      },
+      "candidate": {
+        "ready": true,
+        "pid": 6246,
+        "runtime": "v24.19.0"
+      }
+    },
+    "python": {
+      "baseline": {
+        "ready": true,
+        "pid": 6270,
+        "runtime": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+        "dependencies": {
+          "cryptography": "50.0.2",
+          "rfc8785": "0.1.4"
+        }
+      },
+      "candidate": {
+        "ready": true,
+        "pid": 6271,
+        "runtime": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+        "dependencies": {
+          "cryptography": "50.0.2",
+          "rfc8785": "0.1.4"
+        }
+      }
+    }
+  },
+  "workerScriptsSha256": {
+    "warmed-artifacts.py": "3e9394b972c12b268f474f94945e24e17e68bcc3607807e8e319b2eb8549b6ea",
+    "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb",
+    "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82"
+  },
+  "host": {
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "machine": "x86_64",
+    "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+    "cpuCount": 5,
+    "affinity": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "cgroupCpuMax": {
+      "value": "400000 100000",
+      "error": null
+    },
+    "cgroupCpuSetEffective": {
+      "value": "0-4",
+      "error": null
+    },
+    "before": {
+      "loadAverage": [
+        0.8095703125,
+        0.56787109375,
+        0.25341796875
+      ],
+      "cgroupCpuStat": {
+        "value": {
+          "usage_usec": 251247916,
+          "user_usec": 172709264,
+          "system_usec": 78538651,
+          "nice_usec": 0,
+          "nr_periods": 6105,
+          "nr_throttled": 28,
+          "throttled_usec": 1049633,
+          "nr_bursts": 0,
+          "burst_usec": 0
+        },
+        "error": null
+      },
+      "cgroupCpuPressure": {
+        "value": null,
+        "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+      },
+      "hostCpuPressure": {
+        "value": null,
+        "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+      }
+    },
+    "after": {
+      "loadAverage": [
+        1.0673828125,
+        0.6572265625,
+        0.29443359375
+      ],
+      "cgroupCpuStat": {
+        "value": {
+          "usage_usec": 280569132,
+          "user_usec": 191485561,
+          "system_usec": 89083571,
+          "nice_usec": 0,
+          "nr_periods": 6403,
+          "nr_throttled": 28,
+          "throttled_usec": 1049633,
+          "nr_bursts": 0,
+          "burst_usec": 0
+        },
+        "error": null
+      },
+      "cgroupCpuPressure": {
+        "value": null,
+        "error": "[Errno 2] No such file or directory: '/sys/fs/cgroup/cpu.pressure'"
+      },
+      "hostCpuPressure": {
+        "value": null,
+        "error": "[Errno 2] No such file or directory: '/proc/pressure/cpu'"
+      }
+    }
+  },
+  "limitations": "Shared host without exclusive CPU reservation. Cgroup CPU counters include sibling tasks and cannot attribute interference to a worker. Missing pressure telemetry is reported with null/error. Five samples leave variant-first order split 3:2. Each sample reports a batch mean per operation, not individual-operation percentiles. Long-lived RSS readings cannot replace the earlier fresh-process memory evidence. This warmed method investigates steady state and does not erase cold/fresh-process misses.",
+  "sourceFilesUnchanged": true,
+  "allMeasuredSamplesAtLeast200ms": true,
+  "rawEvidence": {
+    "path": "/workspace/proof-ledger-results/performance/warmed100-2026-10-28.json",
+    "sha256": "927090a0b33a56f7e5375d826bf64e0114674d6359473e697c98d44f3fadc329"
+  },
+  "results": [
+    {
+      "runtime": "node",
+      "case": "100-files",
+      "operation": "create",
+      "iterationsPerSample": 40,
+      "samplesPerVariant": 5,
+      "variantFirstCounts": {
+        "baseline": 3,
+        "candidate": 2
+      },
+      "median": {
+        "baseline": {
+          "elapsedSeconds": 0.691808913,
+          "iterations": 40,
+          "secondsPerOperation": 0.017295222825,
+          "cpuSeconds": 0.65551,
+          "voluntaryContextSwitches": 34021,
+          "involuntaryContextSwitches": 5972,
+          "rssBeforeBytes": 51040256,
+          "rssAfterBytes": 51036160,
+          "throughputMiBPerSecond": 22.585716527187905,
+          "cpuToWallRatio": 0.9475304346071645
+        },
+        "candidate": {
+          "elapsedSeconds": 0.5429542190000002,
+          "iterations": 40,
+          "secondsPerOperation": 0.013573855475000004,
+          "cpuSeconds": 0.534087,
+          "voluntaryContextSwitches": 33955,
+          "involuntaryContextSwitches": 4489,
+          "rssBeforeBytes": 54468608,
+          "rssAfterBytes": 55001088,
+          "throughputMiBPerSecond": 28.777748571100055,
+          "cpuToWallRatio": 0.9909155705492907
+        }
+      },
+      "throughputChangePercent": 27.415698928384202,
+      "pairedThroughputChangesPercent": [
+        2.6299932086166544,
+        10.756001945595962,
+        5.978900895540429,
+        78.25961087153821,
+        12.69238463339799
+      ],
+      "medianPairedThroughputChangePercent": 10.756001945595962,
+      "minimumSampleSeconds": 0.501563373,
+      "allSamplesAtLeast200ms": true,
+      "throughputTargetMet": true,
+      "cgroupCpuStatDeltas": {
+        "usage_usec": 6457837,
+        "user_usec": 3365441,
+        "system_usec": 3092396,
+        "nice_usec": 0,
+        "nr_periods": 66,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
+    },
+    {
+      "runtime": "node",
+      "case": "100-files",
+      "operation": "verify",
+      "iterationsPerSample": 31,
+      "samplesPerVariant": 5,
+      "variantFirstCounts": {
+        "baseline": 2,
+        "candidate": 3
+      },
+      "median": {
+        "baseline": {
+          "elapsedSeconds": 0.8775931540000019,
+          "iterations": 31,
+          "secondsPerOperation": 0.028309456580645223,
+          "cpuSeconds": 0.810972,
+          "voluntaryContextSwitches": 39638,
+          "involuntaryContextSwitches": 11206,
+          "rssBeforeBytes": 52817920,
+          "rssAfterBytes": 53288960,
+          "throughputMiBPerSecond": 13.798392734499355,
+          "cpuToWallRatio": 0.9628858157660585
+        },
+        "candidate": {
+          "elapsedSeconds": 0.7472802859999993,
+          "iterations": 31,
+          "secondsPerOperation": 0.02410581567741933,
+          "cpuSeconds": 0.732911,
+          "voluntaryContextSwitches": 38939,
+          "involuntaryContextSwitches": 8749,
+          "rssBeforeBytes": 56025088,
+          "rssAfterBytes": 56500224,
+          "throughputMiBPerSecond": 16.204595821493424,
+          "cpuToWallRatio": 0.9480255085729146
+        }
+      },
+      "throughputChangePercent": 17.4382852647611,
+      "pairedThroughputChangesPercent": [
+        -45.59732891076488,
+        -56.16886295614931,
+        129.9876140449931,
+        28.2948596307236,
+        46.81787433031066
+      ],
+      "medianPairedThroughputChangePercent": 28.2948596307236,
+      "minimumSampleSeconds": 0.5977427189999999,
+      "allSamplesAtLeast200ms": true,
+      "throughputTargetMet": true,
+      "cgroupCpuStatDeltas": {
+        "usage_usec": 8862210,
+        "user_usec": 4480431,
+        "system_usec": 4381779,
+        "nice_usec": 0,
+        "nr_periods": 94,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
+    },
+    {
+      "runtime": "python",
+      "case": "100-files",
+      "operation": "create",
+      "iterationsPerSample": 170,
+      "samplesPerVariant": 5,
+      "variantFirstCounts": {
+        "baseline": 3,
+        "candidate": 2
+      },
+      "median": {
+        "baseline": {
+          "elapsedSeconds": 0.47009205799986375,
+          "iterations": 170,
+          "secondsPerOperation": 0.0027652473999991985,
+          "cpuSeconds": 0.46957399999999977,
+          "voluntaryContextSwitches": 0,
+          "involuntaryContextSwitches": 1,
+          "rssBeforeBytes": 27045888,
+          "rssAfterBytes": 27045888,
+          "throughputMiBPerSecond": 141.2622248555819,
+          "cpuToWallRatio": 0.9999704860684018
+        },
+        "candidate": {
+          "elapsedSeconds": 0.4815921259996685,
+          "iterations": 170,
+          "secondsPerOperation": 0.0028328948588215793,
+          "cpuSeconds": 0.48157200000000006,
+          "voluntaryContextSwitches": 0,
+          "involuntaryContextSwitches": 1,
+          "rssBeforeBytes": 27922432,
+          "rssAfterBytes": 27926528,
+          "throughputMiBPerSecond": 137.8889861667832,
+          "cpuToWallRatio": 0.9999840258973687
+        }
+      },
+      "throughputChangePercent": -2.3879269155269833,
+      "pairedThroughputChangesPercent": [
+        4.415275726770385,
+        -0.2240665786245266,
+        -15.41693857852221,
+        4.27956038527022,
+        7.335998421117029
+      ],
+      "medianPairedThroughputChangePercent": 4.27956038527022,
+      "minimumSampleSeconds": 0.42180773800009774,
+      "allSamplesAtLeast200ms": true,
+      "throughputTargetMet": true,
+      "cgroupCpuStatDeltas": {
+        "usage_usec": 4781025,
+        "user_usec": 3900426,
+        "system_usec": 880599,
+        "nice_usec": 0,
+        "nr_periods": 48,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
+    },
+    {
+      "runtime": "python",
+      "case": "100-files",
+      "operation": "verify",
+      "iterationsPerSample": 96,
+      "samplesPerVariant": 5,
+      "variantFirstCounts": {
+        "baseline": 2,
+        "candidate": 3
+      },
+      "median": {
+        "baseline": {
+          "elapsedSeconds": 0.5338939120001669,
+          "iterations": 96,
+          "secondsPerOperation": 0.005561394916668405,
+          "cpuSeconds": 0.5338679999999999,
+          "voluntaryContextSwitches": 0,
+          "involuntaryContextSwitches": 1,
+          "rssBeforeBytes": 27078656,
+          "rssAfterBytes": 27078656,
+          "throughputMiBPerSecond": 70.23867318417423,
+          "cpuToWallRatio": 0.9999790964251318
+        },
+        "candidate": {
+          "elapsedSeconds": 0.5193764660002671,
+          "iterations": 96,
+          "secondsPerOperation": 0.005410171520836116,
+          "cpuSeconds": 0.5193760000000004,
+          "voluntaryContextSwitches": 0,
+          "involuntaryContextSwitches": 2,
+          "rssBeforeBytes": 27951104,
+          "rssAfterBytes": 27951104,
+          "throughputMiBPerSecond": 72.20196226600055,
+          "cpuToWallRatio": 0.9999567380124764
+        }
+      },
+      "throughputChangePercent": 2.795168235422585,
+      "pairedThroughputChangesPercent": [
+        -14.698339623124134,
+        3.594728346229048,
+        6.570358927242559,
+        8.726070896285144,
+        -8.228254862741025
+      ],
+      "medianPairedThroughputChangePercent": 3.594728346229048,
+      "minimumSampleSeconds": 0.4442357580001044,
+      "allSamplesAtLeast200ms": true,
+      "throughputTargetMet": true,
+      "cgroupCpuStatDeltas": {
+        "usage_usec": 5399670,
+        "user_usec": 4308804,
+        "system_usec": 1090866,
+        "nice_usec": 0,
+        "nr_periods": 54,
+        "nr_throttled": 0,
+        "throttled_usec": 0,
+        "nr_bursts": 0,
+        "burst_usec": 0
+      }
+    }
+  ]
+}

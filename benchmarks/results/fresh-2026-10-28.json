@@ -1,0 +1,592 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-28T20:47:54.954997+00:00",
+  "sourceRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+  "host": {
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "machine": "x86_64",
+    "cpuCount": 5,
+    "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+    "memoryTotal": "MemTotal:       18488496 kB"
+  },
+  "runtimes": {
+    "node": "v24.19.0",
+    "python": "Python 3.13.5"
+  },
+  "code": {
+    "baseline": {
+      "nodeModule": "/workspace/proof-ledger-results/performance/baseline/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/proof-ledger-results/performance/baseline/python",
+      "nodeModuleSha256": "c6b8ff4cf43575c27e62a738b7f9a9c99db0c6673d5525954fa6924b4e107627",
+      "pythonModuleSha256": "7640df0e4a1670d6bde90b014cacb14c7cda45982ede9e75c3bcb557330f77e4"
+    },
+    "candidate": {
+      "nodeModule": "/workspace/proof-ledger-lanes/performance/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/proof-ledger-lanes/performance/python",
+      "nodeModuleSha256": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+      "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+    }
+  },
+  "cacheConditions": "Warm page cache: sequentially read all artifact bytes immediately before every fresh-process worker; no cache drop. Generation and warming excluded from timings. Host may have concurrent activity.",
+  "measurement": "Fresh process per run and operation. Timed createReceipt/create_receipt or trusted verifyReceipt/verify_receipt with disk checks; import, fixture loading and GC excluded. Peak incremental RSS=max(0, process lifetime peak RSS minus current RSS after imports, receipt fixture loading and GC). Linux getrusage maxRSS; current RSS from Node memoryUsage or Python /proc. Manifests contain deterministic 4 KiB files.",
+  "runsPerCase": 5,
+  "variantOrder": "Alternate baseline then candidate within each repetition",
+  "rawEvidence": {
+    "path": "/workspace/proof-ledger-results/performance/fresh-2026-10-28.json",
+    "sha256": "ab4be6915792c933351cd27fbd417e8c3fc3ce1c9a7dd7c6d131cd48c3991d2b"
+  },
+  "results": [
+    {
+      "runtime": "node",
+      "case": "1MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.007834040000000002,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 36438016,
+        "peakIncrementBytes": 1966080,
+        "throughputMiBPerSecond": 127.64805898361506
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.008281062000000006,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 36306944,
+        "peakIncrementBytes": 1835008,
+        "throughputMiBPerSecond": 120.757458403282
+      },
+      "throughputChangePercent": -5.398124057035236,
+      "incrementalPeakMemoryReductionPercent": 6.666666666666665,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.007568804999999998,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 36306944,
+        "peakIncrementBytes": 1572864,
+        "throughputMiBPerSecond": 132.12125295869035
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.007054517000000004,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 36044800,
+        "peakIncrementBytes": 1703936,
+        "throughputMiBPerSecond": 141.75314908164506
+      },
+      "throughputChangePercent": 7.2901943534900315,
+      "incrementalPeakMemoryReductionPercent": -8.333333333333325,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "1MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.002538275999995676,
+        "idleRssBytes": 25042944,
+        "peakRssBytes": 25968640,
+        "peakIncrementBytes": 925696,
+        "throughputMiBPerSecond": 393.96818943318357
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.0018420289998175576,
+        "idleRssBytes": 24637440,
+        "peakRssBytes": 24690688,
+        "peakIncrementBytes": 53248,
+        "throughputMiBPerSecond": 542.8796181271002
+      },
+      "throughputChangePercent": 37.797830557883614,
+      "incrementalPeakMemoryReductionPercent": 94.24778761061947,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "1MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.0026595389999783947,
+        "idleRssBytes": 24588288,
+        "peakRssBytes": 25501696,
+        "peakIncrementBytes": 913408,
+        "throughputMiBPerSecond": 376.0050144059266
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.0022154409998620395,
+        "idleRssBytes": 24137728,
+        "peakRssBytes": 24129536,
+        "peakIncrementBytes": 0,
+        "throughputMiBPerSecond": 451.3774007352361
+      },
+      "throughputChangePercent": 20.0455800964237,
+      "incrementalPeakMemoryReductionPercent": 100.0,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "100MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.18330985199999997,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 140247040,
+        "peakIncrementBytes": 105775104,
+        "throughputMiBPerSecond": 545.5244162217753
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.105320374,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 36438016,
+        "peakIncrementBytes": 1966080,
+        "throughputMiBPerSecond": 949.4839051748905
+      },
+      "throughputChangePercent": 74.04975413399117,
+      "incrementalPeakMemoryReductionPercent": 98.14126394052045,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "100MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.194372254,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 140247040,
+        "peakIncrementBytes": 105512960,
+        "throughputMiBPerSecond": 514.4767215592407
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.103920525,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 36306944,
+        "peakIncrementBytes": 1835008,
+        "throughputMiBPerSecond": 962.2738145327884
+      },
+      "throughputChangePercent": 87.03933029591602,
+      "incrementalPeakMemoryReductionPercent": 98.26086956521739,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "100MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.1415399930001513,
+        "idleRssBytes": 24186880,
+        "peakRssBytes": 129024000,
+        "peakIncrementBytes": 104792064,
+        "throughputMiBPerSecond": 706.5140945703813
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.09429501500017068,
+        "idleRssBytes": 24379392,
+        "peakRssBytes": 24424448,
+        "peakIncrementBytes": 102400,
+        "throughputMiBPerSecond": 1060.5014485635215
+      },
+      "throughputChangePercent": 50.10336760633114,
+      "incrementalPeakMemoryReductionPercent": 99.90228267667291,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "100MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.14559186899987253,
+        "idleRssBytes": 24694784,
+        "peakRssBytes": 129482752,
+        "peakIncrementBytes": 104787968,
+        "throughputMiBPerSecond": 686.8515438873002
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.0955137900000409,
+        "idleRssBytes": 24248320,
+        "peakRssBytes": 24305664,
+        "peakIncrementBytes": 49152,
+        "throughputMiBPerSecond": 1046.9692386822592
+      },
+      "throughputChangePercent": 52.430208245123744,
+      "incrementalPeakMemoryReductionPercent": 99.95309385138569,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 1.933331487,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 1110704128,
+        "peakIncrementBytes": 1075970048,
+        "throughputMiBPerSecond": 529.6556782349658
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 1.050621216,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 37748736,
+        "peakIncrementBytes": 3276800,
+        "throughputMiBPerSecond": 974.6614521060653
+      },
+      "throughputChangePercent": 84.0179369650194,
+      "incrementalPeakMemoryReductionPercent": 99.6954562066025,
+      "throughputTargetMet": true,
+      "memoryTargetMet": true
+    },
+    {
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 1.589220363,
+        "idleRssBytes": 34865152,
+        "peakRssBytes": 1110573056,
+        "peakIncrementBytes": 1075707904,
+        "throughputMiBPerSecond": 644.3411019897686
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 1.112760859,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 37879808,
+        "peakIncrementBytes": 3276800,
+        "throughputMiBPerSecond": 920.2336618132252
+      },
+      "throughputChangePercent": 42.8177806710579,
+      "incrementalPeakMemoryReductionPercent": 99.69538199098331,
+      "throughputTargetMet": true,
+      "memoryTargetMet": true
+    },
+    {
+      "runtime": "python",
+      "case": "1024MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 1.3036570369999936,
+        "idleRssBytes": 24870912,
+        "peakRssBytes": 1098530816,
+        "peakIncrementBytes": 1073655808,
+        "throughputMiBPerSecond": 785.4826621857947
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.8520132859998739,
+        "idleRssBytes": 24223744,
+        "peakRssBytes": 24268800,
+        "peakIncrementBytes": 102400,
+        "throughputMiBPerSecond": 1201.8591926043646
+      },
+      "throughputChangePercent": 53.00900331267682,
+      "incrementalPeakMemoryReductionPercent": 99.99046249279918,
+      "throughputTargetMet": true,
+      "memoryTargetMet": true
+    },
+    {
+      "runtime": "python",
+      "case": "1024MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 1.1508940450003138,
+        "idleRssBytes": 24522752,
+        "peakRssBytes": 1098113024,
+        "peakIncrementBytes": 1073717248,
+        "throughputMiBPerSecond": 889.7430692672676
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.806200070000159,
+        "idleRssBytes": 24317952,
+        "peakRssBytes": 24346624,
+        "peakIncrementBytes": 0,
+        "throughputMiBPerSecond": 1270.1561784778783
+      },
+      "throughputChangePercent": 42.7553888701705,
+      "incrementalPeakMemoryReductionPercent": 100.0,
+      "throughputTargetMet": true,
+      "memoryTargetMet": true
+    },
+    {
+      "runtime": "node",
+      "case": "1-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.0038973490000000057,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 35389440,
+        "peakIncrementBytes": 786432,
+        "throughputMiBPerSecond": 1.0022838601315907
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.004013683999999997,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 35389440,
+        "peakIncrementBytes": 786432,
+        "throughputMiBPerSecond": 0.9732330696686642
+      },
+      "throughputChangePercent": -2.898459370493345,
+      "incrementalPeakMemoryReductionPercent": 0.0,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.006032088999999999,
+        "idleRssBytes": 34865152,
+        "peakRssBytes": 35258368,
+        "peakIncrementBytes": 393216,
+        "throughputMiBPerSecond": 0.6475783099354139
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.005838418000000004,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 35258368,
+        "peakIncrementBytes": 655360,
+        "throughputMiBPerSecond": 0.6690596665055495
+      },
+      "throughputChangePercent": 3.3171828395978986,
+      "incrementalPeakMemoryReductionPercent": -66.66666666666667,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "1-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.0012695989998974255,
+        "idleRssBytes": 24084480,
+        "peakRssBytes": 24064000,
+        "peakIncrementBytes": 0,
+        "throughputMiBPerSecond": 3.0767588823838055
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.0008285959997920145,
+        "idleRssBytes": 25415680,
+        "peakRssBytes": 25452544,
+        "peakIncrementBytes": 102400,
+        "throughputMiBPerSecond": 4.714299852980833
+      },
+      "throughputChangePercent": 53.22292169116276,
+      "incrementalPeakMemoryReductionPercent": null,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "1-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.0008738339997762523,
+        "idleRssBytes": 24748032,
+        "peakRssBytes": 24588288,
+        "peakIncrementBytes": 0,
+        "throughputMiBPerSecond": 4.470242633040379
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.0011351169996487442,
+        "idleRssBytes": 24678400,
+        "peakRssBytes": 24711168,
+        "peakIncrementBytes": 0,
+        "throughputMiBPerSecond": 3.441275217628463
+      },
+      "throughputChangePercent": -23.018155833569974,
+      "incrementalPeakMemoryReductionPercent": null,
+      "throughputTargetMet": false,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "100-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.03897252499999999,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 40476672,
+        "peakIncrementBytes": 5902336,
+        "throughputMiBPerSecond": 10.02308677715904
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.04406900300000001,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 40538112,
+        "peakIncrementBytes": 6074368,
+        "throughputMiBPerSecond": 8.863940035130813
+      },
+      "throughputChangePercent": -11.56476809788508,
+      "incrementalPeakMemoryReductionPercent": -2.9146426092991007,
+      "throughputTargetMet": false,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "100-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.04568068200000001,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 41811968,
+        "peakIncrementBytes": 6946816,
+        "throughputMiBPerSecond": 8.551207707450601
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.047621804,
+        "idleRssBytes": 34471936,
+        "peakRssBytes": 41041920,
+        "peakIncrementBytes": 6471680,
+        "throughputMiBPerSecond": 8.20265019779595
+      },
+      "throughputChangePercent": -4.076120257854976,
+      "incrementalPeakMemoryReductionPercent": 6.839622641509435,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "100-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.004366570000001957,
+        "idleRssBytes": 24686592,
+        "peakRssBytes": 24707072,
+        "peakIncrementBytes": 45056,
+        "throughputMiBPerSecond": 89.45808724005911
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.004147456000282546,
+        "idleRssBytes": 24694784,
+        "peakRssBytes": 24940544,
+        "peakIncrementBytes": 172032,
+        "throughputMiBPerSecond": 94.18424209283683
+      },
+      "throughputChangePercent": 5.2830940148487215,
+      "incrementalPeakMemoryReductionPercent": -281.8181818181818,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "100-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.00559482200014827,
+        "idleRssBytes": 24879104,
+        "peakRssBytes": 24883200,
+        "peakIncrementBytes": 4096,
+        "throughputMiBPerSecond": 69.81902194379875
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.006480602999999974,
+        "idleRssBytes": 24846336,
+        "peakRssBytes": 24903680,
+        "peakIncrementBytes": 118784,
+        "throughputMiBPerSecond": 60.27602678331038
+      },
+      "throughputChangePercent": -13.668187973429447,
+      "incrementalPeakMemoryReductionPercent": -2800.0,
+      "throughputTargetMet": false,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1000-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.204079729,
+        "idleRssBytes": 34865152,
+        "peakRssBytes": 44441600,
+        "peakIncrementBytes": 9662464,
+        "throughputMiBPerSecond": 19.140803543501374
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.175924,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 44433408,
+        "peakIncrementBytes": 9961472,
+        "throughputMiBPerSecond": 22.204190445874357
+      },
+      "throughputChangePercent": 16.004484322775745,
+      "incrementalPeakMemoryReductionPercent": -3.0945315811784724,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1000-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.28355667300000004,
+        "idleRssBytes": 35364864,
+        "peakRssBytes": 45965312,
+        "peakIncrementBytes": 10600448,
+        "throughputMiBPerSecond": 13.7759057428354
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.32887858,
+        "idleRssBytes": 35233792,
+        "peakRssBytes": 46313472,
+        "peakIncrementBytes": 11010048,
+        "throughputMiBPerSecond": 11.87748378140042
+      },
+      "throughputChangePercent": -13.780741512566719,
+      "incrementalPeakMemoryReductionPercent": -3.863987635239563,
+      "throughputTargetMet": false,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "1000-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.02354627199974857,
+        "idleRssBytes": 25038848,
+        "peakRssBytes": 26034176,
+        "peakIncrementBytes": 970752,
+        "throughputMiBPerSecond": 165.8967500265737
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.025613950999741064,
+        "idleRssBytes": 24158208,
+        "peakRssBytes": 25231360,
+        "peakIncrementBytes": 1105920,
+        "throughputMiBPerSecond": 152.50478147785515
+      },
+      "throughputChangePercent": -8.072471911941248,
+      "incrementalPeakMemoryReductionPercent": -13.924050632911399,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "python",
+      "case": "1000-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.050801350999790884,
+        "idleRssBytes": 25477120,
+        "peakRssBytes": 25960448,
+        "peakIncrementBytes": 483328,
+        "throughputMiBPerSecond": 76.89264011927713
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.05271001000028264,
+        "idleRssBytes": 24989696,
+        "peakRssBytes": 25530368,
+        "peakIncrementBytes": 540672,
+        "throughputMiBPerSecond": 74.10831453037201
+      },
+      "throughputChangePercent": -3.6210560394155156,
+      "incrementalPeakMemoryReductionPercent": -11.864406779661007,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    }
+  ]
+}

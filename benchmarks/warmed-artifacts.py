@@ -30,6 +30,8 @@ parser.add_argument("--work-dir", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--summary", type=Path)
 parser.add_argument("--target-ms", type=float, default=400)
+parser.add_argument("--case", action="append", choices=("1MiB", "1-files", "100-files", "1000-files"),
+                    help="Measure selected cases in both runtimes; omit to retain the original diagnostic cases")
 args = parser.parse_args()
 if sys.platform != "linux":
     parser.error("Linux is required for contention telemetry")
@@ -148,6 +150,13 @@ cases = {
 }
 for runtime_cases in cases.values():
     runtime_cases.append(("1000-files", [f"small/{index:04d}.bin" for index in range(1000)], 4096 * 1000))
+if args.case:
+    selected = {
+        "1MiB": ("1MiB", ["artifact-1MiB.bin"], 1024 * 1024),
+        **{f"{count}-files": (f"{count}-files", [f"small/{index:04d}.bin" for index in range(count)], 4096 * count)
+           for count in (1, 100, 1000)},
+    }
+    cases = {runtime: [selected[name] for name in args.case] for runtime in cases}
 for runtime_cases in cases.values():
     for _, paths, size in runtime_cases:
         if sum((args.work_dir / path).stat().st_size for path in paths) != size:
