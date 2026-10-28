@@ -67,3 +67,40 @@ Use `--runtime node` or `--runtime python` to restrict the warmed diagnostic to
 one runtime. Omitting `--runtime` preserves the original two-runtime behavior;
 repeat it to select both explicitly. This supports sequential quiet windows
 without maintaining another copy of the harness.
+
+## Opt in to a fresh CI job
+
+Include this literal marker in a pull request's body before opening it or
+pushing the candidate commit:
+
+```text
+<!-- proof-ledger-artifact-benchmark -->
+```
+
+The existing CI workflow then adds one bounded `Opt-in artifact benchmark` job;
+ordinary checks and triggers remain unchanged. Editing the body alone does not
+start another run. The body is used only in a boolean marker check and is never
+inserted into a command. No new schedule, secret, publication, or timing-based
+pass/fail gate is created.
+
+The job builds its checked-out candidate and fixed baseline
+`232849c4e833da992cbcdcc6fa4b7bd0f56cbde3` with locked npm dependencies and
+disabled lifecycle scripts, then measures all 24 fresh-process comparisons with
+five paired samples on the same Node 24/Python 3.13 job VM. Both variants share
+one bounded Python dependency environment. Each pair runs baseline first, as
+in the existing harness. The job runs no other tests while measuring. A fresh
+Actions VM removes this workspace's concurrent workloads; it does not establish
+exclusive physical hardware or eliminate every source of measurement noise.
+
+Download `artifact-benchmark-evidence` from that CI run within 90 days. It retains
+raw samples, compact medians, exact checked-out and PR-head identities,
+before/after transitive source and harness checksums, runtime/dependency
+versions, host/cgroup observations, and logs. Partial evidence is uploaded after
+failure; a setup failure can leave only setup logs. The 1 GiB fixtures, baseline
+checkout, and virtual environment stay outside the uploaded evidence directory.
+The ordinary job log also prints the median Markdown table between
+`BENCHMARK_TABLE_BEGIN` / `BENCHMARK_TABLE_END` and a compact source-bound JSON
+report between `BENCHMARK_RESULT_JSON_BEGIN` / `BENCHMARK_RESULT_JSON_END`, so
+agents can review the measured results without downloading a binary archive.
+Throughput misses remain recorded observations. Do not rerun unchanged work
+until it passes; retain an unfavorable result and investigate its cause.
