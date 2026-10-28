@@ -1,0 +1,390 @@
+{
+  "status": "design-draft-no-checkpoint-verifier-implemented",
+  "sourceRevision": "a4faccb082ec17233df700f3deb392a31d076374",
+  "evidenceMode": {
+    "cryptographicVectors": "existing-create_receipt-and-canonical_hash-APIs",
+    "policyAndSourceCases": "proposed-contract-examples-not-executed-profile-results"
+  },
+  "testKeyReference": "protocol-v2-vectors.json#/ed25519 (public RFC 8032 vector 1)",
+  "publicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+  "wrongPublicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+  "checkpoint": {
+    "schema": "nymrel.checkpoint",
+    "version": "0.1.0",
+    "sourceProtocol": "checkpoint-fixture-source",
+    "sourceVersion": "1.0.0",
+    "sourceId": "synthetic-ledger-1",
+    "highestSequence": 2,
+    "eventCount": 3,
+    "chainHeadOrStateHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538",
+    "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+    "checkpointId": "fixture-checkpoint-3",
+    "signerIdentity": "fixture-signer",
+    "keyId": "rfc8032-test-key"
+  },
+  "checkpointCanonical": "{\"chainHeadOrStateHash\":\"sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538\",\"checkpointId\":\"fixture-checkpoint-3\",\"eventCount\":3,\"highestSequence\":2,\"keyId\":\"rfc8032-test-key\",\"schema\":\"nymrel.checkpoint\",\"signerIdentity\":\"fixture-signer\",\"sourceEpochDigest\":\"sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3\",\"sourceId\":\"synthetic-ledger-1\",\"sourceProtocol\":\"checkpoint-fixture-source\",\"sourceVersion\":\"1.0.0\",\"version\":\"0.1.0\"}",
+  "checkpointDigest": "sha256:f6a3e74d79a639c949acaa82143ef9cb59e89ef310f8e92c26952fc646263d96",
+  "receipt": {
+    "protocol": "nymrel-proof-ledger",
+    "version": "2.0.0",
+    "proofId": "prf_6ae26065_e040e7747ce1",
+    "timestamp": "2026-10-28T20:51:49.706040Z",
+    "parentOrganization": "Nymrel",
+    "task": {
+      "name": "Retain external checkpoint",
+      "runner": "checkpoint-fixture-generator",
+      "status": "ATTESTED",
+      "exitCode": 0
+    },
+    "merkle": {
+      "algorithm": "RFC6962-SHA256",
+      "leaves": [
+        "3d746003911998b4e4855765624992b14a8101442bc2f1b5c04e60af5ca85564",
+        "2a6b03da4ebdac1aade4f7cd31967a123cc2ee5642e2a2e0b5a5ea344fcfaee4",
+        "b79c780ae3b423ded90b6d1d5958d129eae223fe6b054f3476bcde517c5096bd"
+      ],
+      "root": "c1e9dce97d480f41dbdba4bac9995e455dd6a961f88308dc4befb5821d205166"
+    },
+    "metadata": {},
+    "environment": {
+      "platform": "linux",
+      "arch": "x86_64",
+      "runtime": "python 3.13.5"
+    },
+    "artifacts": [
+      {
+        "path": "checkpoint.json",
+        "sha256": "f6a3e74d79a639c949acaa82143ef9cb59e89ef310f8e92c26952fc646263d96",
+        "sizeBytes": 474,
+        "mimeType": "application/json"
+      }
+    ],
+    "signature": {
+      "algorithm": "Ed25519",
+      "keyId": "rfc8032-test-key",
+      "signerIdentity": "fixture-signer",
+      "timestamp": "2026-10-28T20:51:49.706749Z",
+      "value": "123bb435b25fa406749b3a0d522ff584e59ae6cdcf28e6fdfc9b225f3ab290b4a0e43bf8cea94cc9acaa004c1dca0d96c4a0c8792fd13ebce7ad426de8ac4d0b"
+    }
+  },
+  "trustBundles": [
+    {
+      "name": "active",
+      "bundle": {
+        "schema": "nymrel.checkpoint-trust-bundle",
+        "version": "0.1.0",
+        "bundleId": "synthetic-operator-bundle",
+        "revision": 1,
+        "keys": [
+          {
+            "signerIdentity": "fixture-signer",
+            "keyId": "rfc8032-test-key",
+            "algorithm": "Ed25519",
+            "publicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "state": "ACTIVE",
+            "historicalCheckpointDigests": []
+          }
+        ]
+      },
+      "canonical": "{\"bundleId\":\"synthetic-operator-bundle\",\"keys\":[{\"algorithm\":\"Ed25519\",\"historicalCheckpointDigests\":[],\"keyId\":\"rfc8032-test-key\",\"publicKey\":\"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a\",\"signerIdentity\":\"fixture-signer\",\"state\":\"ACTIVE\"}],\"revision\":1,\"schema\":\"nymrel.checkpoint-trust-bundle\",\"version\":\"0.1.0\"}",
+      "digest": "sha256:69464457921d2b56ec2b6a520be09b550f7338e7a5a5bd0d410e58fda585f060"
+    },
+    {
+      "name": "superseded-admitted",
+      "bundle": {
+        "schema": "nymrel.checkpoint-trust-bundle",
+        "version": "0.1.0",
+        "bundleId": "synthetic-operator-bundle",
+        "revision": 1,
+        "keys": [
+          {
+            "signerIdentity": "fixture-signer",
+            "keyId": "rfc8032-test-key",
+            "algorithm": "Ed25519",
+            "publicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "state": "SUPERSEDED",
+            "historicalCheckpointDigests": [
+              "sha256:f6a3e74d79a639c949acaa82143ef9cb59e89ef310f8e92c26952fc646263d96"
+            ]
+          }
+        ]
+      },
+      "canonical": "{\"bundleId\":\"synthetic-operator-bundle\",\"keys\":[{\"algorithm\":\"Ed25519\",\"historicalCheckpointDigests\":[\"sha256:f6a3e74d79a639c949acaa82143ef9cb59e89ef310f8e92c26952fc646263d96\"],\"keyId\":\"rfc8032-test-key\",\"publicKey\":\"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a\",\"signerIdentity\":\"fixture-signer\",\"state\":\"SUPERSEDED\"}],\"revision\":1,\"schema\":\"nymrel.checkpoint-trust-bundle\",\"version\":\"0.1.0\"}",
+      "digest": "sha256:6b57f1ecfa5cd63ef32196306ecc9d174ce3e261816d1710d7ec0d5de0b06f1e"
+    },
+    {
+      "name": "superseded-unadmitted",
+      "bundle": {
+        "schema": "nymrel.checkpoint-trust-bundle",
+        "version": "0.1.0",
+        "bundleId": "synthetic-operator-bundle",
+        "revision": 1,
+        "keys": [
+          {
+            "signerIdentity": "fixture-signer",
+            "keyId": "rfc8032-test-key",
+            "algorithm": "Ed25519",
+            "publicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "state": "SUPERSEDED",
+            "historicalCheckpointDigests": []
+          }
+        ]
+      },
+      "canonical": "{\"bundleId\":\"synthetic-operator-bundle\",\"keys\":[{\"algorithm\":\"Ed25519\",\"historicalCheckpointDigests\":[],\"keyId\":\"rfc8032-test-key\",\"publicKey\":\"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a\",\"signerIdentity\":\"fixture-signer\",\"state\":\"SUPERSEDED\"}],\"revision\":1,\"schema\":\"nymrel.checkpoint-trust-bundle\",\"version\":\"0.1.0\"}",
+      "digest": "sha256:4f536d49060599e0e1c49e4d17b320453f20d26ddbe0663c176e5a4ba30aa6d8"
+    },
+    {
+      "name": "revoked-retroactive",
+      "bundle": {
+        "schema": "nymrel.checkpoint-trust-bundle",
+        "version": "0.1.0",
+        "bundleId": "synthetic-operator-bundle",
+        "revision": 1,
+        "keys": [
+          {
+            "signerIdentity": "fixture-signer",
+            "keyId": "rfc8032-test-key",
+            "algorithm": "Ed25519",
+            "publicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "state": "REVOKED",
+            "historicalCheckpointDigests": []
+          }
+        ]
+      },
+      "canonical": "{\"bundleId\":\"synthetic-operator-bundle\",\"keys\":[{\"algorithm\":\"Ed25519\",\"historicalCheckpointDigests\":[],\"keyId\":\"rfc8032-test-key\",\"publicKey\":\"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a\",\"signerIdentity\":\"fixture-signer\",\"state\":\"REVOKED\"}],\"revision\":1,\"schema\":\"nymrel.checkpoint-trust-bundle\",\"version\":\"0.1.0\"}",
+      "digest": "sha256:953a905e647ff539fb2ce60a1e7b7bab46e95fb87f52a016d1d88f01e71a9f0e"
+    },
+    {
+      "name": "unknown-key",
+      "bundle": {
+        "schema": "nymrel.checkpoint-trust-bundle",
+        "version": "0.1.0",
+        "bundleId": "synthetic-operator-bundle",
+        "revision": 1,
+        "keys": [
+          {
+            "signerIdentity": "fixture-signer",
+            "keyId": "unrelated-key-id",
+            "algorithm": "Ed25519",
+            "publicKey": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            "state": "ACTIVE",
+            "historicalCheckpointDigests": []
+          }
+        ]
+      },
+      "canonical": "{\"bundleId\":\"synthetic-operator-bundle\",\"keys\":[{\"algorithm\":\"Ed25519\",\"historicalCheckpointDigests\":[],\"keyId\":\"unrelated-key-id\",\"publicKey\":\"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a\",\"signerIdentity\":\"fixture-signer\",\"state\":\"ACTIVE\"}],\"revision\":1,\"schema\":\"nymrel.checkpoint-trust-bundle\",\"version\":\"0.1.0\"}",
+      "digest": "sha256:e60d41453f7286a952b5eabd332ea58474795a0abe1492551edeb74c404b83fd"
+    }
+  ],
+  "proposedKeyPolicyCases": [
+    {
+      "bundle": "active",
+      "expectedKeyPolicy": "ACTIVE"
+    },
+    {
+      "bundle": "superseded-admitted",
+      "expectedKeyPolicy": "HISTORICAL_SUPERSEDED_ALLOWED"
+    },
+    {
+      "bundle": "superseded-unadmitted",
+      "expectedKeyPolicy": "SUPERSEDED_NOT_ADMITTED"
+    },
+    {
+      "bundle": "revoked-retroactive",
+      "expectedKeyPolicy": "REVOKED_KEY"
+    },
+    {
+      "bundle": "unknown-key",
+      "expectedKeyPolicy": "UNKNOWN_KEY"
+    }
+  ],
+  "proposedSourceCases": [
+    {
+      "name": "exact-covered-prefix",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 3,
+        "checkpointPrefixHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538"
+      },
+      "expectedSourceComparison": "CHECKPOINT_MATCH",
+      "expectedUncheckpointedSuffixCount": 0,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "valid-extension",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 4,
+        "checkpointPrefixHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538"
+      },
+      "expectedSourceComparison": "CHECKPOINT_PREFIX_MATCH",
+      "expectedUncheckpointedSuffixCount": 1,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "covered-event-truncated",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 2,
+        "checkpointPrefixHash": null
+      },
+      "expectedSourceComparison": "TRUNCATED_RELATIVE_TO_CHECKPOINT",
+      "expectedUncheckpointedSuffixCount": null,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "shorter-valid-replacement",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 1,
+        "checkpointPrefixHash": null
+      },
+      "expectedSourceComparison": "TRUNCATED_RELATIVE_TO_CHECKPOINT",
+      "expectedUncheckpointedSuffixCount": null,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "same-length-fork",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 3,
+        "checkpointPrefixHash": "sha256:f3bcc53316534ed6aa0cc9723f859570db02c8cacc5b5be0f9b7f666b9af8ea9"
+      },
+      "expectedSourceComparison": "STATE_MISMATCH",
+      "expectedUncheckpointedSuffixCount": null,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "different-epoch",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:fab9bd70542918e8aa0f8617e69c0c2bfc66b0322a66243930db93649c864ad0",
+        "validEventCount": 3,
+        "checkpointPrefixHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538"
+      },
+      "expectedSourceComparison": "SOURCE_EPOCH_MISMATCH",
+      "expectedUncheckpointedSuffixCount": null,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "different-source",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-2",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 3,
+        "checkpointPrefixHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538"
+      },
+      "expectedSourceComparison": "SOURCE_IDENTITY_MISMATCH",
+      "expectedUncheckpointedSuffixCount": null,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "unavailable-prefix-proof",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 3,
+        "checkpointPrefixHash": null
+      },
+      "expectedSourceComparison": "SOURCE_UNAVAILABLE",
+      "expectedUncheckpointedSuffixCount": null,
+      "illustratesUndetectableUncheckpointedTailDeletion": false
+    },
+    {
+      "name": "uncheckpointed-fourth-event-deleted",
+      "observation": {
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "validEventCount": 3,
+        "checkpointPrefixHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538"
+      },
+      "expectedSourceComparison": "CHECKPOINT_MATCH",
+      "expectedUncheckpointedSuffixCount": 0,
+      "illustratesUndetectableUncheckpointedTailDeletion": true
+    }
+  ],
+  "proposedAdmissionCases": [
+    {
+      "name": "boolean-count",
+      "change": {
+        "eventCount": true
+      },
+      "expected": "MALFORMED_PROFILE"
+    },
+    {
+      "name": "count-sequence-mismatch",
+      "change": {
+        "highestSequence": 1
+      },
+      "expected": "MALFORMED_PROFILE"
+    },
+    {
+      "name": "negative-count",
+      "change": {
+        "eventCount": -1
+      },
+      "expected": "MALFORMED_PROFILE"
+    },
+    {
+      "name": "unsupported-checkpoint-version",
+      "change": {
+        "version": "0.2.0"
+      },
+      "expected": "UNSUPPORTED_VERSION"
+    },
+    {
+      "name": "old-signed-checkpoint-substitution",
+      "change": {
+        "checkpointId": "older-checkpoint"
+      },
+      "expected": "CHECKPOINT_PIN_MISMATCH"
+    },
+    {
+      "name": "bundle-policy-tamper",
+      "target": "active",
+      "change": {
+        "revision": 999
+      },
+      "expected": "TRUST_BUNDLE_PIN_MISMATCH"
+    },
+    {
+      "name": "self-supplied-bundle-pin",
+      "expected": "TRUST_INPUT_UNAVAILABLE"
+    },
+    {
+      "name": "superseded-signs-new-content-with-old-timestamp",
+      "expected": "SUPERSEDED_NOT_ADMITTED"
+    },
+    {
+      "name": "receipt-artifact-changed-with-signed-root-retained",
+      "expected": "RECEIPT_INTEGRITY_FAILURE"
+    },
+    {
+      "name": "receipt-task-or-metadata-outside-profile",
+      "expected": "RECEIPT_PROFILE_MISMATCH"
+    }
+  ]
+}
