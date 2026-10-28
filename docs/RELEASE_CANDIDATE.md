@@ -71,6 +71,92 @@ original provenance when retrying a failed registry job; if those bytes are
 unavailable, establish a new reviewed release rather than claiming a rebuild
 is the original artifact.
 
+## Restore publication prerequisites
+
+Official documentation was read on October 28, 2026. The values below come from
+this repository's existing release workflow; they are configuration inputs, not
+evidence that either registry account has a matching publisher already saved.
+
+| Publisher field | npm | PyPI |
+| --- | --- | --- |
+| Package/project | `@nymrel/proof-ledger` | `nymrel-proof-ledger` |
+| GitHub organization/owner | `nymrel` | `nymrel` |
+| GitHub repository | `nymrel-proof-ledger` | `nymrel-proof-ledger` |
+| Workflow filename | `release.yml` | `release.yml` |
+| GitHub environment | `npm` | `pypi` |
+| Required operation | Allow direct `npm publish` | Publish through GitHub Actions |
+
+Enter the workflow filename alone, including `.yml`, rather than the workflow's
+display name or full `.github/workflows/` path. Preserve the exact environment
+names. Both publishing jobs already request `id-token: write` and use
+GitHub-hosted runners. The npm metadata already identifies the matching GitHub
+repository. Trusted npm publication requires npm 11.5.1+ and Node 22.14.0+.
+
+### PyPI: a pending publisher can create the first project
+
+An account owner can open [account publishing](https://pypi.org/manage/account/publishing/)
+and inspect existing pending entries. If no matching entry exists and setup is
+authorized, add a GitHub pending publisher with the PyPI project name and the
+four GitHub values above. For an existing project, use that project's
+**Manage → Publishing** page instead. A pending publisher creates the project
+on its first successful publication and then becomes a normal publisher; it
+does not reserve the project name. See [creating a project through OIDC](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
+and [adding a publisher](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
+
+The historical `invalid-publisher` error means the signed OIDC claims did not
+match a known publisher. Compare owner, repository, filename, environment, and
+project name rather than adding a long-lived token. The [official error guide](https://docs.pypi.org/trusted-publishers/troubleshooting/)
+explains this distinction. No authenticated PyPI account or pending-publisher
+list was available during this preparation, so current saved entries remain
+unknown.
+
+### npm: establish the package before trusted-publisher setup
+
+The [documented npm trust setup](https://docs.npmjs.com/cli/v12/commands/npm-trust)
+requires an existing package. It does not provide PyPI's account-level pending
+publisher bootstrap. An npm account with publish access to the `@nymrel` scope
+must authorize first publication separately.
+
+Current npm supports [staging a new package](https://docs.npmjs.com/staged-publishing/):
+it creates a **public `0.0.0-stage` placeholder**, while the staged release bytes
+remain unavailable until a maintainer approves them with 2FA. The owner can
+review and approve through **Staged Packages** on npmjs.com, including from a
+phone browser. Staging requires npm 11.15.0+ and Node 22.14.0+; the account must
+have publish access and 2FA enabled. Staging the first package is itself a
+registry change and was not performed by this preparation. An owner-authorized
+authenticated bootstrap must use the accepted archive, rather than repacking
+the source merely to publish it.
+
+After the package exists, open its npm **Settings → Trusted publishing** and
+inspect the current connections before adding one with the table's values.
+Explicitly allow direct **`npm publish`** for the existing workflow: current
+new configurations default to allowing staged publishing, which does not
+authorize its direct publish command. A new connection must complete its
+first successful publication within two days or it expires. See [npm trusted
+publishing](https://docs.npmjs.com/trusted-publishers/). No authenticated npm
+package settings were available here; current connections and scope ownership
+remain unknown. No npm connection, staging, or account setting was changed.
+
+### Run hosted branch verification before a new release
+
+An authorized maintainer can open [the release workflow](https://github.com/nymrel/nymrel-proof-ledger/actions/workflows/release.yml),
+choose **Run workflow**, select the **`main` branch**, and run it. This branch
+run verifies and builds the selected source while the tag-only attestation and
+publishers stay skipped. Check the run's source SHA and accepted archive hashes
+before using its result. In the current cloud runtime the GitHub CLI read probe
+returned `Forbidden`, the connected GitHub tool has no dispatch operation, and
+no browser profile had a recorded GitHub sign-in. Supported authenticated access
+is needed for the agent to perform this step; no token should be pasted into
+chat and no desktop engineering relay is required.
+
+For the next new patch release, review a version change to **`2.0.1`** in npm
+and Python metadata and the npm lockfile, then use a new matching **`v2.0.1`**
+tag after normal integration and checks. First confirm that this version/tag
+remains unused. The existing annotated `v2.0.0` tag was observed pointing to
+`392c6ee071230f98b08aec4c6e0c8b380f54fd28`; preserve it. Branch-built archives
+must not be described as tag-bound release artifacts. These instructions do
+not bump a version, create a tag, configure an account, or authorize publishing.
+
 ## Observed historical release outcome
 
 On October 28, 2026, all 124 returned workflow runs were inspected. The sole
