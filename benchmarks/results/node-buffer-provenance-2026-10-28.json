@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "disposition": "REJECTED: no useful warmed throughput improvement, with two retained material fresh-process regressions. No production adoption.",
+  "comparison": "Current streaming1MiB buffer versus identical emitted modules with only the buffer constant changed to512KiB. This is not the original frozen whole-file baseline comparison.",
+  "variantManifest": {
+    "hypothesis": "Reduce transient allocation/page-fault pressure with a 512KiB bounded hashing buffer; no size-dependent branch or whole-file fallback. Adoption requires paired evidence.",
+    "sourceReceiptSha256": "5cf9567336c0a1ba3fa78becfc37d6cd3e56ebf4715dddf08b0e658f55a4c874",
+    "variants": {
+      "current-1MiB": {
+        "canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+        "envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+        "merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+        "receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+        "signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+      },
+      "candidate-512KiB": {
+        "canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+        "envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+        "merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+        "receipt.js": "cbe8d31ab51d177e0dda8e3dadf867edd234e422e3301474ba134f676d556caf",
+        "signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+      }
+    }
+  },
+  "runs": [
+    {
+      "mode": "fresh",
+      "hypothesis": "Reduce allocation/read-granularity cost with only the bounded buffer constant changed 1MiB to512KiB. Five retained pairs; no repeated samples to seek a pass.",
+      "before": {
+        "at": "2026-10-28T21:06:17.707022+00:00",
+        "hashes": {
+          "current-1MiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "current-1MiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "current-1MiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "current-1MiB/dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+          "current-1MiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+          "candidate-512KiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "candidate-512KiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "candidate-512KiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "candidate-512KiB/dist/src/core/receipt.js": "cbe8d31ab51d177e0dda8e3dadf867edd234e422e3301474ba134f676d556caf",
+          "candidate-512KiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+        },
+        "harness": {
+          "warmed-artifacts.py": "12f7dd2ffbe1c811e0f5d3ba3678ab9397cbda49b1ac1369b3edda53f232cf38",
+          "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+          "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb",
+          "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+          "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+          "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+          "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3"
+        },
+        "cpuStat": "usage_usec 434827340\nuser_usec 306476521\nsystem_usec 128350818\nnice_usec 0\nnr_periods 9816\nnr_throttled 31\nthrottled_usec 1124958\nnr_bursts 0\nburst_usec 0\n",
+        "cpuMax": "400000 100000\n",
+        "cpuPressure": null
+      },
+      "command": [
+        "/workspace/proof-ledger-results/performance/venv/bin/python",
+        "/workspace/proof-ledger-lanes/performance/benchmarks/artifact-benchmark.py",
+        "--node-module",
+        "/workspace/proof-ledger-results/performance/node-buffer-variants/candidate-512KiB/dist/src/core/receipt.js",
+        "--baseline-node-module",
+        "/workspace/proof-ledger-results/performance/node-buffer-variants/current-1MiB/dist/src/core/receipt.js",
+        "--python-root",
+        "/workspace/proof-ledger-lanes/performance/python",
+        "--baseline-python-root",
+        "/workspace/proof-ledger-lanes/performance/python",
+        "--python",
+        "/workspace/proof-ledger-results/performance/venv/bin/python",
+        "--work-dir",
+        "/workspace/proof-ledger-results/performance/data",
+        "--runtime",
+        "node",
+        "--output",
+        "/workspace/proof-ledger-results/performance/node-buffer-fresh-2026-10-28.json",
+        "--runs",
+        "5",
+        "--case",
+        "1MiB",
+        "--case",
+        "1024MiB",
+        "--case",
+        "1000-files"
+      ],
+      "exitCode": 0,
+      "after": {
+        "at": "2026-10-28T21:06:54.000261+00:00",
+        "hashes": {
+          "current-1MiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "current-1MiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "current-1MiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "current-1MiB/dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+          "current-1MiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+          "candidate-512KiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "candidate-512KiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "candidate-512KiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "candidate-512KiB/dist/src/core/receipt.js": "cbe8d31ab51d177e0dda8e3dadf867edd234e422e3301474ba134f676d556caf",
+          "candidate-512KiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+        },
+        "harness": {
+          "warmed-artifacts.py": "12f7dd2ffbe1c811e0f5d3ba3678ab9397cbda49b1ac1369b3edda53f232cf38",
+          "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+          "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb",
+          "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+          "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+          "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+          "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3"
+        },
+        "cpuStat": "usage_usec 471178091\nuser_usec 331445157\nsystem_usec 139732934\nnice_usec 0\nnr_periods 10179\nnr_throttled 31\nthrottled_usec 1124958\nnr_bursts 0\nburst_usec 0\n",
+        "cpuMax": "400000 100000\n",
+        "cpuPressure": null
+      },
+      "unchanged": true,
+      "rawEvidence": {
+        "path": "/workspace/proof-ledger-results/performance/node-buffer-fresh-2026-10-28.json",
+        "sha256": "4e407af0e1e9aa8f29266ca2cbd2b0ec5c8d4ab26b1b0a84ad217289bad1eee4"
+      }
+    },
+    {
+      "mode": "warmed",
+      "hypothesis": "Reduce allocation/read-granularity cost with only the bounded buffer constant changed 1MiB to512KiB. Five retained pairs; no repeated samples to seek a pass.",
+      "before": {
+        "at": "2026-10-28T21:06:58.468504+00:00",
+        "hashes": {
+          "current-1MiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "current-1MiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "current-1MiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "current-1MiB/dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+          "current-1MiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+          "candidate-512KiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "candidate-512KiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "candidate-512KiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "candidate-512KiB/dist/src/core/receipt.js": "cbe8d31ab51d177e0dda8e3dadf867edd234e422e3301474ba134f676d556caf",
+          "candidate-512KiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+        },
+        "harness": {
+          "warmed-artifacts.py": "12f7dd2ffbe1c811e0f5d3ba3678ab9397cbda49b1ac1369b3edda53f232cf38",
+          "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+          "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb",
+          "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+          "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+          "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+          "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3"
+        },
+        "cpuStat": "usage_usec 471316301\nuser_usec 331524038\nsystem_usec 139792262\nnice_usec 0\nnr_periods 10189\nnr_throttled 31\nthrottled_usec 1124958\nnr_bursts 0\nburst_usec 0\n",
+        "cpuMax": "400000 100000\n",
+        "cpuPressure": null
+      },
+      "command": [
+        "/workspace/proof-ledger-results/performance/venv/bin/python",
+        "/workspace/proof-ledger-lanes/performance/benchmarks/warmed-artifacts.py",
+        "--node-module",
+        "/workspace/proof-ledger-results/performance/node-buffer-variants/candidate-512KiB/dist/src/core/receipt.js",
+        "--baseline-node-module",
+        "/workspace/proof-ledger-results/performance/node-buffer-variants/current-1MiB/dist/src/core/receipt.js",
+        "--python-root",
+        "/workspace/proof-ledger-lanes/performance/python",
+        "--baseline-python-root",
+        "/workspace/proof-ledger-lanes/performance/python",
+        "--python",
+        "/workspace/proof-ledger-results/performance/venv/bin/python",
+        "--work-dir",
+        "/workspace/proof-ledger-results/performance/data",
+        "--runtime",
+        "node",
+        "--output",
+        "/workspace/proof-ledger-results/performance/node-buffer-warmed-2026-10-28.json",
+        "--case",
+        "1MiB",
+        "--case",
+        "1000-files",
+        "--summary",
+        "/workspace/proof-ledger-results/performance/node-buffer-warmed-summary-2026-10-28.json"
+      ],
+      "exitCode": 0,
+      "after": {
+        "at": "2026-10-28T21:07:29.544161+00:00",
+        "hashes": {
+          "current-1MiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "current-1MiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "current-1MiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "current-1MiB/dist/src/core/receipt.js": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+          "current-1MiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1",
+          "candidate-512KiB/dist/src/core/canonical.js": "5fa938a0c5e25c53de6dcfd79e4d6dc582ddff6f631a1722213417ca736b18f3",
+          "candidate-512KiB/dist/src/core/merkle.js": "baec486c9830d4f22f6f71f140fd3c8d4d5399f94f9368dc66a65336016f8511",
+          "candidate-512KiB/dist/src/core/envelope.js": "9f7333f09b7225b3250dfdea6f74c94222017c5b2c7daf65a425bbdc767ea0a0",
+          "candidate-512KiB/dist/src/core/receipt.js": "cbe8d31ab51d177e0dda8e3dadf867edd234e422e3301474ba134f676d556caf",
+          "candidate-512KiB/dist/src/core/signer.js": "9674162604823dd28549da4be65cc8feae92fca1c5d0f679324c72ea0a4059b1"
+        },
+        "harness": {
+          "warmed-artifacts.py": "12f7dd2ffbe1c811e0f5d3ba3678ab9397cbda49b1ac1369b3edda53f232cf38",
+          "summarize-artifacts.py": "b827116c98b00b4750870d428f89f6033f223e9b8374ad10a007358b86f7690c",
+          "warmed-artifact-worker.mjs": "4ca257c279d2f210df802f1aebaa42edba1b49cc371240575fda7b42e64b9aeb",
+          "warmed-artifact-worker.py": "9ecd2d9a321d45998b43c2479bc658d9e28761352195d62ab0aab51faf510d82",
+          "artifact-worker.py": "4b81da9dafae085e35c59e95658bce6b111d6f7cc2c71915bc32698a7e2528c7",
+          "artifact-worker.mjs": "6c6a0184f262b51330fb11cd44ab17d8ca6970256a1c35cfad624a6a509446ac",
+          "artifact-benchmark.py": "ad29747add12daf57b303cbb1bc57f4e848e7f7f2280912a5982404ff95ef5b3"
+        },
+        "cpuStat": "usage_usec 502383976\nuser_usec 349586375\nsystem_usec 152797601\nnice_usec 0\nnr_periods 10500\nnr_throttled 31\nthrottled_usec 1124958\nnr_bursts 0\nburst_usec 0\n",
+        "cpuMax": "400000 100000\n",
+        "cpuPressure": null
+      },
+      "unchanged": true,
+      "rawEvidence": {
+        "path": "/workspace/proof-ledger-results/performance/node-buffer-warmed-2026-10-28.json",
+        "sha256": "71af2cc49ea118ec63ea3919f59106cc2341d08ebd967b2895d724319f1b3626"
+      }
+    }
+  ],
+  "existingTests": {
+    "command": "node --test --test-concurrency=1 candidate-512KiB/dist/test/ts/streaming.test.js candidate-512KiB/dist/test/ts/artifact-paths.test.js",
+    "passed": 28,
+    "failed": 0,
+    "logSha256": "616a5437ae85c519e27211b62fc3c257ffb4e3c761dd267c9786cb162484f8a9"
+  }
+}

@@ -107,7 +107,9 @@ def _hash_file(file_path: str, state: dict[str, bytearray]) -> tuple[str, int]:
     if buffer is None:
         buffer = state["buffer"] = bytearray(_FILE_HASH_CHUNK_SIZE)
     view = memoryview(buffer)
-    with open(file_path, "rb") as file:
+    # The reusable buffer already bounds reads. FileIO avoids BufferedReader
+    # trying to fill a partial final chunk with an extra EOF read.
+    with open(file_path, "rb", buffering=0) as file:
         while count := file.readinto(buffer):
             digest.update(view[:count])
             size_bytes += count

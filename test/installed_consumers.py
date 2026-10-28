@@ -131,6 +131,31 @@ def main():
     def json_run(label, command, cwd, expected=(0,)):
         return json.loads(run(label, command, cwd, expected).stdout)
 
+    reference_recovery_checks = []
+
+    def reference_recovery(label, command, cwd, public):
+        artifact = public / 'artifact.txt'
+        original = artifact.read_bytes()
+        for case, changed, diagnostic in (
+                ('missing', None, 'Verification failed: artifact missing or unreadable. Restore the original artifact.txt beside proof.json, check read access, then retry verification.'),
+                ('mismatch', b'changed artifact bytes\n', 'Verification failed: artifact bytes do not match the receipt. Restore the original artifact.txt beside proof.json, then retry verification.')):
+            if changed is None:
+                artifact.unlink()
+            else:
+                artifact.write_bytes(changed)
+            try:
+                rejected = run(f'{label}-{case}', command, cwd, expected=(1,))
+                require(not rejected.stdout.strip(), 'Rejected reference consumer must not emit PASS evidence')
+                require(rejected.stderr.strip() == diagnostic,
+                        'Reference consumer must emit only the sanitized reason and recovery action')
+            finally:
+                artifact.write_bytes(original)
+            recovered = json_run(f'{label}-{case}-restored', command, cwd)
+            require(recovered.get('status') == 'PASS' and len(recovered['checks']) == 4,
+                    'Restored reference consumer must complete every verification check')
+            reference_recovery_checks.append({'label': label, 'case': case, 'exit_code': 1,
+                                               'diagnostic': diagnostic, 'restored': 'PASS'})
+
     try:
         report['source'] = source_state()
         report['host']['node'] = run('node-version', ['node', '--version'], ROOT).stdout.strip()
@@ -249,6 +274,12 @@ def main():
                     (node_public / 'proof.json').write_bytes(original_receipt)
                 result = json_run(f'node-verify-{kind}-public-only', ['node', node_example, 'verify', public], node_project)
                 require(len(result['checks']) == 4, 'Installed-consumer acceptance condition failed')
+                reference_recovery(f'{kind}-verify-node-reference',
+                                   [python, '-I', python_example, 'verify', node_public], project, node_public)
+                reference_recovery(f'node-verify-{kind}-reference',
+                                   ['node', node_example, 'verify', public], node_project, public)
+
+            report['reference_consumer_recovery_checks'] = reference_recovery_checks
 
             cli_checks = []
             for source, public in receipts:
