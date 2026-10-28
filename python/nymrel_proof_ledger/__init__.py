@@ -9,6 +9,7 @@ Parent Organization: Nymrel
 __version__ = "2.0.0"
 __author__ = "Nymrel <contact@nymrel.com>"
 
+from .checkpoint import verify_checkpoint
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
 from .canonical import canonical_hash, canonicalize, canonicalize_legacy
 from .envelope import (
@@ -67,6 +68,7 @@ __all__ = [
     "validate_receipt_envelope",
     "verify_proof",
     "verify_receipt",
+    "verify_checkpoint",
     "SIGNAL_PROOF_PROFILE",
     "SIGNAL_PROOF_PROFILE_VERSION",
     "SIGNAL_PROOF_BUNDLE_PROFILE",

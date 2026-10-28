@@ -1,0 +1,127 @@
+{
+  "description": "Synthetic test-only RFC 8032 signing key; no real source semantics",
+  "cases": [
+    {
+      "name": "empty",
+      "checkpoint": {
+        "schema": "nymrel.checkpoint",
+        "version": "0.1.0",
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "highestSequence": null,
+        "eventCount": 0,
+        "chainHeadOrStateHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "checkpointId": "fixture-empty",
+        "signerIdentity": "fixture-signer",
+        "keyId": "rfc8032-test-key"
+      },
+      "receipt": {
+        "protocol": "nymrel-proof-ledger",
+        "version": "2.0.0",
+        "proofId": "prf_6ae26564_23431a49a418",
+        "timestamp": "2026-10-28T21:13:08.341001Z",
+        "parentOrganization": "Nymrel",
+        "task": {
+          "name": "Retain external checkpoint",
+          "runner": "nymrel-agent",
+          "status": "ATTESTED",
+          "exitCode": 0
+        },
+        "merkle": {
+          "algorithm": "RFC6962-SHA256",
+          "leaves": [
+            "e6b258ef244f63968965bad66cbbc6ca5faafdfaba697bdff07827ebdd92b6e4",
+            "2a6b03da4ebdac1aade4f7cd31967a123cc2ee5642e2a2e0b5a5ea344fcfaee4",
+            "0b7fd276d316ed0e66041a58fbcf47d429d4543d2f5422436f122f1e4438405a"
+          ],
+          "root": "2df31a7ac5f909999a6e91f8d4a78085aa3e2d1cf5fe400dab9fb074490bc439"
+        },
+        "metadata": {},
+        "environment": {
+          "platform": "linux",
+          "arch": "x86_64",
+          "runtime": "python 3.13.5"
+        },
+        "artifacts": [
+          {
+            "path": "checkpoint.json",
+            "sha256": "04b4feeec24c7cc09f4d27e236299e17a632971681f10fce18fda3267bb9b142",
+            "sizeBytes": 470,
+            "mimeType": "application/json"
+          }
+        ],
+        "signature": {
+          "algorithm": "Ed25519",
+          "keyId": "rfc8032-test-key",
+          "signerIdentity": "fixture-signer",
+          "timestamp": "2026-10-28T21:13:08.341494Z",
+          "value": "8458116a8e1912703221b695aebd37f928ac7ae9b307ebf5352f833c4c6ee1e56c057d03cc9a9fc329f3c528c4e743b543d8a2df2608e32493bb79bee1cd7002"
+        }
+      },
+      "checkpointDigest": "sha256:04b4feeec24c7cc09f4d27e236299e17a632971681f10fce18fda3267bb9b142"
+    },
+    {
+      "name": "new-content",
+      "checkpoint": {
+        "schema": "nymrel.checkpoint",
+        "version": "0.1.0",
+        "sourceProtocol": "checkpoint-fixture-source",
+        "sourceVersion": "1.0.0",
+        "sourceId": "synthetic-ledger-1",
+        "highestSequence": 2,
+        "eventCount": 3,
+        "chainHeadOrStateHash": "sha256:90791416eea612e9dd1b9bac9b9d4e13077715551ce1e444491b4ff58d551538",
+        "sourceEpochDigest": "sha256:821e0a078aa73bfdca831cdcbeee0541b2bc79e4c75fb1de7900bf1327f0edd3",
+        "checkpointId": "fixture-new-content",
+        "signerIdentity": "fixture-signer",
+        "keyId": "rfc8032-test-key"
+      },
+      "receipt": {
+        "protocol": "nymrel-proof-ledger",
+        "version": "2.0.0",
+        "proofId": "prf_6ae26564_6058e43e0fae",
+        "timestamp": "2026-10-28T21:13:08.342911Z",
+        "parentOrganization": "Nymrel",
+        "task": {
+          "name": "Retain external checkpoint",
+          "runner": "nymrel-agent",
+          "status": "ATTESTED",
+          "exitCode": 0
+        },
+        "merkle": {
+          "algorithm": "RFC6962-SHA256",
+          "leaves": [
+            "e6b258ef244f63968965bad66cbbc6ca5faafdfaba697bdff07827ebdd92b6e4",
+            "2a6b03da4ebdac1aade4f7cd31967a123cc2ee5642e2a2e0b5a5ea344fcfaee4",
+            "7e0407e8838b661e932be97ce6c9a46cdd1bd90333bde552ee2a295fa6652633"
+          ],
+          "root": "abbfb8165d1fbb1db6d5b5c30298167333206370fbade1ba70c0e58a9283ea31"
+        },
+        "metadata": {},
+        "environment": {
+          "platform": "linux",
+          "arch": "x86_64",
+          "runtime": "python 3.13.5"
+        },
+        "artifacts": [
+          {
+            "path": "checkpoint.json",
+            "sha256": "7d174f88e387b36027e884d1971ced658bab1b79829fd3e6c5ebbdeb273ef2f6",
+            "sizeBytes": 473,
+            "mimeType": "application/json"
+          }
+        ],
+        "signature": {
+          "algorithm": "Ed25519",
+          "keyId": "rfc8032-test-key",
+          "signerIdentity": "fixture-signer",
+          "timestamp": "2026-10-28T21:13:08.343018Z",
+          "value": "98581ffbe2663fb7954a7541e37aa10dcddd3ea58bb927fb732d36aa752fbc309a358f42917068a4e414b4d8937398552d753963c1068dcfd3ea94559024f002"
+        }
+      },
+      "checkpointDigest": "sha256:7d174f88e387b36027e884d1971ced658bab1b79829fd3e6c5ebbdeb273ef2f6"
+    }
+  ]
+}

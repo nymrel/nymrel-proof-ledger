@@ -104,3 +104,11 @@ v2 gate. Default exit zero also permits integrity-only verification. The gate's
 JSON `policy` verdict is separate from the core cryptographic verdict and does
 not establish signer authorization or execution. Add `--check-files` when local
 artifact checks are required.
+
+## Experimental offline checkpoints
+
+The checkpoint core relies on independently provisioned current pins and a
+trusted, source-specific adapter. It provides neither storage nor an update or
+recovery channel, and cannot detect deletion beyond the retained checkpoint.
+A signature does not establish signer authority or trusted time. See
+[the checkpoint profile](docs/CHECKPOINT_PROFILE.md) for lifecycle policy.
