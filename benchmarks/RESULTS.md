@@ -344,3 +344,58 @@ when exporting the workspace. This scoped comparison demonstrates removal of
 redundant reads without an observed material regression against old streaming;
 it does not close the original full throughput criterion against whole-file
 hashing.
+
+### Final complete-candidate comparison
+
+The accepted Python unbuffered-read change justified one new complete comparison
+against the original whole-file baseline. A detached, built checkout fixed the
+candidate at `1e3c049414dc79f26f2947a6d6a5c5d6e377d9d3`; the baseline remained
+`232849c4e833da992cbcdcc6fa4b7bd0f56cbde3`. Node production hashing was unchanged.
+Changes in other worktrees could not alter this candidate. The same Node
+24.19.0, Python 3.13.5, cryptography 50.0.2, and rfc8785 0.1.4 were used.
+
+Exactly one predeclared full fresh-process comparison and one default warmed
+diagnostic were run, retaining every sample:
+
+| Criterion | Final observation |
+| --- | --- |
+| Fresh throughput | 22 of 24 medians met the 10% threshold; all 12 Node comparisons passed. |
+| Warmed throughput | All eight default medians met the 10% threshold; every batch exceeded 200 ms. |
+| 1 GiB memory | All four creation/verification comparisons passed, with 99.720–100% measured incremental-RSS reduction. |
+| Integrity of measurement | Both drivers exited zero; transitive source, emitted modules, and harness hashes stayed unchanged within each run. |
+
+The [final fresh summary](results/final-fresh-2026-10-28.json) retains two misses:
+
+| Runtime | Input | Operation | Baseline / candidate ms | Throughput change |
+| --- | --- | --- | ---: | ---: |
+| Python | One 4 KiB file | Creation | 0.703 / 0.882 | -20.28% |
+| Python | One 4 KiB file | Verification | 0.739 / 1.618 | -54.34% |
+
+The [final warmed summary](results/final-warmed-2026-10-28.json) remains separate:
+
+| Runtime | Input | Creation throughput change | Verification throughput change |
+| --- | --- | ---: | ---: |
+| Node | 1 MiB | -7.97% | -1.16% |
+| Node | 1,000 × 4 KiB | +18.76% | +1.94% |
+| Python | One 4 KiB file | -5.13% | +22.99% |
+| Python | 1,000 × 4 KiB | +1.22% | -2.05% |
+
+The warmed passes do not erase the fresh misses or prove a cold-operation
+guarantee. These methods use a warm page cache; "fresh" describes a new process
+and first measured operation. Other project agents paused heavy work, but the
+host was still shared without an exclusive reservation. Cgroup throttling
+counters did not increase during either run; this does not establish absence
+of every form of host interference.
+
+**The full throughput acceptance criterion remains unmet.** No further timing
+runs were performed to seek a pass. Another comparison requires a controlled
+host or an attributable source change and a declared method; these results do
+not justify an unsupported Node rewrite or another buffer-size search.
+
+[Final provenance](results/final-provenance-2026-10-28.json) retains exact source
+and transitive emitted/Python module hashes, harness identities, observation
+times, host state, and raw-file checksums. Raw results, logs, and the reproduction
+wrapper are exported separately at
+`/workspace/proof-ledger-results/performance/final-2026-10-28/evidence-2026-10-28.tar.gz`,
+with `EVIDENCE_SHA256SUMS` alongside it. Preserve this final bundle in addition to
+the earlier profiling/variant evidence when moving the workspace.
