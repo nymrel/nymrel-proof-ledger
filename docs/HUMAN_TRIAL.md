@@ -3,6 +3,13 @@
 This is a protocol, not completed adoption evidence. Leave results blank until
 observed. Automated checks and agent reviews do not count as human trials.
 
+**Operator preference — October 28, 2026:** The active request uses independent
+agents from different providers rather than recruiting people. Follow the
+[provider-agent trial protocol](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/AGENT_TRIAL.md)
+for that work. Preserve this
+human protocol and leave its unobserved results blank; agent trials supply their
+own provider, timing, and recovery evidence.
+
 Use two distinct people who did not implement these changes. Trial A uses Node;
 trial B uses Python. Each person works alone in a fresh consuming project outside
 the checkout, without seeing the other person's troubleshooting. Use the same
