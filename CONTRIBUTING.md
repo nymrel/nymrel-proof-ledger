@@ -60,6 +60,10 @@ retrying. Recover the same immutable distributions through the existing release
 run; do not retag or rebuild merely to retry a registry failure. Trusted-publisher
 account configuration remains a separate prerequisite.
 
+The release gate builds the TypeScript files. When packing a checkout without
+running that gate, run `npm run build` before `npm pack` or `npm pack --dry-run`;
+the compiled package files are not stored in Git.
+
 Run Python checks in an isolated environment:
 
 ~~~powershell

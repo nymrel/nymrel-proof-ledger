@@ -126,10 +126,12 @@ def generate_svg_badge(
     height = 180 if compact else 300
 
     qr_matrix = generate_qr_matrix(target_value)
-    qr_cell_size = 3 if compact else 4
+    # Four-module quiet zone; the extra pixel keeps the stroke outside it.
+    qr_cell_size = min(3, 100 // (len(qr_matrix) + 8)) if compact else 4
+    qr_padding = 4 * qr_cell_size + 1
     qr_size_px = len(qr_matrix) * qr_cell_size
     qr_offset_x = width - qr_size_px - 32
-    qr_offset_y = 30 if compact else 60
+    qr_offset_y = 36 + qr_padding if compact else 60
     qr_path = generate_qr_svg_path(qr_matrix, qr_cell_size, qr_offset_x, qr_offset_y)
 
     env = receipt.get("environment", {})
@@ -147,6 +149,17 @@ def generate_svg_badge(
     timestamp = receipt.get("timestamp", "")
     platform_name = env.get("platform", "unknown")
     task_name = task.get("name", "Execution Task")
+    # Only abbreviate the visible label; the QR target and metadata keep the full ID.
+    truncated_proof_id = truncate_hash(proof_id, 8, 8)
+    full_details = "" if compact else f"""
+    <text x="0" y="44" fill="#5C665F" font-weight="600">SIGNER IDENTITY</text>
+    <text x="0" y="62" fill="#1C2320">{html.escape(signer_id)} <tspan fill="#A8541F" font-weight="600">({html.escape(sig_algo)})</tspan></text>
+
+    <text x="220" y="0" fill="#5C665F" font-weight="600">LINEAGE &amp; ENV</text>
+    <text x="220" y="18" fill="#1C2320" font-family="'SF Mono', Monaco, Consolas, monospace">{html.escape(git_branch)}@{html.escape(git_commit)} ({html.escape(platform_name)})</text>
+
+    <text x="220" y="44" fill="#5C665F" font-weight="600">TIMESTAMP</text>
+    <text x="220" y="62" fill="#1C2320">{html.escape(timestamp)}</text>"""
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif">
@@ -177,34 +190,27 @@ def generate_svg_badge(
 
   <!-- Task Title & Proof ID -->
   <text x="24" y="94" fill="#1C2320" font-size="18" font-weight="700">{html.escape(task_name)}</text>
-  <text x="24" y="112" fill="#5C665F" font-size="11" font-family="'SF Mono', Monaco, Consolas, monospace">ID: {html.escape(proof_id)} • TASK: {html.escape(task_status)}</text>
+  <text x="24" y="112" fill="#5C665F" font-size="11" font-family="'SF Mono', Monaco, Consolas, monospace">ID: {html.escape(truncated_proof_id)} • TASK: {html.escape(task_status)}</text>
 
   <!-- Cryptographic Details -->
   <g transform="translate(24, 134)" font-size="11">
     <text x="0" y="0" fill="#5C665F" font-weight="600">MERKLE ROOT</text>
     <text x="0" y="18" fill="#1C2320" font-family="'SF Mono', Monaco, Consolas, monospace" font-weight="700">{html.escape(truncated_root)}</text>
 
-    <text x="0" y="44" fill="#5C665F" font-weight="600">SIGNER IDENTITY</text>
-    <text x="0" y="62" fill="#1C2320">{html.escape(signer_id)} <tspan fill="#A8541F" font-weight="600">({html.escape(sig_algo)})</tspan></text>
-
-    <text x="220" y="0" fill="#5C665F" font-weight="600">LINEAGE &amp; ENV</text>
-    <text x="220" y="18" fill="#1C2320" font-family="'SF Mono', Monaco, Consolas, monospace">{html.escape(git_branch)}@{html.escape(git_commit)} ({html.escape(platform_name)})</text>
-
-    <text x="220" y="44" fill="#5C665F" font-weight="600">TIMESTAMP</text>
-    <text x="220" y="62" fill="#1C2320">{html.escape(timestamp)}</text>
+    {full_details}
   </g>
 
   <!-- QR Verification Container -->
   <g>
-    <rect x="{qr_offset_x - 8}" y="{qr_offset_y - 8}" width="{qr_size_px + 16}" height="{qr_size_px + 16}" rx="8" fill="#FFFFFF" stroke="#E2DDD5" stroke-width="1"/>
+    <rect x="{qr_offset_x - qr_padding}" y="{qr_offset_y - qr_padding}" width="{qr_size_px + 2 * qr_padding}" height="{qr_size_px + 2 * qr_padding}" fill="#FFFFFF" stroke="#E2DDD5" stroke-width="1"/>
     <path d="{qr_path}" fill="#1C2320"/>
-    <text x="{qr_offset_x + qr_size_px / 2}" y="{qr_offset_y + qr_size_px + 18}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">{target_label}</text>
+    <text x="{qr_offset_x + qr_size_px / 2}" y="{qr_offset_y + qr_size_px + qr_padding + 12}" fill="#5C665F" font-size="9" text-anchor="middle" font-weight="600">{target_label}</text>
   </g>
 
   <!-- Footer Dual-Audience Marker -->
-  <line x1="24" y1="{height - 38}" x2="{width - 24}" y2="{height - 38}" stroke="#E2DDD5" stroke-width="1"/>
-  <text x="24" y="{height - 20}" fill="#5C665F" font-size="10">Portable receipt • Verify with authenticated key material</text>
-  <text x="{width - 24}" y="{height - 20}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">{html.escape(target_host)}</text>
+  <line x1="24" y1="{height - (26 if compact else 38)}" x2="{width - 24}" y2="{height - (26 if compact else 38)}" stroke="#E2DDD5" stroke-width="1"/>
+  <text x="24" y="{height - (12 if compact else 20)}" fill="#5C665F" font-size="10">Portable receipt • Verify with authenticated key material</text>
+  <text x="{width - 24}" y="{height - (12 if compact else 20)}" fill="#2A332E" font-weight="700" font-size="10" text-anchor="end">{html.escape(target_host)}</text>
 
   <!-- Machine-Readable Metadata -->
   <metadata>
