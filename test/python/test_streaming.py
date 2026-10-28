@@ -56,6 +56,34 @@ class TrackedFile:
 
 
 class TestStreaming(unittest.TestCase):
+    def test_short_reads_continue_until_eof_in_creation_and_verification(self):
+        content = bytes(range(251)) * 3
+        with tempfile.TemporaryDirectory() as cwd:
+            (Path(cwd) / 'artifact.bin').write_bytes(content)
+            original_open = open
+            reads, closes = [], []
+
+            class ShortReadFile(TrackedFile):
+                def readinto(self, buffer):
+                    return super().readinto(memoryview(buffer)[:17])
+
+            def short_read_open(*args, **kwargs):
+                return ShortReadFile(original_open(*args, **kwargs), reads, closes)
+
+            with patch('builtins.open', side_effect=short_read_open):
+                receipt = create_receipt(
+                    task={'name': 'Short artifact reads'}, signing_key=AUTH['public_key_or_secret'],
+                    signer_identity='fixture', cwd=cwd, artifacts=[{'path': 'artifact.bin'}],
+                )
+                self.assertEqual(receipt['artifacts'][0]['sha256'], hashlib.sha256(content).hexdigest())
+                self.assertEqual(receipt['artifacts'][0]['sizeBytes'], len(content))
+                result = verify_receipt(receipt, **AUTH, check_files_on_disk=True, cwd=cwd)
+                self.assertTrue(result['valid'], result['errors'])
+                self.assertTrue(result['trusted'])
+                self.assertEqual(result['checkedArtifacts'], 1)
+                self.assertGreater(len(reads), 2)
+                self.assertEqual(len(closes), 2)
+
     def test_file_hashes_match_in_memory_bytes(self):
         for name, data in SAMPLES:
             with self.subTest(name=name), tempfile.TemporaryDirectory() as cwd:
