@@ -244,3 +244,52 @@ sample. No production source was changed to chase these timings. The next
 performance increment is controlled profiling of the current Node 1 MiB and
 Python single-file verification paths, followed by an attributable fix only if
 the measurements identify one. Universal throughput acceptance stays open.
+
+### Node profiling and rejected buffer-size hypothesis
+
+The [Node profile summary](results/node-profile-2026-10-28.json) retains
+deterministic cost counts and two instrumented diagnostics. Per 1 MiB operation,
+both baseline and current source perform one open, two reads, and one close;
+baseline additionally performs `fstat`. Verification uses the same two
+`realpath` calls in each implementation. Current source creates one fewer
+promise and one fewer filesystem request per operation. Neither more filesystem
+calls nor added path checks explain the observed regression.
+
+In five alternating instrumented pairs, current creation took 2.447 ms versus
+2.013 ms at baseline; verification took 1.822 ms versus 1.720 ms. Creation's
+difference spanned I/O, SHA updates, and residual work, with 130.8 versus 82.2
+minor faults per operation. An earlier grouped profile reversed the direction.
+The wrappers add overhead, and these stage medians cannot be used as acceptance
+timings or proof of a sole production bottleneck.
+
+The allocation/read-granularity difference was tested as one explicit
+hypothesis: current 1 MiB streaming buffer versus an otherwise identical 512 KiB
+buffer. Only the copied emitted constant changed; production source stayed
+unchanged. Existing streaming/path checks passed all 28 cases against the
+512 KiB variant, including exact digests, byte counts, partial tails, read
+failures, signature rejection before disk, and filesystem confinement.
+
+One predeclared [fresh five-pair comparison](results/node-buffer-fresh-2026-10-28.json)
+and one [warmed five-pair comparison](results/node-buffer-warmed-2026-10-28.json)
+retained these throughput changes relative to the current 1 MiB buffer:
+
+| Input | Operation | Fresh | Warmed |
+| --- | --- | ---: | ---: |
+| 1 MiB | Creation | -18.12% | -0.46% |
+| 1 MiB | Verification | +11.82% | -0.71% |
+| 1 GiB | Creation | -1.72% | Not measured |
+| 1 GiB | Verification | +3.08% | Not measured |
+| 1,000 × 4 KiB | Creation | -3.88% | -5.79% |
+| 1,000 × 4 KiB | Verification | -15.11% | +0.32% |
+
+**The 512 KiB change was rejected.** It provided no useful warmed improvement
+and retained two material fresh-process regressions. Both variants kept 1 GiB
+RSS growth below 4 MiB; these relative buffer comparisons are separate from
+the original 75% memory-reduction target against whole-file hashing. All warmed
+batches exceeded 200 ms. No unfavorable sample was dropped or repeated.
+[The variant manifest and provenance](results/node-buffer-provenance-2026-10-28.json)
+bind exact emitted modules, harnesses, host counters, and raw evidence. Hashes
+stayed unchanged within each run and throttling counters did not increase.
+Raw profiles, counts, scripts, and variant modules are included in the existing
+exportable evidence bundle. The original throughput criterion remains open;
+this experiment does not justify a speculative production rewrite.

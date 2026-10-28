@@ -62,3 +62,8 @@ both runtimes. Available selections are `1MiB`, `1-files`, `100-files`, and
 results separate, retain every sample, and declare additional cases before
 running them. The warmed diagnostic does not replace the full fresh-process
 comparison or its RSS measurements.
+
+Use `--runtime node` or `--runtime python` to restrict the warmed diagnostic to
+one runtime. Omitting `--runtime` preserves the original two-runtime behavior;
+repeat it to select both explicitly. This supports sequential quiet windows
+without maintaining another copy of the harness.
