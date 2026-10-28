@@ -62,6 +62,14 @@ they are not automatically achieved by implementing a feature.
 The [independent trial protocol](HUMAN_TRIAL.md) provides the two-person
 procedure and blank results templates; no human trial has been recorded.
 
+**Directed continuation — October 28, 2026:** The operator selected independent
+agents on different providers for this continuation, with the additional provider
+CLI work assigned to a local agent. Use the [provider-agent protocol](AGENT_TRIAL.md)
+and record actual provider/runtime identity, timings, failures, and recovery.
+This replaces recruiting people for the current directed work. Agent results
+remain agent integration evidence; they do not establish the original human
+adoption target above or convert its unobserved results into completed trials.
+
 ## Milestones
 
 ### Day 30 checkpoint — November 17, 2026
@@ -135,4 +143,5 @@ and the quickstart documents the behavior and migration.
 | October 18, 2026 | Implemented safe CLI keys, the authenticated-v2 gate, installed reference consumers, and bounded artifact hashing. | Release tests and supported-runtime suites passed. Exact built archives passed clean-consumer checks. See the execution report for measured performance, review results, and remaining external milestones. |
 | October 20, 2026 | Reconciled the existing keygen candidate, completed warmed performance diagnostics, and prepared the two-person trial protocol. | All eight warmed medians met the threshold; cold-call limitations remain explicit. The delivery candidate preserves the required other-team review gate and records hosted checks in its PR. |
 | October 25, 2026 | Reconciled the completed source handoffs and plans with current main. | PR31/30 integrated as `10a9412eae1d49c02eb6a90e8510451d4d0532ed`; the [integration receipt](https://github.com/nymrel/nymrel-proof-ledger/pull/31#issuecomment-6367931810) records Codex/Astra review and eight passing post-merge jobs. Inspected main is `3656374615fc32c4c8da87688a5c53416e9a86be`. Earlier other-team review holds are historical for that integration. The human, throughput, and hosted-release criteria above remain open. |
-| October 28, 2026 | Prepared further adoption and release candidates, reusing the merged QR repair and existing dependency-update commits. | The [trial protocol](HUMAN_TRIAL.md) now describes reusable public-only trial packets from accepted archives; the [release-candidate procedure](RELEASE_CANDIDATE.md) preserves exact-archive installation and publication controls. New benchmark evidence retains throughput misses; the full performance target remains open. These preparation changes require their normal source review/integration. No human trials, authenticated configuration delivery, or registry publication are claimed. |
+| October 28, 2026 | Integrated adoption/release preparation through [PR41](https://github.com/nymrel/nymrel-proof-ledger/pull/41), reusing the merged QR repair and dependency updates. | Merge `4ef0c1a738ed4c968f8076a6f441ba6c1725d6dd` follows exact-source review and eight passing hosted jobs. The [trial protocol](HUMAN_TRIAL.md) describes public-only packets; the [release-candidate procedure](RELEASE_CANDIDATE.md) preserves archive and publication controls. No human trials or registry publication are claimed. |
+| October 28, 2026 | Continued provider-agent trials, first-call performance attribution, and reference-consumer recovery improvements. | Two independently started OpenAI agent trials passed against accepted source `d73f440d436facd8599b9e4148c883cd0b8102f3`; a different-provider trial is assigned to a local agent and remains unverified. The new hashing candidate removed a redundant Python EOF read without an observed material regression against old streaming. Final comparison against the original baseline passed 22/24 fresh throughput cases, 8/8 warmed cases, and all four 1 GiB memory targets; retained Python fresh-call misses keep the full target open. See [all performance results](https://github.com/nymrel/nymrel-proof-ledger/blob/main/benchmarks/RESULTS.md). New consumer diagnostics give matching artifact recovery guidance while preserving verification failures. |

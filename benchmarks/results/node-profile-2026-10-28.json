@@ -1,0 +1,121 @@
+{
+  "method": "Five alternating variant pairs, 200 instrumented operations per fresh worker after 10 untimed warmup operations; diagnostic profiling, not steady-state acceptance. No sample discarded or repeated.",
+  "limitations": "Wrappers change execution overhead; stage medians and their residuals cannot be used as acceptance timings. Grouped diagnostic also retained, with reversed direction. These measurements support an allocation/read-granularity hypothesis, not sole attribution.",
+  "ioCountsPerOperation": {
+    "baseline": {
+      "open": 1,
+      "fstat": 1,
+      "read": 2,
+      "close": 1,
+      "verifyAdditionalRealpath": 2
+    },
+    "current": {
+      "open": 1,
+      "read": 2,
+      "close": 1,
+      "verifyAdditionalRealpath": 2
+    }
+  },
+  "asyncResourcesPerOperation": {
+    "create": {
+      "baseline": {
+        "PROMISE": 36,
+        "FSREQPROMISE": 4
+      },
+      "current": {
+        "PROMISE": 35,
+        "FSREQPROMISE": 3
+      }
+    },
+    "verify": {
+      "baseline": {
+        "PROMISE": 48,
+        "FSREQPROMISE": 6
+      },
+      "current": {
+        "PROMISE": 47,
+        "FSREQPROMISE": 5
+      }
+    }
+  },
+  "pairedMediansPerOperation": [
+    {
+      "operation": "create",
+      "variant": "baseline",
+      "elapsedMs": 2.012996285,
+      "cpuMs": 2.001585,
+      "readFileMs": 1.1061430449999983,
+      "openMs": 0.0,
+      "readMs": 0.0,
+      "closeMs": 0.0,
+      "artifactHashMs": 0.7450368200000025,
+      "otherHashMs": 0.011337000000004593,
+      "minorFaults": 82.22
+    },
+    {
+      "operation": "create",
+      "variant": "candidate",
+      "elapsedMs": 2.44720639,
+      "cpuMs": 2.443015,
+      "readFileMs": 0.0,
+      "openMs": 0.18203174999999702,
+      "readMs": 0.9220719299999973,
+      "closeMs": 0.08707920000000229,
+      "artifactHashMs": 0.9056185250000027,
+      "otherHashMs": 0.014444694999986041,
+      "minorFaults": 130.765
+    },
+    {
+      "operation": "verify",
+      "variant": "baseline",
+      "elapsedMs": 1.7195182999999998,
+      "cpuMs": 1.7220550000000001,
+      "readFileMs": 0.5917795700000019,
+      "openMs": 0.0,
+      "readMs": 0.0,
+      "closeMs": 0.0,
+      "artifactHashMs": 0.7058920150000005,
+      "otherHashMs": 0.010738709999999117,
+      "minorFaults": 75.605
+    },
+    {
+      "operation": "verify",
+      "variant": "candidate",
+      "elapsedMs": 1.8215873749999998,
+      "cpuMs": 1.85988,
+      "readFileMs": 0.0,
+      "openMs": 0.10489460000000207,
+      "readMs": 0.4887881999999996,
+      "closeMs": 0.0719470749999985,
+      "artifactHashMs": 0.7270300250000022,
+      "otherHashMs": 0.011620315000010066,
+      "minorFaults": 61.435
+    }
+  ],
+  "rawEvidence": [
+    {
+      "path": "/workspace/proof-ledger-results/performance/node-stage-profile-2026-10-28.json",
+      "sha256": "5e2d7b6f42d536b0ffd98012e43292a071b1371fa4bc0fe092683e90a56b5d3a"
+    },
+    {
+      "path": "/workspace/proof-ledger-results/performance/node-paired-stage-profile-2026-10-28.json",
+      "sha256": "af207753b69173498e47d8d7badf69afa471739eb931cc8668b4d48f275e8916"
+    },
+    {
+      "path": "/workspace/proof-ledger-results/performance/io-count-baseline-create.json",
+      "sha256": "05d872506e9670e3b08431ef0fab22f2145ec6b230ee3f683dfb76abe132d5a3"
+    },
+    {
+      "path": "/workspace/proof-ledger-results/performance/io-count-baseline-verify.json",
+      "sha256": "7b9e793445d96c94173b78d05a326a1ae61b07070b232768d28248af51cf577b"
+    },
+    {
+      "path": "/workspace/proof-ledger-results/performance/io-count-current-create.json",
+      "sha256": "cc61c4ef955fcb072e75cb39ad90d5488a3cba6c24fd4bb3fc405e2f90a41833"
+    },
+    {
+      "path": "/workspace/proof-ledger-results/performance/io-count-current-verify.json",
+      "sha256": "49828652d0175160dbaa785074be3ab6db5011c3fd069074de906551ed112353"
+    }
+  ]
+}

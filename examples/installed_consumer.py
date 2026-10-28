@@ -16,6 +16,19 @@ def require(condition, message):
         raise AssertionError(message)
 
 
+def verification_failure_message(result):
+    # Core error text may contain receipt-controlled paths and filesystem details.
+    # Emit a fixed category and recovery action instead of printing that text.
+    errors = result.get('errors', [])
+    for prefix, message in (
+            ('Artifact missing on disk:', 'artifact missing or unreadable. Restore the original artifact.txt beside proof.json, check read access, then retry verification.'),
+            ('Artifact tampered:', 'artifact bytes do not match the receipt. Restore the original artifact.txt beside proof.json, then retry verification.'),
+            ('Artifact path escapes verification root', 'artifact location was rejected. Restore the original receipt and keep artifact.txt inside its fixture directory, then retry verification.')):
+        if any(isinstance(error, str) and error.startswith(prefix) for error in errors):
+            return f'Verification failed: {message}'
+    return 'Verification failed: receipt authentication or integrity check failed. Check the independently supplied public configuration and original receipt/artifact, then retry verification.'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('create', 'verify'))
@@ -57,6 +70,9 @@ def main():
             'check_files_on_disk': True, 'cwd': str(root),
         }
         original = verify_receipt(receipt, **options)
+        if not (original['valid'] and original['trusted'] and original['signatureChecked']
+                and original['checkedArtifacts'] == 1):
+            raise SystemExit(verification_failure_message(original))
         require(original['valid'] and original['trusted'] and original['signatureChecked'], 'Installed-consumer acceptance condition failed')
         require(original['checkedArtifacts'] == 1, 'Installed-consumer acceptance condition failed')
         checks.append('trusted-v2-public-only')

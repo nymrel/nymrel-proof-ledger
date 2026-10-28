@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-10-28T21:06:17.779987+00:00",
+  "sourceRevision": "906f17bb79fe53b66eaae3c81fd34f63d5b46cd8",
+  "host": {
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "machine": "x86_64",
+    "cpuCount": 5,
+    "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+    "memoryTotal": "MemTotal:       18488496 kB"
+  },
+  "runtimes": {
+    "node": "v24.19.0",
+    "python": "Python 3.13.5"
+  },
+  "code": {
+    "baseline": {
+      "nodeModule": "/workspace/proof-ledger-results/performance/node-buffer-variants/current-1MiB/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/proof-ledger-lanes/performance/python",
+      "nodeModuleSha256": "ad1e7aee5ea7dfb59baf3efe8274598e14841b4e8013a77ca6fc87b15a2217bc",
+      "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+    },
+    "candidate": {
+      "nodeModule": "/workspace/proof-ledger-results/performance/node-buffer-variants/candidate-512KiB/dist/src/core/receipt.js",
+      "pythonRoot": "/workspace/proof-ledger-lanes/performance/python",
+      "nodeModuleSha256": "cbe8d31ab51d177e0dda8e3dadf867edd234e422e3301474ba134f676d556caf",
+      "pythonModuleSha256": "033fd86771e28e6f8fd64df193756f86be898f9804b564bf418d8e96702e425a"
+    }
+  },
+  "cacheConditions": "Warm page cache: sequentially read all artifact bytes immediately before every fresh-process worker; no cache drop. Generation and warming excluded from timings. Host may have concurrent activity.",
+  "measurement": "Fresh process per run and operation. Timed createReceipt/create_receipt or trusted verifyReceipt/verify_receipt with disk checks; import, fixture loading and GC excluded. Peak incremental RSS=max(0, process lifetime peak RSS minus current RSS after imports, receipt fixture loading and GC). Linux getrusage maxRSS; current RSS from Node memoryUsage or Python /proc. Manifests contain deterministic 4 KiB files.",
+  "runsPerCase": 5,
+  "variantOrder": "Alternate baseline then candidate within each repetition",
+  "rawEvidence": {
+    "path": "/workspace/proof-ledger-results/performance/node-buffer-fresh-2026-10-28.json",
+    "sha256": "4e407af0e1e9aa8f29266ca2cbd2b0ec5c8d4ab26b1b0a84ad217289bad1eee4"
+  },
+  "results": [
+    {
+      "runtime": "node",
+      "case": "1MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.006022475999999997,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 36569088,
+        "peakIncrementBytes": 1835008,
+        "throughputMiBPerSecond": 166.0446633577287
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.007355040000000003,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 35913728,
+        "peakIncrementBytes": 1179648,
+        "throughputMiBPerSecond": 135.9611912375731
+      },
+      "throughputChangePercent": -18.11769888403061,
+      "incrementalPeakMemoryReductionPercent": 35.71428571428571,
+      "throughputTargetMet": false,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.007252796000000003,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 36306944,
+        "peakIncrementBytes": 1703936,
+        "throughputMiBPerSecond": 137.87786117243607
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.006486168,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 35782656,
+        "peakIncrementBytes": 1048576,
+        "throughputMiBPerSecond": 154.1742366216848
+      },
+      "throughputChangePercent": 11.81942866728094,
+      "incrementalPeakMemoryReductionPercent": 38.46153846153846,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 1.179096015,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 37748736,
+        "peakIncrementBytes": 3145728,
+        "throughputMiBPerSecond": 868.4619292857163
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 1.199754664,
+        "idleRssBytes": 34603008,
+        "peakRssBytes": 37355520,
+        "peakIncrementBytes": 2752512,
+        "throughputMiBPerSecond": 853.5078301641843
+      },
+      "throughputChangePercent": -1.721906121300143,
+      "incrementalPeakMemoryReductionPercent": 12.5,
+      "throughputTargetMet": true,
+      "memoryTargetMet": false
+    },
+    {
+      "runtime": "node",
+      "case": "1024MiB",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 1.134880726,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 37879808,
+        "peakIncrementBytes": 3014656,
+        "throughputMiBPerSecond": 902.2974631080306
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 1.100979264,
+        "idleRssBytes": 34865152,
+        "peakRssBytes": 38666240,
+        "peakIncrementBytes": 3932160,
+        "throughputMiBPerSecond": 930.08109551462
+      },
+      "throughputChangePercent": 3.0792098551276625,
+      "incrementalPeakMemoryReductionPercent": -30.434782608695656,
+      "throughputTargetMet": true,
+      "memoryTargetMet": false
+    },
+    {
+      "runtime": "node",
+      "case": "1000-files",
+      "operation": "create",
+      "baselineMedian": {
+        "elapsedSeconds": 0.182132405,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 44527616,
+        "peakIncrementBytes": 9924608,
+        "throughputMiBPerSecond": 21.447309170490556
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.189482949,
+        "idleRssBytes": 34734080,
+        "peakRssBytes": 44871680,
+        "peakIncrementBytes": 10137600,
+        "throughputMiBPerSecond": 20.615311407254907
+      },
+      "throughputChangePercent": -3.879264091461865,
+      "incrementalPeakMemoryReductionPercent": -2.146099876186547,
+      "throughputTargetMet": true,
+      "memoryTargetMet": null
+    },
+    {
+      "runtime": "node",
+      "case": "1000-files",
+      "operation": "verify",
+      "baselineMedian": {
+        "elapsedSeconds": 0.238075252,
+        "idleRssBytes": 34942976,
+        "peakRssBytes": 46170112,
+        "peakIncrementBytes": 11141120,
+        "throughputMiBPerSecond": 16.407627282486295
+      },
+      "candidateMedian": {
+        "elapsedSeconds": 0.28044325400000003,
+        "idleRssBytes": 34955264,
+        "peakRssBytes": 46063616,
+        "peakIncrementBytes": 11116544,
+        "throughputMiBPerSecond": 13.928842802544288
+      },
+      "throughputChangePercent": -15.107513336726585,
+      "incrementalPeakMemoryReductionPercent": 0.22058823529411686,
+      "throughputTargetMet": false,
+      "memoryTargetMet": null
+    }
+  ]
+}
