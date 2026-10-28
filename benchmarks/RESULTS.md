@@ -293,3 +293,54 @@ stayed unchanged within each run and throttling counters did not increase.
 Raw profiles, counts, scripts, and variant modules are included in the existing
 exportable evidence bundle. The original throughput criterion remains open;
 this experiment does not justify a speculative production rewrite.
+
+### Python buffering attribution and scoped change
+
+A deterministic raw-read count identified redundant work in Python's existing
+streaming implementation. For a 4 KiB file, `BufferedReader.readinto(65536)`
+returns the data after raw reads of 4,096 and zero bytes; the loop then performs
+another EOF read. Unbuffered `FileIO.readinto` needs two raw reads instead of
+three. The change retains the reusable 64 KiB buffer, continues after short
+reads, and leaves authentication, canonicalization, path containment, and
+verification-before-disk rules unchanged. Eight streaming, three path-boundary,
+and thirteen API-hardening checks passed, including a new short-read creation
+and trusted-verification regression.
+
+The [buffering comparison](results/python-buffering-2026-10-28.json) isolates
+old streaming revision `d73f440d436facd8599b9e4148c883cd0b8102f3` from unbuffered
+candidate `c1cbf00e1c2298c04c7f45ee8df5e918d4679b8b`. It uses Python 3.13.5,
+cryptography 50.0.2, and rfc8785 0.1.4 on the same shared Linux AMD EPYC 9V74
+host. All cases and five paired samples per variant were declared before the
+run; no unfavorable sample was dropped or repeated.
+
+| Input | Operation | Method | Old / unbuffered ms | Throughput change |
+| --- | --- | --- | ---: | ---: |
+| One 4 KiB file | Creation | Warmed | 0.103 / 0.101 | +2.04% |
+| One 4 KiB file | Verification | Warmed | 0.156 / 0.158 | -1.84% |
+| 1,000 × 4 KiB | Creation | Warmed | 27.293 / 26.276 | +3.87% |
+| 1,000 × 4 KiB | Verification | Warmed | 54.513 / 52.980 | +2.89% |
+| 1 MiB | Creation | Warmed | 1.027 / 1.042 | -1.38% |
+| 1 MiB | Verification | Warmed | 1.075 / 1.025 | +4.91% |
+| 100 MiB | Creation | Fresh process | 84.920 / 82.336 | +3.14% |
+| 100 MiB | Verification | Fresh process | 83.741 / 86.348 | -3.02% |
+
+**No material regression was observed; a single-file verification speedup was
+not established.** All 60 warmed batches lasted at least 0.517 seconds, source
+hashes stayed unchanged, and cgroup throttling counters did not increase. The
+100 MiB fresh-process representative retained median incremental RSS of
+102,400 bytes for creation in both variants and 4,096/zero bytes for verification.
+Those are high-water observations, not zero-memory claims or a replacement for
+the separate 1 GiB memory target.
+
+The warmed run reused the existing driver and workers with two recorded copy
+adaptations: measuring Python only and binding the original worker directory.
+It had already started when the shared `--runtime` selector became available;
+it was retained without a consistency rerun. The tracked summary binds both
+driver hashes, worker/package hashes, host observations, medians, and every
+external raw-evidence checksum. Raw samples, logs, the counted-read script, and
+the adapted driver remain at
+`/workspace/proof-ledger-results/python-performance/`. Preserve that directory
+when exporting the workspace. This scoped comparison demonstrates removal of
+redundant reads without an observed material regression against old streaming;
+it does not close the original full throughput criterion against whole-file
+hashing.
