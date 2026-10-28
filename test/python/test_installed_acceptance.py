@@ -22,6 +22,45 @@ class TestInstalledAcceptance(unittest.TestCase):
             capture_output=True, text=True, timeout=30, check=False,
         )
 
+    def test_reference_consumer_reports_sanitized_artifact_reason_and_recovers(self):
+        with tempfile.TemporaryDirectory(prefix='private-path-must-not-print-') as directory:
+            root = Path(directory)
+            keys = ProofSigner.generate_key_pair()
+            original = b'synthetic public artifact'
+            artifact = root / 'artifact.txt'
+            artifact.write_bytes(original)
+            receipt = create_receipt(
+                task={'name': 'private receipt details must not print'}, signing_key=keys['privateKey'],
+                signer_identity='fixture', algorithm='Ed25519', cwd=directory,
+                artifacts=[{'path': 'artifact.txt'}], metadata={'purpose': 'private metadata must not print'},
+            )
+            (root / 'proof.json').write_text(json.dumps(receipt))
+            (root / 'verifier-config.json').write_text(json.dumps({
+                'algorithm': 'Ed25519', 'publicKey': keys['publicKey'],
+            }))
+            launcher = "import runpy,sys; sys.argv=['installed_consumer.py','verify',sys.argv[1]]; runpy.run_path('examples/installed_consumer.py',run_name='__main__')"
+            for case, changed, diagnostic in (
+                    ('missing', None, 'Verification failed: artifact missing or unreadable. Restore the original artifact.txt beside proof.json, check read access, then retry verification.'),
+                    ('mismatch', b'changed artifact bytes', 'Verification failed: artifact bytes do not match the receipt. Restore the original artifact.txt beside proof.json, then retry verification.')):
+                with self.subTest(case=case):
+                    if changed is None:
+                        artifact.unlink()
+                    else:
+                        artifact.write_bytes(changed)
+                    try:
+                        failed = self.run_script(launcher, directory)
+                        self.assertEqual(failed.returncode, 1)
+                        self.assertEqual(failed.stdout, '')
+                        self.assertEqual(failed.stderr.strip(), diagnostic)
+                        for sensitive in (directory, keys['publicKey'], keys['privateKey'],
+                                          'private receipt details', 'private metadata'):
+                            self.assertNotIn(sensitive, failed.stderr)
+                    finally:
+                        artifact.write_bytes(original)
+                    recovered = self.run_script(launcher, directory)
+                    self.assertEqual(recovered.returncode, 0, recovered.stderr)
+                    self.assertEqual(len(json.loads(recovered.stdout)['checks']), 4)
+
     def test_reference_consumer_rejects_real_invalid_receipts_when_optimized(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
