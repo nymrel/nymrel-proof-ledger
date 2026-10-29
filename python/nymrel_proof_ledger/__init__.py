@@ -6,7 +6,7 @@ Dual-runtime cryptographic attestation and proof-of-execution protocol library.
 Parent Organization: Nymrel
 """
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 __author__ = "Nymrel <contact@nymrel.com>"
 
 from .checkpoint import verify_checkpoint
