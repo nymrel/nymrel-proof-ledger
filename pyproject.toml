@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nymrel-proof-ledger"
-version = "2.0.0"
+version = "2.0.1"
 description = "Versioned cryptographic attestation protocol with RFC 8785, RFC 6962, HMAC-SHA256, and Ed25519"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
