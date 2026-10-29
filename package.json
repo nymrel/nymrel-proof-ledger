@@ -1,6 +1,6 @@
 {
   "name": "@nymrel/proof-ledger",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Versioned TypeScript and Python cryptographic attestation protocol with RFC 8785, RFC 6962, HMAC-SHA256, and Ed25519.",
   "author": "Nymrel <contact@nymrel.com>",
   "license": "MIT",
