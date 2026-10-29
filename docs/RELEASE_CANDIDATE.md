@@ -130,12 +130,18 @@ accepts a package specification, allowing the agent to submit the retained
 tarball after account access and publication authorization are supplied.
 
 A staged version occupies the same version slot as a published version.
-After approving the bootstrap version, do not rerun a tag publisher expecting
-it to publish that version again. Plan the initial owner-authorized upload and
-later trusted-publisher releases separately, retaining the bootstrap archive's
-original source and build evidence. Account setup alone does not make the
-current tag workflow an end-to-end first-publication path for an absent npm
-package.
+After approving the bootstrap version, the npm job checks the exact public
+package/version before attempting another upload. Only a matching package
+identity, official tarball URL, SHA-512 integrity value, and downloaded tarball
+bytes matching the accepted release archive permit it to skip duplicate upload.
+An actual version-metadata 404 permits the existing trusted publisher to upload;
+authentication failures, redirects, malformed metadata, and different bytes fail
+closed. Preserve the original bootstrap archive and its source/build evidence;
+do not rebuild or retag to make a collision pass. The local archive checks,
+hosted acceptance, attestation, protected environments, and tag controls still
+apply. A skipped duplicate upload does not claim that the original bootstrap
+used trusted publishing or generated registry provenance. Account setup alone
+does not make an absent npm package ready for direct trusted publication.
 
 After the package exists, open its npm **Settings → Trusted publishing** and
 inspect the current connections before adding one with the table's values.

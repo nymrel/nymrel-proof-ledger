@@ -179,6 +179,12 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Check out the exact release source for registry recovery
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Download release distributions
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
@@ -211,6 +217,17 @@ jobs:
           cmp "$checksum_directory/expected-null" "$checksum_directory/actual" || fail "Distribution files differ from checksum manifest"
           sha256sum --check --strict release/SHA256SUMS
 
+      - name: Check for an identical npm bootstrap or completed upload
+        id: npm-state
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          mapfile -t packages < <(find release/npm -maxdepth 1 -type f -name '*.tgz' -print)
+          test "${#packages[@]}" -eq 1
+          python3 tools/check_npm_publication.py --archive "${packages[0]}" \
+            --version "${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Node.js for npm trusted publishing
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
@@ -230,6 +247,7 @@ jobs:
           NODE
 
       - name: Publish the exact npm archive with provenance
+        if: steps.npm-state.outputs.already_published == 'false'
         run: |
           mapfile -t packages < <(find release/npm -maxdepth 1 -type f -name '*.tgz' -print)
           test "${#packages[@]}" -eq 1
