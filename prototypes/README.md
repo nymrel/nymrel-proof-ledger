@@ -111,8 +111,13 @@ reducer, applies a command and commits the whole bounded snapshot before returni
 Same-process calls share a queue; independent processes coordinate through SQLite.
 Storage version advances for changed audit records; reads and exact retries retain
 the checkpoint. A lost acknowledgement is recovered by retrying the same request
-ID, not inventing another intent. Commit uncertainty requires closing/reopening
+ID, not inventing another intent. Commit or rollback uncertainty requires closing/reopening
 and reconciling durable state. Unknown payment outcomes remain held on restart.
+When a reader makes `COMMIT` return `SQLITE_BUSY`, the active transaction retries
+that same commit for up to five seconds without rerunning the command. On timeout,
+it reports a retryable busy result only after rollback succeeds. A rollback
+failure quarantines the handle and requires reopen/reconciliation. Other commit
+errors also retain uncertain-outcome handling. This follows [SQLite's transaction contract](https://www.sqlite.org/lang_transaction.html#implicit_versus_explicit_transactions).
 
 Creation is exclusive in an already existing private local directory. Empty,
 partial, corrupt, linked or replaced files are refused rather than silently

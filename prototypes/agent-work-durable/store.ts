@@ -48,7 +48,7 @@ export class SQLiteAuditStore implements AtomicAuditStore {
   readonly #db: DatabaseSync;
   readonly #fileIdentity: string;
   #closed = false;
-  #uncertain = false;
+  #uncertaintyCode: string | null = null;
 
   private constructor(filename: string, config: Config) {
     const major = Number(process.versions.node.split('.')[0]);
@@ -119,6 +119,24 @@ export class SQLiteAuditStore implements AtomicAuditStore {
     }
   }
 
+  async #commit(): Promise<void> {
+    const deadline = Date.now() + 5000;
+    for (;;) {
+      try { this.#db.exec('COMMIT'); return; }
+      catch (error) {
+        // SQLite leaves a reader-blocked SQLITE_BUSY transaction active. Retry
+        // only that COMMIT, never the operation that produced the reservation.
+        if (typeof error === 'object' && error !== null && 'errcode' in error && error.errcode === 5) {
+          if (Date.now() >= deadline) throw new LedgerError('STORE_BUSY_RETRY_SAME_REQUEST');
+          await delay(10);
+          continue;
+        }
+        this.#uncertaintyCode = 'COMMIT_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST';
+        throw new LedgerError(this.#uncertaintyCode);
+      }
+    }
+  }
+
   #checkFile(): void {
     requireFile(this.#filename);
     const identity = lstatSync(this.#filename);
@@ -143,7 +161,7 @@ export class SQLiteAuditStore implements AtomicAuditStore {
   transact<T>(operation: (current: StoredAudit) => Promise<{ bundle: AuditBundle; value: T }>): Promise<CommitResult<T>> {
     return serial(this.#filename, async () => {
       requireThat(!this.#closed, 'STORE_CLOSED');
-      requireThat(!this.#uncertain, 'COMMIT_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST');
+      if (this.#uncertaintyCode !== null) throw new LedgerError(this.#uncertaintyCode);
       this.#checkFile();
       await this.#begin();
       let committed = false;
@@ -158,11 +176,16 @@ export class SQLiteAuditStore implements AtomicAuditStore {
         requireThat(Number.isSafeInteger(checkpoint.storageVersion), 'STORE_VERSION');
         this.#checkFile();
         if (changed) this.#db.prepare('UPDATE ledger SET version=?, audit_json=?, audit_head=?, audit_digest=? WHERE singleton=1 AND version=?').run(checkpoint.storageVersion, serialized, next.bundle.head, canonicalHash(next.bundle), current.checkpoint.storageVersion);
-        try { this.#db.exec('COMMIT'); committed = true; }
-        catch { this.#uncertain = true; throw new LedgerError('COMMIT_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST'); }
+        await this.#commit(); committed = true;
         return { checkpoint, value: next.value };
       } finally {
-        if (!committed) { try { this.#db.exec('ROLLBACK'); } catch { /* Outcome is uncertain; a fresh read is required. */ } }
+        if (!committed) {
+          try { this.#db.exec('ROLLBACK'); }
+          catch {
+            this.#uncertaintyCode = 'ROLLBACK_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST';
+            throw new LedgerError(this.#uncertaintyCode);
+          }
+        }
       }
     });
   }

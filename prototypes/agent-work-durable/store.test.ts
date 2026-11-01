@@ -109,6 +109,92 @@ test('separate processes cannot reserve the same available units', async () => {
   const recovered = await open(path, config); assert.equal((await recovered.view()).treasury.commitments, 150); await recovered.close();
 });
 
+test('busy commit waits for an existing reader without reapplying the reservation', { timeout: 10000 }, async () => {
+  const { path, ledger } = await create(); await scoped(ledger);
+  const before = await ledger.view();
+  const reader = new DatabaseSync(join(path, 'ledger.sqlite'), { allowExtension: false });
+  reader.exec('BEGIN'); reader.prepare('SELECT version FROM ledger').get();
+  const originalExec = DatabaseSync.prototype.exec;
+  let observedBusy!: () => void;
+  const busySeen = new Promise<void>(resolve => { observedBusy = resolve; });
+  let readerClosed = false, timer: ReturnType<typeof setTimeout> | undefined;
+  DatabaseSync.prototype.exec = function (sql: string): void {
+    try { return originalExec.call(this, sql); }
+    catch (error) {
+      if (sql === 'COMMIT' && typeof error === 'object' && error !== null && 'errcode' in error && error.errcode === 5) observedBusy();
+      throw error;
+    }
+  };
+  try {
+    const command = { type: 'accept_assignment', requestId: 'waitForReader', workId: 'packet' };
+    const result = ledger.worker.submit(command).then(response => ({ response, error: undefined }), error => ({ response: undefined, error }));
+    await Promise.race([busySeen, new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(Error('Expected a reader-blocked COMMIT')), 5000); })]);
+    if (timer) clearTimeout(timer);
+    reader.exec('COMMIT'); reader.close(); readerClosed = true;
+    const settled = await result;
+    assert.equal(settled.error, undefined);
+    assert.equal(settled.response!.outcome.ok, true);
+    const after = await ledger.view();
+    assert.equal(after.treasury.commitments, 150);
+    assert.equal(after.checkpoint.storageVersion, before.checkpoint.storageVersion + 1);
+    assert.equal(after.state.revision, before.state.revision + 1);
+    const retry = await ok(ledger.worker.submit(command));
+    assert.equal(retry.outcome.replayed, true); assert.deepEqual(retry.checkpoint, after.checkpoint);
+  } finally {
+    if (timer) clearTimeout(timer);
+    DatabaseSync.prototype.exec = originalExec;
+    if (!readerClosed) { reader.exec('ROLLBACK'); reader.close(); }
+    await ledger.close();
+  }
+});
+
+test('busy commit timeout rolls back and permits the same request after the reader closes', { timeout: 15000 }, async () => {
+  const { path, ledger } = await create(); await scoped(ledger);
+  const before = await ledger.view();
+  const reader = new DatabaseSync(join(path, 'ledger.sqlite'), { allowExtension: false });
+  reader.exec('BEGIN'); reader.prepare('SELECT version FROM ledger').get();
+  const command = { type: 'accept_assignment', requestId: 'timeoutForReader', workId: 'packet' };
+  try {
+    await assert.rejects(ledger.worker.submit(command), /STORE_BUSY_RETRY_SAME_REQUEST/);
+  } finally { reader.exec('COMMIT'); reader.close(); }
+  try {
+    assert.deepEqual(await ledger.view(), before);
+    const retry = await ok(ledger.worker.submit(command));
+    assert.equal(retry.outcome.replayed, false);
+    const after = await ledger.view();
+    assert.equal(after.treasury.commitments, 150);
+    assert.equal(after.checkpoint.storageVersion, before.checkpoint.storageVersion + 1);
+  } finally { await ledger.close(); }
+});
+
+test('failed rollback after commit timeout quarantines the handle until reopen', { timeout: 15000 }, async () => {
+  const { path, ledger } = await create(); await scoped(ledger);
+  const before = await ledger.view();
+  const reader = new DatabaseSync(join(path, 'ledger.sqlite'), { allowExtension: false });
+  reader.exec('BEGIN'); reader.prepare('SELECT version FROM ledger').get();
+  const originalExec = DatabaseSync.prototype.exec;
+  const command = { type: 'accept_assignment', requestId: 'rollbackFailure', workId: 'packet' };
+  DatabaseSync.prototype.exec = function (sql: string): void {
+    if (sql === 'ROLLBACK') throw Error('Injected rollback failure');
+    return originalExec.call(this, sql);
+  };
+  try {
+    await assert.rejects(ledger.worker.submit(command), /ROLLBACK_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST/);
+    await assert.rejects(ledger.view(), /ROLLBACK_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST/);
+    await assert.rejects(ledger.worker.submit(command), /ROLLBACK_UNCERTAIN_REOPEN_AND_RETRY_SAME_REQUEST/);
+  } finally {
+    DatabaseSync.prototype.exec = originalExec;
+    reader.exec('COMMIT'); reader.close();
+    await ledger.close();
+  }
+  const recovered = await open(path);
+  try {
+    assert.deepEqual(await recovered.view(), before);
+    await ok(recovered.worker.submit(command));
+    assert.equal((await recovered.view()).treasury.commitments, 150);
+  } finally { await recovered.close(); }
+});
+
 test('concurrent outgoing attempts cannot reuse held capacity across handles', async () => {
   const { path, ledger } = await create(); await assigned(ledger); const second = await open(path);
   const results = await Promise.all([ledger, second].map((l, index) => l.worker.submit({ type: 'begin_spend', requestId: `spend${index}`, attemptId: `attempt${index}`, workId: 'packet', amount: 100 })));

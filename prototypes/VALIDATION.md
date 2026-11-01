@@ -6,8 +6,10 @@ Nymrel / JalenBuilds LLC attribution. No open PR overlapped this source delivery
 The existing external-checkpoint issue remains a separate lane; this change adds
 no checkpoint service, key lifecycle, stable API or protocol behavior.
 
-The 16 runtime/test TypeScript and tsconfig files match the previously reviewed
-in-memory revision 3 and durable revision 1 bytes exactly. The delivery changes
+Fourteen runtime/test TypeScript and tsconfig files match the previously reviewed
+in-memory revision 3 and durable revision 1 bytes exactly. The durable store and
+its regression test add a correction for reader-blocked commits found by hosted
+Node 26 CI. The delivery also changes
 portable documentation, adds this source manifest and runs the existing prototype
 tests in CI's Node 24/26 jobs. All existing CI jobs, permissions, matrices and
 release controls remain present. The stable library and package declarations have
@@ -27,7 +29,7 @@ and hex material is redacted before retaining diagnostic logs.
 | `npm run test:release` | Passed: 266 TypeScript tests, 208 Python tests and configured cross-runtime authentication/Signal/keygen/CLI checks. |
 | `node_modules/.bin/tsc -p prototypes/agent-work/tsconfig.json` | Passed. |
 | `node_modules/.bin/tsc -p prototypes/agent-work-durable/tsconfig.json` | Passed. |
-| `node --test --test-reporter=tap dist/agent-work/prototypes/agent-work/engine.test.js dist/agent-work-durable/prototypes/agent-work-durable/store.test.js` | Passed: 46 tests, zero failures or skips. |
+| `node --test --test-reporter=tap dist/agent-work/prototypes/agent-work/engine.test.js dist/agent-work-durable/prototypes/agent-work-durable/store.test.js` | Passed: 49 tests, zero failures or skips, after the commit-busy/rollback correction. |
 | `node dist/agent-work/prototypes/agent-work/demo.js` | Passed; reference arithmetic yields 350 available fictional units. |
 | `node dist/agent-work-durable/prototypes/agent-work-durable/demo.js` | Passed; restart retains 90 unknown units, 710 available and zero settled spend. |
 | `npm run test:installed -- --output <new-directory-outside-checkout>` | Passed: 115 retained steps, 63 installed CLI gate checks and eight reference recovery checks. |
@@ -49,14 +51,28 @@ formal approval, another GitHub identity, registry release or real customer use.
 
 ## Technical review and publication hygiene
 
+Initial published head `b36f98e9b754f15893bc64043e36d376da358c93` passed local
+checks, but its hosted Node 26 job failed the competing-process test with the
+wrapper's generic uncertain-commit error. A deterministic held-reader regression
+reproduces that symptom locally through `SQLITE_BUSY`; the hosted log did not
+retain the underlying SQLite error code. The correction retries only the active commit, with a bounded
+wait; it does not reapply the business operation. Other commit errors still require
+reopen/reconciliation. Fresh technical review additionally found that a failed
+rollback after timeout must quarantine the handle rather than report a safe retry.
+That failure is now explicit and requires reopening; its fault-injection test
+does not claim a naturally observed filesystem I/O failure. The failing hosted run and before-fix regression are retained
+as failure evidence, not replaced by the later result. The hosted retest is
+required to establish the corrected candidate's Node 26 result.
+
 The earlier fresh-context technical reviews requested as Terra6.1 identified and
 verified fixes for checker execution, invoice deadlines and oversized-work
 eligibility. The final in-memory review reported no remaining finding in its
 changed/affected paths. A separate fresh-context review independently rebuilt the
 durable wrapper and passed all 16 storage tests, reporting no actionable defect
-within the offline trusted-filesystem scope. Those exact code bytes are reused
-here. Delivery documentation and the new CI step receive a separate source-delivery
-review; its result is recorded with the exact PR head rather than predeclared here.
+within the offline trusted-filesystem scope. Unchanged bytes reuse that evidence;
+the commit-busy change receives fresh technical review. Delivery documentation and
+the new CI step also received a separate source-delivery review. Exact-head review
+and hosted results are recorded in the PR rather than predeclared here.
 
 Requested model labels do not establish the actual served model; served identity
 is unknown from available metadata. These are finite technical reviews, not

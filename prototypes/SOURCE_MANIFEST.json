@@ -14,13 +14,13 @@
     },
     {
       "path": "prototypes/README.md",
-      "sha256": "d82c091fb6aa91869e46077aae0c72fc26c22b2212fb8500a68bbabb79198082",
-      "sizeBytes": 8883
+      "sha256": "60d4951e908aa841f237b465f4cd8b03ab0fdc7d1b242cce510bdfb5b19ab5f5",
+      "sizeBytes": 9393
     },
     {
       "path": "prototypes/VALIDATION.md",
-      "sha256": "153b42242bf9cdcf21f854f244065af85c1540231ba2aa0a834357b619d3d18e",
-      "sizeBytes": 5839
+      "sha256": "2edaff361218990fd5dd3aa1a398722b44c888a0c01e759986ada40d1cc37a28",
+      "sizeBytes": 7082
     },
     {
       "path": "prototypes/agent-work/README.md",
@@ -106,15 +106,15 @@
     },
     {
       "path": "prototypes/agent-work-durable/store.test.ts",
-      "sha256": "30a60e47a59ecdab102dcc0a4db1aefeed94431c6a94103407fc81130b6791f2",
-      "sizeBytes": 17793,
-      "reviewedRuntimeBytesUnchanged": true
+      "sha256": "f1ff8c5191bbcc0074f001943a92cf50d47f966d470bb243ba6281d45081a07a",
+      "sizeBytes": 22442,
+      "reviewedRuntimeBytesUnchanged": false
     },
     {
       "path": "prototypes/agent-work-durable/store.ts",
-      "sha256": "27028b5f70cbf27f312110ff2fbf8aff54b5c81e3ddebaeb27ab63065f567426",
-      "sizeBytes": 9669,
-      "reviewedRuntimeBytesUnchanged": true
+      "sha256": "61b9615c1f45ec284862b553c9b5318514f082a173d7bb90213e43e343c5664c",
+      "sizeBytes": 10423,
+      "reviewedRuntimeBytesUnchanged": false
     },
     {
       "path": "prototypes/agent-work-durable/test-worker.ts",
@@ -141,5 +141,13 @@
     "observedServedModel": null,
     "formalGitHubApproval": false
   },
-  "hashScope": "Raw SHA256 of all proposed prototype files and changed CI workflow, excluding this manifest itself. Hashes establish byte identity, not action truth or signer authority."
+  "hashScope": "Raw SHA256 of all proposed prototype files and changed CI workflow, excluding this manifest itself. Hashes establish byte identity, not action truth or signer authority.",
+  "runtimeReconciliation": {
+    "unchangedCheckpointFiles": 14,
+    "changedRuntimeFiles": [
+      "prototypes/agent-work-durable/store.ts",
+      "prototypes/agent-work-durable/store.test.ts"
+    ],
+    "reason": "Handle documented reader-blocked SQLITE_BUSY COMMIT without reapplying the command; confirm rollback before a safe retry; quarantine failed rollback until reopen. Deterministic held-reader, timeout and rollback-failure regressions accompany the change; fresh review and hosted retest required."
+  }
 }
