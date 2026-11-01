@@ -1,0 +1,145 @@
+{
+  "schema": "nymrel.experimental-source-manifest/1",
+  "baseRevision": "11e1ca7410318567099fa586326268e086dc3d21",
+  "license": {
+    "spdx": "MIT",
+    "notice": "Copyright (c) 2026 Nymrel / JalenBuilds LLC",
+    "path": "LICENSE"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "5245ec78de50748152ea53561316973f585b6dc0372289abb24910dc0b579746",
+      "sizeBytes": 14800
+    },
+    {
+      "path": "prototypes/README.md",
+      "sha256": "d82c091fb6aa91869e46077aae0c72fc26c22b2212fb8500a68bbabb79198082",
+      "sizeBytes": 8883
+    },
+    {
+      "path": "prototypes/VALIDATION.md",
+      "sha256": "153b42242bf9cdcf21f854f244065af85c1540231ba2aa0a834357b619d3d18e",
+      "sizeBytes": 5839
+    },
+    {
+      "path": "prototypes/agent-work/README.md",
+      "sha256": "0484894b2c46f2d42ddd5ef5352342680fd2b335d7af746c52ed05b7a2a7e8d9",
+      "sizeBytes": 618
+    },
+    {
+      "path": "prototypes/agent-work/agent-cli.ts",
+      "sha256": "12e42f6dfb2ff079717d76539537198ae2cded6c657edced701ee0e78b87534e",
+      "sizeBytes": 925,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/contracts.ts",
+      "sha256": "a1167316fd70e3f1d019b8d2ebbd79bffaf7fc275684972bfaf8ec03d924077e",
+      "sizeBytes": 5879,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/demo.ts",
+      "sha256": "fecd6f1fb2dad8fa7ce7745b2dfb9f1e2f3b568024132578f43c2b2bf5400351",
+      "sizeBytes": 6767,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/engine.test.ts",
+      "sha256": "ae5afccd03fbe1ec29b22f4925de8e5955b2b65f661cebbe6ef60f3bc030d3d6",
+      "sizeBytes": 31769,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/engine.ts",
+      "sha256": "55326a631732b701d862f4ae7f0333e18890da8b954dd1f915a85b5f6fe370f0",
+      "sizeBytes": 31457,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/fixtures.ts",
+      "sha256": "145c06138feaa8e523faab37226b8ec0a3b9a22f0e2f8a4424938a58ddd7189e",
+      "sizeBytes": 2505,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/replay-cli.ts",
+      "sha256": "70177afb37f9328de94418f9d06d862c1e2990be86f2ed6515c7b987d320f86f",
+      "sizeBytes": 545,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/tsconfig.json",
+      "sha256": "e0076026690c4e01063a6533fb80d31f3b56386c2f045b1c7ff9ccbaffc53767",
+      "sizeBytes": 171,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work/work-adapter.ts",
+      "sha256": "2984933278e7b90ac7106e1698c0bfa2453868254c51b5efa4f2e01706711b0b",
+      "sizeBytes": 1360,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/README.md",
+      "sha256": "0b014d8b56ca02718ab95f5a4bba5c341b927c4269014b952d7efc5a57bb0936",
+      "sizeBytes": 703
+    },
+    {
+      "path": "prototypes/agent-work-durable/contracts.ts",
+      "sha256": "03a04ea23f17a084603ecff209fd6dcee7c7b779aa6b93b3f2757460d815e5ca",
+      "sizeBytes": 1687,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/demo.ts",
+      "sha256": "e4310eb0411cb76aab7cc26923744ca82c97eff9e20f800b739f35d00932658e",
+      "sizeBytes": 2767,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/ledger.ts",
+      "sha256": "378dadb1fb01b4dc8016bc504f0b173ca164c26ebadcd559060a9a3fa92e0302",
+      "sizeBytes": 3761,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/store.test.ts",
+      "sha256": "30a60e47a59ecdab102dcc0a4db1aefeed94431c6a94103407fc81130b6791f2",
+      "sizeBytes": 17793,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/store.ts",
+      "sha256": "27028b5f70cbf27f312110ff2fbf8aff54b5c81e3ddebaeb27ab63065f567426",
+      "sizeBytes": 9669,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/test-worker.ts",
+      "sha256": "843ee91b562d2345c9070bd6a0099b2a2bec1428644fa9ad2750c9272ba9c494",
+      "sizeBytes": 1337,
+      "reviewedRuntimeBytesUnchanged": true
+    },
+    {
+      "path": "prototypes/agent-work-durable/tsconfig.json",
+      "sha256": "40a3ae9752278d6afd86f3d4d4ec0677e567d0aa1988dd7f1afded48634fd03e",
+      "sizeBytes": 169,
+      "reviewedRuntimeBytesUnchanged": true
+    }
+  ],
+  "priorCheckpointManifests": {
+    "inMemoryRevision3Sha256": "dc5362d37a71405b2ff87c8ff10e9edd54257b1f2116643a272c0a70a8e460de",
+    "durableRevision1Sha256": "5d4d502e689de063b3c897d8433a3befb109cf283a7f245ec66e96eca74eec4f"
+  },
+  "provenance": "Prototype source authored for Nymrel; direct reuse of existing MIT library primitives; no third-party repository source copied. Private checkpoint paths and raw evidence are excluded.",
+  "productionBindings": [],
+  "newDependencies": [],
+  "reviewIdentity": {
+    "requestedModel": "gpt-6.1-terra",
+    "observedServedModel": null,
+    "formalGitHubApproval": false
+  },
+  "hashScope": "Raw SHA256 of all proposed prototype files and changed CI workflow, excluding this manifest itself. Hashes establish byte identity, not action truth or signer authority."
+}
