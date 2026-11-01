@@ -234,6 +234,13 @@ jobs:
       - name: Build, type-check, and test
         run: npm test
 
+      - name: Exercise offline agent-work prototypes
+        if: matrix.node-version != 22
+        run: |
+          node_modules/.bin/tsc -p prototypes/agent-work/tsconfig.json
+          node_modules/.bin/tsc -p prototypes/agent-work-durable/tsconfig.json
+          node --test dist/agent-work/prototypes/agent-work/engine.test.js dist/agent-work-durable/prototypes/agent-work-durable/store.test.js
+
       - name: Inspect the npm package boundary
         run: npm pack --dry-run --ignore-scripts
 
