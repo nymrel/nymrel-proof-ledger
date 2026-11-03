@@ -114,6 +114,21 @@ def _read_receipt_for_presentation(proof_path):
     return receipt
 
 
+def _require_distinct_receipt_output(proof_path, output_path):
+    """Keep presentation commands from replacing their source receipt via aliases."""
+    source = os.stat(proof_path)
+    try:
+        destination = os.stat(output_path)
+    except FileNotFoundError:
+        # A new destination cannot already refer to the existing input receipt.
+        return
+    if os.path.samestat(source, destination):
+        raise ValueError(
+            'Output path refers to the input receipt. '
+            'Choose a different output path, then retry.',
+        )
+
+
 def _main(argv=None):
     parser = argparse.ArgumentParser(
         prog="proof-ledger-py",
@@ -392,6 +407,7 @@ def _main(argv=None):
 
     if args.command == "badge":
         receipt = _read_receipt_for_presentation(args.proof)
+        _require_distinct_receipt_output(args.proof, args.out)
 
         if args.format == "html":
             content = generate_html_certificate(receipt)
@@ -430,6 +446,8 @@ def _main(argv=None):
 
     if args.command == "export":
         receipt = _read_receipt_for_presentation(args.proof)
+        if args.out:
+            _require_distinct_receipt_output(args.proof, args.out)
 
         if args.format == "html":
             out_str = generate_html_certificate(receipt)

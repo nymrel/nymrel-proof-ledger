@@ -205,6 +205,10 @@ the root for manual copying. Without JavaScript, select the root directly and
 use the browser's Print command. Generating, copying, or printing a certificate
 does not verify the receipt or its reported task outcome.
 
+In both CLIs, `badge` and `export --out` refuse a destination that refers to the
+input receipt, including existing symlink and hardlink aliases. Choose a separate
+output path and retry; an existing separate report can still be replaced.
+
 ## CLI
 
 Build the checkout first. The [source installation guide](https://github.com/nymrel/nymrel-proof-ledger/blob/main/docs/QUICKSTART.md)
