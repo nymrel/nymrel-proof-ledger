@@ -118,6 +118,70 @@ describe('CLI first-use and recovery', () => {
     });
   });
 
+  it('preserves the input receipt when a badge or report targets the same path', async () => {
+    await withConsumer(async directory => {
+      const original = await fs.readFile(path.join(directory, 'proof.json'));
+      await fs.mkdir(path.join(directory, 'nested'));
+      for (const [name, formats] of [
+        ['badge', ['svg', 'shield', 'html']],
+        ['export', ['markdown', 'jsonld', 'json-ld', 'html']],
+      ] as const) {
+        for (const format of formats) {
+          for (const output of ['proof.json', './nested/../proof.json', path.join(directory, 'proof.json')]) {
+            const result = command(directory, [name, 'proof.json', '--format', format, '--out', output]);
+            assert.equal(result.status, 1);
+            assert.equal(result.stdout, '');
+            assert.match(result.stderr, /Output path refers to the input receipt\. Choose a different output path, then retry\./);
+            assert.deepEqual(await fs.readFile(path.join(directory, 'proof.json')), original);
+          }
+        }
+        const output = path.join(directory, 'output.txt');
+        await fs.writeFile(output, 'previous report');
+        const retry = command(directory, [name, 'proof.json', '--out', output]);
+        assert.equal(retry.status, 0, retry.stderr);
+        assert.notEqual(await fs.readFile(output, 'utf8'), 'previous report');
+        assert.deepEqual(await fs.readFile(path.join(directory, 'proof.json')), original);
+      }
+    });
+  });
+
+  it('preserves receipt bytes when output is an existing hardlink alias', async () => {
+    await withConsumer(async directory => {
+      const original = await fs.readFile(path.join(directory, 'proof.json'));
+      await fs.link(path.join(directory, 'proof.json'), path.join(directory, 'alias.json'));
+      for (const name of ['badge', 'export']) {
+        const result = command(directory, [name, 'proof.json', '--out', 'alias.json']);
+        assert.equal(result.status, 1);
+        assert.equal(result.stdout, '');
+        assert.match(result.stderr, /Choose a different output path, then retry/);
+        assert.deepEqual(await fs.readFile(path.join(directory, 'proof.json')), original);
+        assert.deepEqual(await fs.readFile(path.join(directory, 'alias.json')), original);
+      }
+    });
+  });
+
+  it('preserves receipt bytes through input, output, and parent-directory symlink aliases', { skip: process.platform === 'win32' }, async () => {
+    await withConsumer(async directory => {
+      const original = await fs.readFile(path.join(directory, 'proof.json'));
+      await fs.symlink('proof.json', path.join(directory, 'alias.json'));
+      await fs.symlink(directory, path.join(directory, 'linked-directory'));
+      for (const name of ['badge', 'export']) {
+        for (const [input, output] of [
+          ['proof.json', 'alias.json'],
+          ['alias.json', 'proof.json'],
+          ['proof.json', 'linked-directory/proof.json'],
+        ]) {
+          const result = command(directory, [name, input, '--out', output]);
+          assert.equal(result.status, 1);
+          assert.equal(result.stdout, '');
+          assert.match(result.stderr, /Choose a different output path, then retry/);
+          assert.deepEqual(await fs.readFile(path.join(directory, 'proof.json')), original);
+          assert.equal(await fs.readlink(path.join(directory, 'alias.json')), 'proof.json');
+        }
+      }
+    });
+  });
+
   it('refuses incomplete receipts before displaying or exporting misleading proof data', async () => {
     await withConsumer(async directory => {
       for (const args of [['inspect', 'invalid.json'], ['export', 'invalid.json', '--out', 'report.md']]) {

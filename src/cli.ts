@@ -119,6 +119,21 @@ async function readReceiptForPresentation(proofPath: string): Promise<ProofRecei
   return receipt as ProofReceipt;
 }
 
+/** Refuse accidental receipt replacement, including symlink and hardlink aliases. */
+async function requireSeparateReceiptOutput(proofPath: string, outPath: string): Promise<void> {
+  const input = await fs.stat(path.resolve(proofPath), { bigint: true });
+  let output;
+  try {
+    output = await fs.stat(path.resolve(outPath), { bigint: true });
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return;
+    throw error;
+  }
+  if (input.dev === output.dev && input.ino === output.ino) {
+    throw new Error('Output path refers to the input receipt. Choose a different output path, then retry.');
+  }
+}
+
 function invalidReceiptInput(message: string): VerificationResult {
   return {
     valid: false, trusted: false, merkleValid: false, signatureChecked: false,
@@ -495,6 +510,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
         throw new Error('Unsupported badge format; use svg, shield, or html');
       }
       const receipt = await readReceiptForPresentation(proofPath);
+      await requireSeparateReceiptOutput(proofPath, outPath);
 
       let content: string;
       if (format === 'html') {
@@ -553,6 +569,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
         throw new Error('Unsupported export format; use markdown, jsonld, or html');
       }
       let receipt = await readReceiptForPresentation(proofPath);
+      if (outPath) await requireSeparateReceiptOutput(proofPath, outPath);
 
       let output = '';
       if (format === 'jsonld' || format === 'json-ld') {

@@ -75,6 +75,84 @@ class TestCliFirstUseAndRecovery(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertFalse((self.directory / 'badge.svg').exists())
 
+    def assert_receipt_output_alias_rejected(self, output_path):
+        proof = self.directory / 'proof.json'
+        proof_before = proof.read_bytes()
+        for command, formats in (
+            ('badge', ('svg', 'shield', 'html')),
+            ('export', ('markdown', 'jsonld', 'html')),
+        ):
+            for format_name in formats:
+                with self.subTest(command=command, format=format_name, output=str(output_path)):
+                    result = self.command(
+                        command, 'proof.json', '--format', format_name,
+                        '--out', str(output_path),
+                    )
+                    self.assertEqual(result.returncode, 1)
+                    self.assertEqual(result.stdout, '')
+                    self.assertIn(
+                        'Output path refers to the input receipt. '
+                        'Choose a different output path, then retry.',
+                        result.stderr,
+                    )
+                    self.assertNotIn('Traceback', result.stderr)
+                    self.assertEqual(proof.read_bytes(), proof_before)
+                    self.assertTrue(os.path.samefile(proof, self.directory / output_path))
+
+                    destination = self.directory / 'presentation-output.txt'
+                    destination.write_text('previous presentation output', encoding='utf-8')
+                    retry = self.command(
+                        command, 'proof.json', '--format', format_name,
+                        '--out', str(destination),
+                    )
+                    self.assertEqual(retry.returncode, 0, retry.stderr)
+                    self.assertNotEqual(destination.read_text(encoding='utf-8'), 'previous presentation output')
+                    self.assertEqual(proof.read_bytes(), proof_before)
+
+    def test_presentation_output_cannot_replace_receipt_through_direct_or_relative_paths(self):
+        (self.directory / 'nested').mkdir()
+        for output in ('proof.json', './proof.json', 'nested/../proof.json', self.directory / 'proof.json'):
+            with self.subTest(output=str(output)):
+                self.assert_receipt_output_alias_rejected(output)
+
+    def test_presentation_output_cannot_replace_receipt_through_symlink(self):
+        alias = self.directory / 'receipt-alias.json'
+        try:
+            alias.symlink_to('proof.json')
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f'Symlink creation is unavailable: {error}')
+        self.assert_receipt_output_alias_rejected('receipt-alias.json')
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(os.readlink(alias), 'proof.json')
+
+    def test_presentation_output_cannot_replace_receipt_through_parent_symlink(self):
+        alias = self.directory / 'directory-alias'
+        try:
+            alias.symlink_to(self.directory, target_is_directory=True)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f'Directory symlink creation is unavailable: {error}')
+        self.assert_receipt_output_alias_rejected('directory-alias/proof.json')
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(os.readlink(alias), str(self.directory))
+
+    def test_presentation_output_cannot_replace_receipt_through_hardlink(self):
+        alias = self.directory / 'receipt-hardlink.json'
+        try:
+            alias.hardlink_to(self.directory / 'proof.json')
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f'Hardlink creation is unavailable: {error}')
+        self.assert_receipt_output_alias_rejected('receipt-hardlink.json')
+        self.assertEqual(alias.read_bytes(), (self.directory / 'proof.json').read_bytes())
+
+    def test_presentation_output_can_create_a_new_destination(self):
+        proof_before = (self.directory / 'proof.json').read_bytes()
+        for command, filename in (('badge', 'new-badge.svg'), ('export', 'new-report.md')):
+            with self.subTest(command=command):
+                result = self.command(command, 'proof.json', '--out', filename)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertTrue((self.directory / filename).read_text(encoding='utf-8'))
+                self.assertEqual((self.directory / 'proof.json').read_bytes(), proof_before)
+
     def test_unknown_flag_recovery_keeps_the_selected_receipt(self):
         result = self.command('verify', '--jsoon', 'proof.json')
         self.assertEqual(result.returncode, 2)
