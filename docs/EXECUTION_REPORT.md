@@ -1,6 +1,25 @@
 # Goal execution — October 18, 2026
 
-## Current disposition — October 28, 2026
+## Current disposition — November 4, 2026
+
+The inspected main is `24daebeb4fa087b00d8c8e9db6db06aebf073731`.
+[PR46](https://github.com/nymrel/nymrel-proof-ledger/pull/46) and
+[PR47](https://github.com/nymrel/nymrel-proof-ledger/pull/47) have merged matching
+package version `2.0.1` preparation and exact-byte npm recovery. The original
+offline prototype delivery in [PR48](https://github.com/nymrel/nymrel-proof-ledger/pull/48)
+is merged; its optional sibling-test follow-up retains its separate adoption
+disposition. [PR49](https://github.com/nymrel/nymrel-proof-ledger/pull/49) has merged
+receipt-preserving CLI output checks. These completed source milestones are not
+pending implementation work.
+
+Use the [current release action](RELEASE_CANDIDATE.md#current-source-and-next-release-action--november-4-2026)
+for the remaining source/archive/hosted-release work. Do not repeat version
+preparation or treat old accepted archives as later-source artifacts. This
+reconciliation did not rerun runtime tests, publish packages, execute a new
+hosted release, or establish different-provider trial or human-adoption results.
+The dated records below preserve their original evidence and limitations.
+
+## October 28 disposition
 
 Source preparation and recovery improvements integrated through
 [PR41](https://github.com/nymrel/nymrel-proof-ledger/pull/41) and

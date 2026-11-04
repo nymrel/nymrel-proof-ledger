@@ -4,12 +4,17 @@
 
 **Focus:** Nymrel Proof Ledger, TypeScript and Python.
 
-**Status — October 28, 2026:** Engineering implementation and source integration
-complete. The recorded fresh CI comparison meets all stated throughput and
-large-file memory thresholds for its host/runtime environment; earlier workspace
-misses remain retained. The directed different-provider agent trial and hosted
-release/provenance evidence remain open. Human adoption is separately unobserved;
-see the operator-selected continuation and progress record below.
+**Status — November 4, 2026:** Engineering source milestones include merged
+version preparation and npm recovery (PR46/47), experimental offline prototypes
+(PR48), and CLI receipt-output protection (PR49). The optional PR48 sibling-test
+follow-up is separate from its completed source delivery. Do not repeat those
+merged milestones or bump package version `2.0.1` again. The recorded fresh CI
+comparison meets the stated throughput and large-file memory thresholds for
+its host/runtime environment; earlier workspace misses remain retained.
+Different-provider trial completion, a new exact-source hosted release/provenance
+result, current registry configuration/publication and human adoption were not
+established by this source reconciliation. See the [current release action](RELEASE_CANDIDATE.md#current-source-and-next-release-action--november-4-2026)
+and preserve the original acceptance criteria below.
 
 **Tracking:** This file is the working goal. No background execution or daily
 check-in is scheduled by creating it.
@@ -144,6 +149,7 @@ and the quickstart documents the behavior and migration.
 
 | Date | Completed | Evidence / next action |
 | --- | --- | --- |
+| November 4, 2026 | Reconciled completed source milestones and the release continuation. | Inspected main `24daebeb4fa087b00d8c8e9db6db06aebf073731` contains merged PR46/47/48/49. Package `2.0.1` preparation is complete; PR46 archive hashes do not identify later-source archives. The tag-ref read returned only immutable `v2.0.0`; the GitHub releases collection was empty. Select the intended release source and obtain its actual branch/tag/archive/provenance evidence through the existing process. This documentation result does not close trial, publication or human-adoption criteria. |
 | October 18, 2026 | Set the scoped goal and prioritized its milestones after source inspection. | Baseline revision above. Implementation, fresh release tests, benchmarks, and independent trials remain pending. Start with safe CLI key handling. |
 | October 18, 2026 | Implemented safe CLI keys, the authenticated-v2 gate, installed reference consumers, and bounded artifact hashing. | Release tests and supported-runtime suites passed. Exact built archives passed clean-consumer checks. See the execution report for measured performance, review results, and remaining external milestones. |
 | October 20, 2026 | Reconciled the existing keygen candidate, completed warmed performance diagnostics, and prepared the two-person trial protocol. | All eight warmed medians met the threshold; cold-call limitations remain explicit. The delivery candidate preserves the required other-team review gate and records hosted checks in its PR. |
