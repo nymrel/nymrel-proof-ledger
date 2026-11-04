@@ -165,13 +165,34 @@ no browser profile had a recorded GitHub sign-in. Supported authenticated access
 is needed for the agent to perform this step; no token should be pasted into
 chat and no desktop engineering relay is required.
 
-For the next new patch release, review a version change to **`2.0.1`** in npm
-and Python metadata and the npm lockfile, then use a new matching **`v2.0.1`**
-tag after normal integration and checks. First confirm that this version/tag
-remains unused. The existing annotated `v2.0.0` tag was observed pointing to
-`392c6ee071230f98b08aec4c6e0c8b380f54fd28`; preserve it. Branch-built archives
-must not be described as tag-bound release artifacts. These instructions do
-not bump a version, create a tag, configure an account, or authorize publishing.
+### Current source and next release action — November 4, 2026
+
+Version preparation is complete: [PR46](https://github.com/nymrel/nymrel-proof-ledger/pull/46)
+merged as `4765381e4a8ff91d37254b9e14c1ec5d4719669d`, aligning npm, its lockfile,
+Python distribution metadata and Python's runtime version at **`2.0.1`**.
+Receipt protocol emission remains `2.0.0`. Do not repeat that version bump.
+[PR47](https://github.com/nymrel/nymrel-proof-ledger/pull/47) subsequently merged
+the exact-byte npm recovery guard as `11e1ca7410318567099fa586326268e086dc3d21`.
+Its changed packaged documentation means PR46's accepted archives are historical
+candidate evidence, not the archives of a later source tree.
+
+The November 4 source checkpoint is
+`24daebeb4fa087b00d8c8e9db6db06aebf073731`, including the experimental source-only
+[PR48](https://github.com/nymrel/nymrel-proof-ledger/pull/48) and CLI output-safety
+[PR49](https://github.com/nymrel/nymrel-proof-ledger/pull/49). PR48's separate
+optional sibling-test follow-up does not make its merged source incomplete and
+is not a new release prerequisite.
+
+The next release owner action is to select and review the intended source,
+run its configured branch verification, and retain its exact accepted archives.
+Immediately before a separately authorized tag/publication, reconcile current
+tag and registry state and the original build evidence. The November 4 GitHub
+tag-ref read returned only the annotated `v2.0.0`, still pointing to
+`392c6ee071230f98b08aec4c6e0c8b380f54fd28`; preserve it. No `v2.0.1` tag or GitHub
+release was returned in those reads. These observations do not establish npm
+or PyPI state, account configuration, or a new hosted release/provenance result.
+Branch-built archives must not be described as tag-bound artifacts. This
+procedure changes no version, tag, account setting or publication authority.
 
 ## Observed historical release outcome
 
