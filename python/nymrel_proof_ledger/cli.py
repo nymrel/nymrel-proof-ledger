@@ -8,6 +8,7 @@ import os
 import re
 import sys
 
+from . import __version__
 from .badge import generate_html_certificate, generate_shield_svg, generate_svg_badge
 from .receipt import create_receipt, verify_receipt
 from .signer import ProofSigner
@@ -134,7 +135,7 @@ def _main(argv=None):
         prog="proof-ledger-py",
         description="Nymrel Proof Ledger (Python Engine) - Cryptographic Attestation Protocol",
     )
-    parser.add_argument('--version', '-v', action='version', version='2.0.0')
+    parser.add_argument('--version', '-v', action='version', version=__version__)
     subparsers = parser.add_subparsers(dest="command", help="Sub-command help")
 
     # keygen

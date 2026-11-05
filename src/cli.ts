@@ -14,11 +14,15 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { createReceipt, verifyReceipt, type ProofReceipt, type VerificationResult, type VerifyReceiptOptions } from './core/receipt.js';
 import { generateSvgBadge, generateShieldSvg, generateHtmlCertificate } from './visual/badge.js';
 import { ProofSigner, type SignatureAlgorithm } from './core/signer.js';
 import { validateReceiptEnvelope } from './core/envelope.js';
+
+// This module is emitted to dist/src; read the installed package's own metadata.
+const { version: packageVersion } = createRequire(import.meta.url)('../../package.json') as { version: string };
 
 /** Escape untrusted display strings without changing receipt or signature bytes. */
 function displayCopy<T>(value: T, markdown = false): T {
@@ -43,7 +47,7 @@ function terminalErrorMessage(message: string): string {
 
 function printHelp(): void {
   console.log(`
-\x1b[1m\x1b[32mNYMREL PROOF LEDGER CLI\x1b[0m (v2.0.0)
+\x1b[1m\x1b[32mNYMREL PROOF LEDGER CLI\x1b[0m (v${packageVersion})
 Cryptographic Attestation & Proof-of-Execution Protocol
 Parent Organization: Nymrel
 
@@ -318,7 +322,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
   }
 
   if (parsed.flags.version || parsed.flags.v) {
-    console.log('2.0.0');
+    console.log(packageVersion);
     return 0;
   }
 
@@ -644,7 +648,7 @@ ${receipt.artifacts.map((a) => `| ${a.path} | ${a.sha256} | ${a.sizeBytes} |`).j
 
 export async function runCli(argv: string[] = process.argv.slice(2)): Promise<number> {
   if (argv.length === 1 && (argv[0] === '--version' || argv[0] === '-v')) {
-    console.log('2.0.0');
+    console.log(packageVersion);
     return 0;
   }
   try { return await runCliUnchecked(argv); }

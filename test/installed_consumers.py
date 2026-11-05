@@ -232,6 +232,8 @@ def main():
             shutil.copy2(node_project / 'node_modules/@nymrel/proof-ledger/examples/installed-consumer.mjs', node_example)
             node_cli = node_project / 'node_modules/.bin' / ('proof-ledger.cmd' if os.name == 'nt' else 'proof-ledger')
             run('node-installed-cli-help', [node_cli, '--help'], node_project)
+            require(run('node-installed-cli-version', [node_cli, '--version'], node_project).stdout.strip() == version,
+                    'Installed Node CLI must report the distribution version')
             node_public = consumer_root / 'node-public'
             created = json_run('node-create', ['node', node_example, 'create', node_public], node_project)
             require(str(ROOT) not in created['module'], 'Installed-consumer acceptance condition failed')
@@ -251,6 +253,8 @@ def main():
                 python_example.write_bytes(python_example_bytes)
                 python_cli = scripts / ('proof-ledger-py.exe' if os.name == 'nt' else 'proof-ledger-py')
                 run(f'{kind}-installed-cli-help', [python_cli, '--help'], project)
+                require(run(f'{kind}-installed-cli-version', [python_cli, '--version'], project).stdout.strip() == version,
+                        'Installed Python CLI must report the distribution version')
                 public = consumer_root / f'{kind}-public'
                 created = json_run(f'{kind}-create', [python, '-I', python_example, 'create', public], project)
                 require(Path(created['module']).resolve().is_relative_to(environment), 'Installed-consumer acceptance condition failed')
