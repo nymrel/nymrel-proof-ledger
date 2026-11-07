@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { promises as fs } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { createReceipt, verifyReceipt } from '../../src/core/receipt.js';
 
 const entrypoint = path.resolve('bin/proof-ledger.js');
+const packageVersion = JSON.parse(readFileSync('package.json', 'utf8')).version as string;
 
 function command(cwd: string, args: string[]) {
   return spawnSync(process.execPath, [entrypoint, ...args], { cwd, encoding: 'utf8' });
@@ -33,11 +34,16 @@ async function withConsumer(action: (directory: string) => Promise<void>) {
 }
 
 describe('CLI first-use and recovery', () => {
-  it('reports the version without requiring a command', () => {
-    const result = command(process.cwd(), ['--version']);
-    assert.equal(result.status, 0);
-    assert.equal(result.stdout.trim(), '2.0.0');
-    assert.equal(result.stderr, '');
+  it('reports the installed package version from every version entry point', () => {
+    for (const args of [['--version'], ['-v'], ['attest', '--version']]) {
+      const result = command(os.tmpdir(), args);
+      assert.equal(result.status, 0);
+      assert.equal(result.stdout.trim(), packageVersion);
+      assert.equal(result.stderr, '');
+    }
+    const help = command(os.tmpdir(), ['--help']);
+    assert.equal(help.status, 0);
+    assert.ok(help.stdout.includes(`(v${packageVersion})`));
   });
 
   it('verifies the requested receipt when boolean flags precede its filename', async () => {

@@ -9,6 +9,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'python'))
 
 from nymrel_proof_ledger.receipt import create_receipt, verify_receipt
+from nymrel_proof_ledger import __version__
 
 PYTHON_SOURCE = str(Path(__file__).resolve().parents[2] / 'python')
 
@@ -43,10 +44,12 @@ class TestCliFirstUseAndRecovery(unittest.TestCase):
         )
 
     def test_version_is_available_without_a_command(self):
-        result = self.command('--version')
-        self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), '2.0.0')
-        self.assertEqual(result.stderr, '')
+        for flag in ('--version', '-v'):
+            with self.subTest(flag=flag):
+                result = self.command(flag)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout.strip(), __version__)
+                self.assertEqual(result.stderr, '')
 
     def test_boolean_flags_preserve_the_requested_receipt_and_equals_options_work(self):
         receipt = json.loads((self.directory / 'proof.json').read_text(encoding='utf-8'))
