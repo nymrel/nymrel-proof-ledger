@@ -41,17 +41,17 @@ From the built checkout, create a local archive:
 npm pack --ignore-scripts
 ```
 
-Version 2.0.0 produces `nymrel-proof-ledger-2.0.0.tgz`. In your consuming project,
+Package version 2.0.1 produces `nymrel-proof-ledger-2.0.1.tgz`. In your consuming project,
 install that file using its actual path:
 
 ```sh
-npm install /absolute/path/to/nymrel-proof-ledger/nymrel-proof-ledger-2.0.0.tgz --ignore-scripts
+npm install /absolute/path/to/nymrel-proof-ledger/nymrel-proof-ledger-2.0.1.tgz --ignore-scripts
 ```
 
 The installed package exposes the compiled API and `proof-ledger` CLI. In an ES
 module, use `import { attestExecution, verifyProof } from '@nymrel/proof-ledger'`.
-The archive contains the runtime and README; the executable demo and detailed
-guides remain in the source repository. Creating or installing this archive does
+The archive contains the runtime, README, executable examples and detailed
+guides. Creating or installing this archive does
 not publish it to npm.
 
 ## Install into a Python environment
