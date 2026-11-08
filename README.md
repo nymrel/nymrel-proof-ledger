@@ -56,6 +56,11 @@ CLI verification, see the [source installation guide](https://github.com/nymrel/
 Registry installs such as `npm install @nymrel/proof-ledger` and
 `pip install nymrel-proof-ledger` are not the current installation path.
 
+To attach an authenticated receipt to a real policy-engine result, try the
+[PermitMesh decision integration](docs/POLICY_DECISION_INTEGRATION.md). It preserves
+the native allow/deny artifact for an independently configured offline verifier;
+tool dispatch and enforcement remain host responsibilities.
+
 ## Runtime support
 
 | Runtime | Supported | Production dependencies |
