@@ -87,11 +87,116 @@ def check_npm_documentation(archive):
         return checked
 
 
+def permitmesh_acceptance(wheel, sha256, output, consumer_root, python, environment,
+                          node_cli, node_public, example_bytes, run, json_run):
+    """Optional real policy producer; reuse the installed Node CLI as verifier."""
+    retained = output / 'producer-artifacts'
+    retained.mkdir()
+    copied_wheel = retained / wheel.name
+    shutil.copyfile(wheel, copied_wheel)
+    require(digest(copied_wheel) == sha256, 'PermitMesh wheel checksum changed before installation')
+    run('permitmesh-install-exact-wheel', [
+        'uv', 'pip', 'install', '--python', python, '--no-deps', copied_wheel,
+    ], consumer_root)
+    example = consumer_root / 'permitmesh_decision.py'
+    example.write_bytes(example_bytes)
+    contract = {
+        'contract_version': '0.2', 'issuer': {'id': 'fixture-issuer'},
+        'subject': {'id': 'fixture-reader'},
+        'scope': {'repositories': [{'name': 'fixture', 'refs': ['main'],
+                  'allow_paths': ['README.md'], 'deny_paths': ['.env']}],
+                  'channels': ['fixture/read']},
+        'capabilities': ['read'],
+        'validity': {'not_before': '2030-01-01T00:00:00Z', 'expires_at': '2030-01-02T00:00:00Z'},
+        'limits': {'max_files_changed': 0, 'max_commands': 0, 'max_cost_usd': 0},
+        'approval_gates': [], 'operation_constraints': [],
+        'lifecycle': {'claim_id': 'fixture-claim', 'fencing_generation': 1},
+        'validation': {'required_commands': [], 'required_artifacts': []},
+    }
+    request = {
+        'subject_id': 'fixture-reader', 'action': 'read', 'channel': 'fixture/read',
+        'repository': 'fixture', 'ref': 'main', 'path': 'README.md',
+        'files_changed': 0, 'commands_used': 0, 'cost_usd': 0,
+        'claim_id': 'fixture-claim', 'fencing_generation': 1, 'approvals': [],
+    }
+    contract_path = consumer_root / 'permitmesh-contract.json'
+    contract_path.write_text(json.dumps(contract), encoding='utf-8')
+    checks = []
+    for name, allowed in (('allow', True), ('deny', False)):
+        request_path = consumer_root / f'permitmesh-request-{name}.json'
+        request_path.write_text(json.dumps({**request, 'path': 'README.md' if allowed else '.env'}), encoding='utf-8')
+        public = consumer_root / f'permitmesh-{name}'
+        config_path = consumer_root / f'permitmesh-{name}-public-config.json'
+        command = [python, '-I', example, contract_path, request_path, public,
+                   '--public-config', config_path, '--evaluation-time', '2030-01-01T12:00:00Z']
+        created = json_run(f'permitmesh-create-{name}', command, consumer_root)
+        require(created['status'] == 'RECORDED' and created['policyAllowed'] is allowed,
+                'Real PermitMesh decision did not match the fixture expectation')
+        require(created['producerVersion'] == '0.2.0', 'This reference profile exercises PermitMesh 0.2.0')
+        for field in ('producerModule', 'ledgerModule'):
+            require(Path(created[field]).resolve().is_relative_to(environment), 'Producer imported a source checkout')
+        native = json.loads((public / 'decision.json').read_bytes())
+        require(native['allowed'] is allowed and native['contract_digest'] == created['contractDigest'],
+                'Native decision projection changed')
+        require(native['reason_codes'] == ([] if allowed else ['PATH_DENIED']), 'Unexpected native reason codes')
+        proof = json.loads((public / 'proof.json').read_bytes())
+        require(proof['artifacts'][0]['path'] == 'decision.json', 'Receipt must bind the native decision artifact')
+        config = json.loads(config_path.read_text(encoding='utf-8'))
+        require(sorted(config) == ['algorithm', 'publicKey'] and config['algorithm'] == 'Ed25519',
+                'Only public Ed25519 configuration may cross the boundary')
+
+        def verify(case, *, key=config_path, accepted=False):
+            verdict = json_run(f'permitmesh-node-{name}-{case}', [
+                node_cli, 'verify', 'proof.json', '--key-file', key,
+                '--algo', 'Ed25519', '--check-files', '--require-trusted-v2', '--json',
+            ], public, (0,) if accepted else (1,))
+            require(verdict['trusted'] is accepted and verdict['policy']['passed'] is accepted,
+                    'Independent installed Node verifier returned an unexpected trust verdict')
+            if accepted:
+                require(verdict['valid'] and verdict['signatureChecked'] and verdict['checkedArtifacts'] == 1,
+                        'Accepted decision requires authentication and actual artifact verification')
+            checks.append({'decision': name, 'case': case, 'authenticated': accepted})
+
+        verify('original', accepted=True)
+        verify('wrong-key', key=node_public / 'verifier-config.json')
+        artifact = public / 'decision.json'
+        original = artifact.read_bytes()
+        changed = json.loads(original)
+        changed['allowed'] = not allowed
+        artifact.write_text(json.dumps(changed), encoding='utf-8')
+        try:
+            verify('changed-decision')
+        finally:
+            artifact.write_bytes(original)
+        artifact.unlink()
+        try:
+            verify('missing-decision')
+        finally:
+            artifact.write_bytes(original)
+        verify('restored', accepted=True)
+        # Preserve identities, not ephemeral fixture payloads, in the acceptance receipt.
+        checks.append({'decision': name, 'artifact_sha256': digest(artifact),
+                       'contract_digest': created['contractDigest'],
+                       'policy_allowed': allowed, 'reason_codes': native['reason_codes']})
+    return {'wheel': {'filename': wheel.name, 'sha256': sha256},
+            'example_sha256': hashlib.sha256(example_bytes).hexdigest(), 'checks': checks,
+            'scope': 'synthetic policy decisions; no dispatch, nonce consumption, or external adoption'}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, help='New output directory outside the source checkout; retained after the run')
     parser.add_argument('--artifacts', type=Path, help='Reuse exactly one npm tgz, wheel, and Python tar.gz found recursively here; skip rebuilding')
+    parser.add_argument('--permitmesh-wheel', type=Path, help='Optional separately built PermitMesh 0.2.0 wheel for real policy-producer acceptance')
+    parser.add_argument('--permitmesh-sha256', help='Required independently checked SHA256 of --permitmesh-wheel')
     args = parser.parse_args()
+    if bool(args.permitmesh_wheel) != bool(args.permitmesh_sha256):
+        parser.error('--permitmesh-wheel and --permitmesh-sha256 must be supplied together')
+    if args.permitmesh_wheel:
+        require(re.fullmatch(r'[0-9a-f]{64}', args.permitmesh_sha256) is not None,
+                'PermitMesh checksum must be 64 lowercase hexadecimal characters')
+        require(args.permitmesh_wheel.suffix == '.whl' and digest(args.permitmesh_wheel) == args.permitmesh_sha256,
+                'PermitMesh wheel checksum does not match the supplied pin')
     output = args.output.resolve() if args.output else Path(tempfile.mkdtemp(prefix='proof-ledger-acceptance-'))
     require(not output.is_relative_to(ROOT), 'Keep build artifacts and consumer environments outside the checkout')
     if args.output:
@@ -209,6 +314,12 @@ def main():
             example_stream = distribution.extractfile(example_member)
             require(example_stream is not None, 'Installed-consumer acceptance condition failed')
             python_example_bytes = example_stream.read()
+            policy_example_bytes = None
+            if args.permitmesh_wheel:
+                policy_example_member = next(name for name in names if name.endswith('/examples/permitmesh_decision.py'))
+                policy_example_stream = distribution.extractfile(policy_example_member)
+                require(policy_example_stream is not None, 'Packaged policy producer is missing')
+                policy_example_bytes = policy_example_stream.read()
             require(any(name.endswith('/docs/INSTALLED_CONSUMERS.md') for name in names), 'Installed-consumer acceptance condition failed')
         report['version'] = version
         report['artifacts'] = [
@@ -282,6 +393,12 @@ def main():
                                    [python, '-I', python_example, 'verify', node_public], project, node_public)
                 reference_recovery(f'node-verify-{kind}-reference',
                                    ['node', node_example, 'verify', public], node_project, public)
+                if kind == 'wheel' and args.permitmesh_wheel:
+                    report['permitmesh_integration'] = permitmesh_acceptance(
+                        args.permitmesh_wheel.resolve(), args.permitmesh_sha256, output,
+                        project, python, environment, node_cli, node_public,
+                        policy_example_bytes, run, json_run,
+                    )
 
             report['reference_consumer_recovery_checks'] = reference_recovery_checks
 

@@ -96,7 +96,7 @@ the actual source path and use the archive filenames emitted by the build:
 mkdir /tmp/ledger-node-consumer
 cd /tmp/ledger-node-consumer
 npm init -y
-npm install /absolute/source/nymrel-proof-ledger-2.0.0.tgz --ignore-scripts
+npm install /absolute/source/nymrel-proof-ledger-2.0.1.tgz --ignore-scripts
 cp /absolute/source/examples/installed-consumer.mjs .
 node installed-consumer.mjs create /tmp/ledger-node-public
 ```
@@ -107,7 +107,7 @@ Create the Python project outside the checkout and install the wheel:
 mkdir /tmp/ledger-python-consumer
 cd /tmp/ledger-python-consumer
 uv venv --python 3.13 .venv
-uv pip install --python .venv/bin/python /tmp/proof-ledger-python-artifacts/nymrel_proof_ledger-2.0.0-py3-none-any.whl
+uv pip install --python .venv/bin/python /tmp/proof-ledger-python-artifacts/nymrel_proof_ledger-2.0.1-py3-none-any.whl
 cp /absolute/source/examples/installed_consumer.py .
 .venv/bin/python -I installed_consumer.py create /tmp/ledger-python-public
 .venv/bin/python -I installed_consumer.py verify /tmp/ledger-node-public
@@ -134,6 +134,9 @@ Read [verification boundaries](VERIFICATION_SECURITY.md) and
 [security guidance](../SECURITY.md) before using receipts as an automation gate.
 
 ## Evidence status
+
+For a real policy-engine producer using the same installed verifier and archive
+harness, see the [PermitMesh decision integration](POLICY_DECISION_INTEGRATION.md).
 
 The harness produces fresh, exact-archive evidence on each invocation. A passing
 local run demonstrates installability and compatibility on the recorded host. It
