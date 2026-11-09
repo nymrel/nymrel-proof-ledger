@@ -53,6 +53,17 @@ or duplicate legacy artifacts can retain the original signature; the warning
 must not be ignored in release gates. New receipts remain protocol v2; no wire-version change is
 needed for this verifier API correction.
 
+CLI task policy is separate from authentication. The unreleased source option
+`verify --require-task-success` requires authenticated protocol v2 plus signed
+task status `SUCCESS` and numeric integer-zero exit code. A failure of this
+requested policy does not turn a valid signature into an invalid signature:
+`valid` and `trusted` can remain true while `policy.passed` is false and the CLI
+exits one. Boolean false, strings, null and missing values cannot satisfy the
+zero check. Canonical-equivalent numeric JSON zero spellings remain equivalent
+across runtimes. `--check-files` remains explicit. No task-success policy can
+establish that the recorded execution occurred, that the signer was authorized,
+that the record is fresh, or that an expected artifact was not omitted.
+
 Unknown top-level, signature and Merkle extension fields are not signed claims.
 They may appear in the returned receipt; consumers must not promote them into
 authenticated assertions. Authentication covers the documented versioned payload.

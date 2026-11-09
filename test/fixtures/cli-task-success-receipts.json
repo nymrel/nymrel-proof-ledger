@@ -1,0 +1,176 @@
+{
+  "missing_task_status": {
+    "protocol": "nymrel-proof-ledger",
+    "version": "2.0.0",
+    "proofId": "prf_mw8rvv3v_9499063ee90e",
+    "timestamp": "2026-11-09T04:40:10.555Z",
+    "parentOrganization": "Nymrel",
+    "task": {
+      "name": "Synthetic signed task policy boundary",
+      "runner": "nymrel-agent",
+      "exitCode": 0
+    },
+    "merkle": {
+      "algorithm": "RFC6962-SHA256",
+      "leaves": [
+        "40531760dcd07d29651231ee131a4a3fde542e2c93a43e9515765bccd991d658",
+        "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+        "91de99dceba2d18f082675cbb1837d413125ab2d88824858f46945d737f5c978"
+      ],
+      "root": "a9414e318ed34c0f176ae2b9015c7d3d3f02a52439103271e8e5d2ba717b0c92"
+    },
+    "metadata": {
+      "purpose": "shared CLI task-policy fixture; test keys only"
+    },
+    "environment": {
+      "platform": "linux",
+      "arch": "x64",
+      "runtime": "node v24.19.0"
+    },
+    "artifacts": [
+      {
+        "path": "artifact.txt",
+        "sha256": "292deb28d2f43343330b21a14ccff103f5be773eb16db968eb4768e108fa8d71",
+        "sizeBytes": 13
+      }
+    ],
+    "signature": {
+      "algorithm": "Ed25519",
+      "keyId": "ed25519-primary",
+      "signerIdentity": "fixture",
+      "timestamp": "2026-11-09T04:40:10.557Z",
+      "value": "8a0323855109ea981f71c3e0e0aed4f08d3d60120837f1187074605117ddb91326337be737c6ce9735b9efea4df0684df36c2359a8c8e831fdd45199199dd509"
+    }
+  },
+  "null_task_status": {
+    "protocol": "nymrel-proof-ledger",
+    "version": "2.0.0",
+    "proofId": "prf_mw8rvv3z_1ebacd5e3db1",
+    "timestamp": "2026-11-09T04:40:10.559Z",
+    "parentOrganization": "Nymrel",
+    "task": {
+      "name": "Synthetic signed task policy boundary",
+      "runner": "nymrel-agent",
+      "status": null,
+      "exitCode": 0
+    },
+    "merkle": {
+      "algorithm": "RFC6962-SHA256",
+      "leaves": [
+        "60000d1d00b9b1d7abc5f22e0e106bb6e5c690a742cf5c3ce6eb06e3063842a1",
+        "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+        "91de99dceba2d18f082675cbb1837d413125ab2d88824858f46945d737f5c978"
+      ],
+      "root": "e46bc896459bc29a1679af280cc2e56d3f5781c24ff00426f388669ab5a387ae"
+    },
+    "metadata": {
+      "purpose": "shared CLI task-policy fixture; test keys only"
+    },
+    "environment": {
+      "platform": "linux",
+      "arch": "x64",
+      "runtime": "node v24.19.0"
+    },
+    "artifacts": [
+      {
+        "path": "artifact.txt",
+        "sha256": "292deb28d2f43343330b21a14ccff103f5be773eb16db968eb4768e108fa8d71",
+        "sizeBytes": 13
+      }
+    ],
+    "signature": {
+      "algorithm": "Ed25519",
+      "keyId": "ed25519-primary",
+      "signerIdentity": "fixture",
+      "timestamp": "2026-11-09T04:40:10.559Z",
+      "value": "ae88fc9d82580a1b39e89e278cb870887704405bf5ba591fd1a451be4f4132213f9a0f2529e93a360e74e0deb8c22fa49377374cd57e3c67e0b69cd26351090f"
+    }
+  },
+  "missing_task_exit_code": {
+    "protocol": "nymrel-proof-ledger",
+    "version": "2.0.0",
+    "proofId": "prf_mw8rvv40_8bde9392e7b5",
+    "timestamp": "2026-11-09T04:40:10.560Z",
+    "parentOrganization": "Nymrel",
+    "task": {
+      "name": "Synthetic signed task policy boundary",
+      "runner": "nymrel-agent",
+      "status": "SUCCESS"
+    },
+    "merkle": {
+      "algorithm": "RFC6962-SHA256",
+      "leaves": [
+        "9815d082edcb445a9be6168cd834c58d8b5b2ddc62242537616ddd811be402b8",
+        "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+        "91de99dceba2d18f082675cbb1837d413125ab2d88824858f46945d737f5c978"
+      ],
+      "root": "0f2c1a4e3a770e820168d8a3b9fe6fb65e6dd41ce85e0d4042b0da184b50cc07"
+    },
+    "metadata": {
+      "purpose": "shared CLI task-policy fixture; test keys only"
+    },
+    "environment": {
+      "platform": "linux",
+      "arch": "x64",
+      "runtime": "node v24.19.0"
+    },
+    "artifacts": [
+      {
+        "path": "artifact.txt",
+        "sha256": "292deb28d2f43343330b21a14ccff103f5be773eb16db968eb4768e108fa8d71",
+        "sizeBytes": 13
+      }
+    ],
+    "signature": {
+      "algorithm": "Ed25519",
+      "keyId": "ed25519-primary",
+      "signerIdentity": "fixture",
+      "timestamp": "2026-11-09T04:40:10.560Z",
+      "value": "76428ad4094771372373ddd7f02d08a24b7ac8fa1b24fa6647b9e0ca5e0323f389d8e2cae1a69033f0cda49606ea7d772e13c7f59344b24d78a3a4260be8f106"
+    }
+  },
+  "null_task_exit_code": {
+    "protocol": "nymrel-proof-ledger",
+    "version": "2.0.0",
+    "proofId": "prf_mw8rvv40_045076275174",
+    "timestamp": "2026-11-09T04:40:10.560Z",
+    "parentOrganization": "Nymrel",
+    "task": {
+      "name": "Synthetic signed task policy boundary",
+      "runner": "nymrel-agent",
+      "status": "SUCCESS",
+      "exitCode": null
+    },
+    "merkle": {
+      "algorithm": "RFC6962-SHA256",
+      "leaves": [
+        "84c9b43c95bea3cf1af7599e178c506f86574a54076ac3a51fea8d51a8a42250",
+        "0c50a1e87f47735614bbe31655541a1706e258225e3343ec763e69c064075210",
+        "91de99dceba2d18f082675cbb1837d413125ab2d88824858f46945d737f5c978"
+      ],
+      "root": "408c1f2ef2c3cc12738789bd1146955a5fef8f6d48fec25c05fe8d1844aa8e3e"
+    },
+    "metadata": {
+      "purpose": "shared CLI task-policy fixture; test keys only"
+    },
+    "environment": {
+      "platform": "linux",
+      "arch": "x64",
+      "runtime": "node v24.19.0"
+    },
+    "artifacts": [
+      {
+        "path": "artifact.txt",
+        "sha256": "292deb28d2f43343330b21a14ccff103f5be773eb16db968eb4768e108fa8d71",
+        "sizeBytes": 13
+      }
+    ],
+    "signature": {
+      "algorithm": "Ed25519",
+      "keyId": "ed25519-primary",
+      "signerIdentity": "fixture",
+      "timestamp": "2026-11-09T04:40:10.560Z",
+      "value": "995df86471c251c70d49f5f2d9b9d9f18543ca968a4274608995e6d46106accc9fcbd88ad350854d1577985ae9ee2f369dabe6ca70d919b32909411ceb486005"
+    }
+  }
+}

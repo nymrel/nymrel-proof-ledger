@@ -135,6 +135,14 @@ Read [verification boundaries](VERIFICATION_SECURITY.md) and
 
 ## Evidence status
 
+Current source also checks the unreleased `--require-task-success` policy using
+an installed Node producer and all three installed CLIs. Correctly signed
+`SUCCESS`/zero and `FAILURE`/nonzero records both authenticate and match their
+artifacts; only the successful task record passes the requested task policy.
+The producer keeps its disposable private key in memory and supplies public
+configuration outside the artifact directories. Historical archives do not
+contain this new policy option.
+
 For a real policy-engine producer using the same installed verifier and archive
 harness, see the [PermitMesh decision integration](POLICY_DECISION_INTEGRATION.md).
 

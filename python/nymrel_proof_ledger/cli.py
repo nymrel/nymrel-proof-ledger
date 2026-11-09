@@ -195,6 +195,10 @@ def _main(argv=None):
         help='Require authenticated protocol v2 verification; exit 1 if the policy fails',
     )
     verify_parser.add_argument(
+        '--require-task-success', action='store_true',
+        help='Require authenticated v2, signed SUCCESS and integer exit code 0; exit 1 if the policy fails',
+    )
+    verify_parser.add_argument(
         "--json", action="store_true", help="Output verification result as JSON"
     )
 
@@ -348,9 +352,18 @@ def _main(argv=None):
             policy_errors.append('Authenticated verification is required')
         if result['receipt'] is None or result['receipt']['version'] != '2.0.0':
             policy_errors.append('Receipt protocol v2 is required')
+        if args.require_task_success:
+            task = result['receipt']['task'] if result['receipt'] is not None else {}
+            if task.get('status') != 'SUCCESS':
+                policy_errors.append('Signed task status SUCCESS is required')
+            exit_code = task.get('exitCode')
+            # Match JavaScript's portable JSON numeric-integer value, not its spelling.
+            if isinstance(exit_code, bool) or not isinstance(exit_code, (int, float)) or exit_code != 0:
+                policy_errors.append('Signed task exit code integer zero is required')
         policy = {
-            'name': 'authenticated-v2', 'passed': not policy_errors, 'errors': policy_errors,
-        } if args.require_trusted_v2 else None
+            'name': 'authenticated-v2-task-success' if args.require_task_success else 'authenticated-v2',
+            'passed': not policy_errors, 'errors': policy_errors,
+        } if args.require_trusted_v2 or args.require_task_success else None
         accepted = result['valid'] and (policy is None or policy['passed'])
 
         if args.json:
@@ -390,7 +403,7 @@ def _main(argv=None):
                 print(f"  * {warning}")
 
         if policy is not None:
-            print(f"Policy: authenticated-v2 ({'PASSED' if policy['passed'] else 'FAILED'})")
+            print(f"Policy: {policy['name']} ({'PASSED' if policy['passed'] else 'FAILED'})")
             for error in policy['errors']:
                 print(f'  * {error}')
 

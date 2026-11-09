@@ -66,6 +66,7 @@ Parent Organization: Nymrel
   --help, -h       Show this help message
   --version, -v    Show version number
   --require-trusted-v2  Verify only: require authenticated protocol v2 (exit 1 otherwise)
+  --require-task-success  Verify only: require authenticated v2, signed SUCCESS and integer exit code 0
 
 \x1b[1mEXAMPLES:\x1b[0m
   $ proof-ledger keygen --algo HMAC-SHA256
@@ -84,13 +85,13 @@ interface ParsedArgs {
 }
 
 const booleanFlags = new Set([
-  'help', 'h', 'version', 'v', 'json', 'compact', 'checkFiles', 'check-files', 'require-trusted-v2', 'include-git-context',
+  'help', 'h', 'version', 'v', 'json', 'compact', 'checkFiles', 'check-files', 'require-trusted-v2', 'require-task-success', 'include-git-context',
 ]);
 const commonFlags = ['help', 'h', 'version', 'v'];
 const commandFlags: Record<string, string[]> = {
   keygen: ['algo', 'out'],
   attest: ['task', 'description', 'signer', 'algo', 'key', 'key-file', 'keyFile', 'files', 'f', 'status', 'out', 'badge', 'html', 'include-git-context'],
-  verify: ['proof', 'key', 'key-file', 'keyFile', 'algo', 'algorithm', 'checkFiles', 'check-files', 'json', 'require-trusted-v2'],
+  verify: ['proof', 'key', 'key-file', 'keyFile', 'algo', 'algorithm', 'checkFiles', 'check-files', 'json', 'require-trusted-v2', 'require-task-success'],
   badge: ['proof', 'out', 'format', 'compact'],
   inspect: ['proof'],
   export: ['proof', 'format', 'out'],
@@ -446,8 +447,16 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       if (!result.valid) policyErrors.push('Receipt verification failed');
       if (!result.trusted) policyErrors.push('Authenticated verification is required');
       if (result.receipt?.version !== '2.0.0') policyErrors.push('Receipt protocol v2 is required');
-      const policy = parsed.flags['require-trusted-v2']
-        ? { name: 'authenticated-v2', passed: policyErrors.length === 0, errors: policyErrors }
+      const requireTaskSuccess = parsed.flags['require-task-success'] === true;
+      if (requireTaskSuccess) {
+        if (result.receipt?.task.status !== 'SUCCESS') policyErrors.push('Signed task status SUCCESS is required');
+        const exitCode = result.receipt?.task.exitCode;
+        if (typeof exitCode !== 'number' || !Number.isInteger(exitCode) || exitCode !== 0) {
+          policyErrors.push('Signed task exit code integer zero is required');
+        }
+      }
+      const policy = parsed.flags['require-trusted-v2'] || requireTaskSuccess
+        ? { name: requireTaskSuccess ? 'authenticated-v2-task-success' : 'authenticated-v2', passed: policyErrors.length === 0, errors: policyErrors }
         : undefined;
       const accepted = result.valid && (policy === undefined || policy.passed);
 
@@ -490,7 +499,7 @@ async function runCliUnchecked(argv: string[]): Promise<number> {
       }
 
       if (policy !== undefined) {
-        console.log(`Policy:      authenticated-v2 (${policy.passed ? 'PASSED' : 'FAILED'})`);
+        console.log(`Policy:      ${policy.name} (${policy.passed ? 'PASSED' : 'FAILED'})`);
         policy.errors.forEach((error) => console.log(`  ✗ ${error}`));
       }
 
