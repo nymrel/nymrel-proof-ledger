@@ -73,6 +73,16 @@ Primary APIs:
 - Python: create_receipt, verify_receipt, ProofSigner, validate_receipt_envelope.
 - CLI: attest, verify, inspect, keygen, badge, export.
 
+Audience handoff:
+- Non-developers can review a supplied HTML certificate and download its complete
+  receipt JSON without JavaScript. This saves data; it does not verify it.
+- Developers start with docs/QUICKSTART.md and the installed reference consumers.
+- Agents use verify --require-trusted-v2 --json with an independently supplied
+  key and algorithm; require exit zero and policy.passed, and use --check-files
+  when the task requires local artifacts. Preserve errors and recover their cause;
+  do not retry with weaker verification. See docs/VERIFICATION_SECURITY.md.
+- Review receipt paths, environment and metadata before a human/agent handoff.
+
 Security:
 - Do not treat integrity-only results as authenticated.
 - Do not expose HMAC or Ed25519 private keys.

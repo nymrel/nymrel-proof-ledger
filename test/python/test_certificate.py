@@ -5,6 +5,7 @@ import re
 import sys
 import unittest
 from html.parser import HTMLParser
+from urllib.parse import unquote
 
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python"))
@@ -56,6 +57,32 @@ class CertificateParser(HTMLParser):
 
 
 class TestCertificateExperience(unittest.TestCase):
+    def test_download_preserves_complete_receipt_for_an_independent_verifier(self):
+        secret = ProofSigner.generate_secret_key()
+        receipt = create_receipt(
+            task={"name": 'Customer review <&" 📄', "status": "SUCCESS", "exitCode": 0},
+            artifacts=[{"path": "release/report.json", "data": "artifact"}],
+            signing_key=secret,
+            signer_identity="release-gate",
+            metadata={"handoff": 'quotes " and Unicode \u2028 📄'},
+        )
+        parsed = CertificateParser(generate_html_certificate(receipt))
+        links = parsed.matching("a", "download-receipt")
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0]["attrs"].get("download"), "proof-receipt.json")
+        url = links[0]["attrs"]["href"]
+        self.assertTrue(url.startswith("data:application/json;charset=utf-8,"))
+        saved = json.loads(unquote(url.split(",", 1)[1]))
+        self.assertEqual(saved, receipt)
+        self.assertTrue(verify_receipt(
+            saved, expected_algorithm="HMAC-SHA256", public_key_or_secret=secret
+        )["trusted"])
+        self.assertTrue(parsed.matching(element_id="raw-receipt"))
+        self.assertTrue(any(
+            link["attrs"].get("href") == "#raw-receipt"
+            for link in parsed.matching("a")
+        ))
+
     def make_receipt(self, artifacts=None):
         return create_receipt(
             task={"name": "Certificate release", "status": "FAILURE", "exitCode": 1},
