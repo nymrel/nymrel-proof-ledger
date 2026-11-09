@@ -462,6 +462,61 @@ def main():
                     finally:
                         missing.rename(artifact)
             report['cli_gate_checks'] = cli_checks
+
+            task_capabilities = [
+                '--require-task-success' in run(f'{consumer}-task-policy-capability',
+                    [*cli, 'verify', '--help'], project).stdout
+                for consumer, project, cli in consumers
+            ]
+            require(all(task_capabilities) or not any(task_capabilities),
+                    'Installed task-policy capability differs across distributions')
+            require(args.artifacts or all(task_capabilities),
+                    'Current-source distributions must expose the task-success policy')
+            if all(task_capabilities):
+                # A signed unsuccessful task is authentic data, but may fail a CI policy.
+                # Use the installed Node API as producer; keep its private key in memory.
+                task_root = consumer_root / 'task-policy'
+                task_root.mkdir()
+                task_producer = node_project / 'task-policy-producer.mjs'
+                task_producer.write_text('''
+    import { mkdirSync, writeFileSync } from 'node:fs';
+    import { join } from 'node:path';
+    import { createReceipt, ProofSigner } from '@nymrel/proof-ledger';
+    const parent = process.argv[2];
+    const keys = ProofSigner.generateKeyPair();
+    writeFileSync(join(parent, 'public.json'), JSON.stringify({ algorithm: 'Ed25519', publicKey: keys.publicKey }), { flag: 'wx' });
+    for (const [name, status, exitCode] of [['success', 'SUCCESS', 0], ['failure', 'FAILURE', 1]]) {
+      const root = join(parent, name);
+      mkdirSync(root);
+      writeFileSync(join(root, 'artifact.txt'), 'Synthetic installed task-policy artifact', { flag: 'wx' });
+      const receipt = await createReceipt({ task: { name: 'Synthetic task policy', status, exitCode },
+        artifacts: [{ path: 'artifact.txt' }], cwd: root, signingKey: keys.privateKey,
+        signerIdentity: 'experimental-installed-task-policy', algorithm: 'Ed25519' });
+      writeFileSync(join(root, 'proof.json'), JSON.stringify(receipt), { flag: 'wx' });
+    }
+    console.log(JSON.stringify({ status: 'CREATED' }));
+    ''', encoding='utf-8')
+                created = json_run('task-policy-installed-producer', ['node', task_producer, task_root], node_project)
+                require(created['status'] == 'CREATED', 'Task-policy fixtures were not created')
+                task_checks = []
+                for consumer, project, cli in consumers:
+                    for name, accepted in (('success', True), ('failure', False)):
+                        result = json_run(f'{consumer}-task-policy-{name}', [
+                            *cli, 'verify', 'proof.json', '--key-file', task_root / 'public.json',
+                            '--algo', 'Ed25519', '--check-files', '--require-task-success', '--json',
+                        ], task_root / name, (0,) if accepted else (1,))
+                        require(result['valid'] and result['trusted'] and result['checkedArtifacts'] == 1,
+                                'Signed task policy must preserve successful authentication and requested artifact checks')
+                        require(result['policy']['name'] == 'authenticated-v2-task-success'
+                                and result['policy']['passed'] is accepted,
+                                'Installed task-success policy returned an unexpected result')
+                        task_checks.append({'consumer': consumer, 'signed_task': name, 'accepted': accepted})
+                report['task_success_policy_checks'] = {'status': 'PASS', 'checks': task_checks}
+            else:
+                report['task_success_policy_checks'] = {
+                    'status': 'UNAVAILABLE', 'checks': [],
+                    'reason': 'Explicitly supplied historical distributions do not expose the new policy',
+                }
             report['consumer_environments_removed'] = True
         report['status'] = 'PASS'
     except Exception as error:

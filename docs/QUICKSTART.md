@@ -110,6 +110,33 @@ checks succeed. JSON output includes `policy.passed` and `policy.errors`; these
 are policy decisions alongside the original cryptographic result fields. The
 same flag is available in `proof-ledger-py verify`.
 
+### Require a signed success claim in CI
+
+The current source adds the **unreleased** `--require-task-success` policy.
+Authentication can succeed for an honestly recorded failed task. Use the
+stronger policy when your downstream job must accept only an authenticated v2
+record whose signed task status is `SUCCESS` and signed exit code is numeric
+integer zero:
+
+```sh
+node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files --require-task-success --json
+proof-ledger-py verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files --require-task-success --json
+```
+
+The flag implies `--require-trusted-v2`; you do not need both. It emits policy
+name `authenticated-v2-task-success`. An authenticated `FAILURE`, `WARNING` or
+`ATTESTED` record, a missing/null outcome, or a successful status with a nonzero
+exit code fails this policy and exits one. Booleans and strings never stand in
+for zero; canonical-equivalent JSON numeric forms such as `0.0` are integer zero.
+Cryptographic `valid`/`trusted` results retain their meanings when only the task
+policy fails. The existing default and authentication-only gate remain unchanged.
+
+Artifact reads remain an explicit `--check-files` request. This gate evaluates
+the signed claim; it does not observe execution, authenticate a real-world signer
+identity, establish authorization or freshness, or discover omitted expected
+artifacts. Evaluate a pinned checkout containing this change; older archives
+and installed versions do not acquire a new flag from these instructions.
+
 Run this experiment from the checkout root so the relative artifact path resolves
 to the same file. Separate verification environments must have matching artifact
 bytes under their own verification root when using `--check-files`.

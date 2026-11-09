@@ -9,6 +9,7 @@ import { createReceipt } from '../../src/core/receipt.js';
 const root = process.cwd();
 const vectors = JSON.parse(await readFile(join(root, 'test/fixtures/protocol-v2-vectors.json'), 'utf8'));
 const cases = JSON.parse(await readFile(join(root, 'test/fixtures/cli-gate-cases.json'), 'utf8'));
+const taskReceipts = JSON.parse(await readFile(join(root, 'test/fixtures/cli-task-success-receipts.json'), 'utf8'));
 const payload = 'gate payload\n';
 
 for (const row of cases) {
@@ -18,14 +19,17 @@ for (const row of cases) {
       const algorithm = row.legacy ? 'HMAC-SHA256' : row.algorithm ?? 'Ed25519';
       const key = row.legacy ? vectors.legacyV1.secret
         : algorithm === 'Ed25519' ? vectors.ed25519.publicKey : vectors.protocolV2.secret;
-      const receipt = row.legacy ? structuredClone(vectors.legacyV1.receipt)
+      const receipt = row.receiptFixture ? structuredClone(taskReceipts[row.receiptFixture])
+        : row.legacy ? structuredClone(vectors.legacyV1.receipt)
         : await createReceipt({
-          task: { name: 'gate reference' }, signerIdentity: 'fixture', algorithm,
+          task: { name: 'gate reference', ...row.task }, signerIdentity: 'fixture', algorithm,
           signingKey: algorithm === 'Ed25519' ? vectors.ed25519.secretKey : key,
           artifacts: [{ path: 'artifact.txt', data: payload }], metadata: { purpose: 'test' },
         });
       if (row.tamper === 'metadata') receipt.metadata.purpose = 'changed';
       if (row.tamper === 'artifact') receipt.artifacts[0].sha256 = '00'.repeat(32);
+      if (row.tamper === 'taskStatus') receipt.task.status = 'SUCCESS';
+      if (row.tamper === 'taskExit') receipt.task.exitCode = 0;
       await writeFile(join(directory, 'proof.json'), JSON.stringify(row.malformed ? null : receipt));
       if (row.inputFailure === 'missing') await rm(join(directory, 'proof.json'));
       if (row.inputFailure === 'json') await writeFile(join(directory, 'proof.json'), '{ incomplete');
@@ -45,7 +49,8 @@ for (const row of cases) {
       }
       if (row.disk) flags.push('--check-files');
       // Put the boolean flag before the path to exercise argument arity.
-      const args = ['verify', ...(row.gate ? ['--require-trusted-v2'] : []), 'proof.json', ...flags];
+      const args = ['verify', ...(row.gate ? ['--require-trusted-v2'] : []),
+        ...(row.taskSuccess ? ['--require-task-success'] : []), 'proof.json', ...flags];
       const run = spawnSync(process.execPath, [resolve(root, 'bin/proof-ledger.js'), ...args, '--json'],
         { cwd: directory, encoding: 'utf8', timeout: 30_000 });
       assert.equal(run.status, row.exit, run.stderr);
@@ -59,8 +64,8 @@ for (const row of cases) {
         assert.equal(result.checkedArtifacts, 0);
         assert.match(result.errors[0], /then retry\./);
       }
-      if (row.gate) {
-        assert.equal(result.policy.name, 'authenticated-v2');
+      if (row.gate || row.taskSuccess) {
+        assert.equal(result.policy.name, row.taskSuccess ? 'authenticated-v2-task-success' : 'authenticated-v2');
         assert.equal(result.policy.passed, row.exit === 0);
         assert.equal(result.policy.errors.length === 0, row.exit === 0);
         const human = spawnSync(process.execPath, [resolve(root, 'bin/proof-ledger.js'), ...args],
@@ -78,6 +83,9 @@ for (const row of cases) {
 test('CLI policy rejects explicit values and extra positional arguments', () => {
   for (const args of [
     ['verify', '--require-trusted-v2=false', 'absent.json'],
+    ['verify', '--require-task-success=false', 'absent.json'],
+    ['verify', '--require-task-success', 'absent.json', 'false'],
+    ['attest', '--require-task-success', '--key', 'fixture'],
     ['verify', '--require-trusted-v2', 'absent.json', 'false'],
     ['verify', 'test/fixtures/auth-context-cli-receipt.json', '--require-trusted-v2', '-require-trusted-v2', '', '--json'],
     ['verify', 'test/fixtures/auth-context-cli-receipt.json', '--require-trusted-v3', '--json'],

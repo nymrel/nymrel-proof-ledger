@@ -14,6 +14,7 @@ from nymrel_proof_ledger.receipt import create_receipt  # noqa: E402 - source ch
 
 VECTORS = json.loads((ROOT / 'test/fixtures/protocol-v2-vectors.json').read_text())
 CASES = json.loads((ROOT / 'test/fixtures/cli-gate-cases.json').read_text())
+TASK_RECEIPTS = json.loads((ROOT / 'test/fixtures/cli-task-success-receipts.json').read_text())
 PAYLOAD = 'gate payload\n'
 
 
@@ -22,8 +23,9 @@ def prepare_case(row, directory):
     key = (VECTORS['legacyV1']['secret'] if row.get('legacy') else
            VECTORS['ed25519']['publicKey'] if algorithm == 'Ed25519' else
            VECTORS['protocolV2']['secret'])
-    receipt = (copy.deepcopy(VECTORS['legacyV1']['receipt']) if row.get('legacy') else
-               create_receipt(task={'name': 'gate reference'}, signer_identity='fixture',
+    receipt = (copy.deepcopy(TASK_RECEIPTS[row['receiptFixture']]) if row.get('receiptFixture') else
+               copy.deepcopy(VECTORS['legacyV1']['receipt']) if row.get('legacy') else
+               create_receipt(task={'name': 'gate reference', **row.get('task', {})}, signer_identity='fixture',
                               algorithm=algorithm,
                               signing_key=VECTORS['ed25519']['secretKey'] if algorithm == 'Ed25519' else key,
                               artifacts=[{'path': 'artifact.txt', 'data': PAYLOAD}],
@@ -32,6 +34,10 @@ def prepare_case(row, directory):
         receipt['metadata']['purpose'] = 'changed'
     if row.get('tamper') == 'artifact':
         receipt['artifacts'][0]['sha256'] = '00' * 32
+    if row.get('tamper') == 'taskStatus':
+        receipt['task']['status'] = 'SUCCESS'
+    if row.get('tamper') == 'taskExit':
+        receipt['task']['exitCode'] = 0
     (directory / 'proof.json').write_text(json.dumps(None if row.get('malformed') else receipt))
     if row.get('inputFailure') == 'missing':
         (directory / 'proof.json').unlink()
@@ -55,7 +61,8 @@ def prepare_case(row, directory):
             flags += ['--algo', row.get('expectedAlgorithm', algorithm)]
     if row.get('disk'):
         flags += ['--check-files']
-    return ['verify', *(['--require-trusted-v2'] if row['gate'] else []), 'proof.json', *flags]
+    return ['verify', *(['--require-trusted-v2'] if row['gate'] else []),
+            *(['--require-task-success'] if row.get('taskSuccess') else []), 'proof.json', *flags]
 
 
 class TestCliGate(unittest.TestCase):
@@ -77,8 +84,9 @@ class TestCliGate(unittest.TestCase):
                     self.assertIsNone(result['signatureValid'])
                     self.assertEqual(result['checkedArtifacts'], 0)
                     self.assertIn('then retry.', result['errors'][0])
-                if row['gate']:
-                    self.assertEqual(result['policy']['name'], 'authenticated-v2')
+                if row['gate'] or row.get('taskSuccess'):
+                    self.assertEqual(result['policy']['name'],
+                                     'authenticated-v2-task-success' if row.get('taskSuccess') else 'authenticated-v2')
                     self.assertEqual(result['policy']['passed'], row['exit'] == 0)
                     self.assertEqual(not result['policy']['errors'], row['exit'] == 0)
                     human = subprocess.run(command, capture_output=True, text=True,
@@ -95,6 +103,9 @@ class TestCliGate(unittest.TestCase):
         env = {**os.environ, 'PYTHONPATH': str(ROOT / 'python')}
         for args in [
             ['verify', '--require-trusted-v2=false', 'absent.json'],
+            ['verify', '--require-task-success=false', 'absent.json'],
+            ['verify', '--require-task-success', 'absent.json', 'false'],
+            ['attest', '--require-task-success', '--key', 'fixture'],
             ['verify', '--require-trusted-v2', 'absent.json', 'false'],
             ['verify', str(ROOT / 'test/fixtures/auth-context-cli-receipt.json'), '--require-trusted-v2', '-require-trusted-v2', '', '--json'],
             ['verify', str(ROOT / 'test/fixtures/auth-context-cli-receipt.json'), '--require-trusted-v3', '--json'],

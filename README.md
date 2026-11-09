@@ -232,6 +232,9 @@ node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo E
 # Automation gate: require an authenticated v2 receipt and requested disk checks.
 node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files --require-trusted-v2 --json
 
+# Unreleased source addition: also require the signed task record to claim success.
+node bin/proof-ledger.js verify proof.json --key-file verifier-key.json --algo Ed25519 --check-files --require-task-success --json
+
 # Integrity-only verification is explicit and is never labeled trusted.
 node bin/proof-ledger.js verify proof.json
 ~~~
@@ -283,6 +286,20 @@ verification fields retain their original meanings. A rejected legacy receipt
 can still have `valid: true` and `trusted: true` while `policy.passed` is false
 and the command exits one. File checks remain explicit through `--check-files`.
 Default verification behavior is unchanged.
+
+The **unreleased source addition** `verify --require-task-success` also requires
+signed `task.status: "SUCCESS"` and a numeric integer-zero `task.exitCode`.
+It implies the authenticated-v2 gate; combining both flags keeps the stronger
+policy. JSON adds `policy: { name: 'authenticated-v2-task-success', passed, errors }`.
+A correctly authenticated `FAILURE`, `WARNING`, `ATTESTED`, missing outcome or
+nonzero exit can retain `valid: true` and `trusted: true` while the requested
+policy fails and the command exits one. Booleans, strings and null are not zero.
+Canonical-equivalent JSON numbers `0`, `0.0`, `0e0` and `-0.0` represent the same
+integer value and pass consistently in both runtimes. File checks still require
+`--check-files`. This checks the signer's task claim, not actual execution,
+authorization, freshness, or whether every expected artifact was included.
+The new flag is absent from historical packages; evaluate this exact reviewed
+source until a new versioned release includes it.
 
 Git collection is disabled by default. Set `includeGitContext: true`,
 `include_git_context=True`, or `attest --include-git-context` only for a trusted
