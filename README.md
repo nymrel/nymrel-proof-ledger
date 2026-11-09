@@ -324,6 +324,15 @@ authorization, freshness, or whether every expected artifact was included.
 The new flag is absent from historical packages; evaluate this exact reviewed
 source until a new versioned release includes it.
 
+For a local first-use check, build this source and run
+`node examples/task-success-demo.mjs ../new-ledger-task-demo`. The
+[retained task-policy demo](docs/QUICKSTART.md#try-the-retained-task-policy-demo-unreleased-source)
+authenticates two synthetic records and confirms that only SUCCESS/zero passes
+the requested policy. It refuses existing output paths and retains its files.
+Its own successful exit means both expected demo outcomes matched, not that the
+synthetic failed task succeeded. The copied example also runs from an application
+with the exact built npm archive installed; it remains an unreleased addition.
+
 Git collection is disabled by default. Set `includeGitContext: true`,
 `include_git_context=True`, or `attest --include-git-context` only for a trusted
 working directory and Git installation; this opt-in executes Git commands.
