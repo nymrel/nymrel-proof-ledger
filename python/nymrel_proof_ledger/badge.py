@@ -271,6 +271,7 @@ def generate_html_certificate(
         verification_result=verification_result,
     )
     json_str = json.dumps(receipt, indent=2)
+    download_url = "data:application/json;charset=utf-8," + quote(json_str, safe="")
     task = receipt.get("task", {})
     artifacts = receipt.get("artifacts", [])
     merkle_root = (
@@ -368,6 +369,9 @@ def generate_html_certificate(
     }}
     .publisher {{ font-size: 0.85rem; color: var(--text-muted); }}
     .presentation-note {{ color: var(--text-muted); }}
+    .receipt-handoff {{ margin-top: 12px; }}
+    summary {{ min-height: 44px; padding: 10px 0; cursor: pointer; }}
+    a.btn {{ text-decoration: none; overflow-wrap: anywhere; }}
     .badge-card {{
       background: var(--white);
       border-radius: 16px;
@@ -526,7 +530,17 @@ def generate_html_certificate(
 
     <section class="data-card" aria-labelledby="receipt-state-title">
       <h2 id="receipt-state-title" class="section-title">{presentation_label}</h2>
-      <p class="presentation-note">This certificate presents receipt data and the supplied verification state. To verify the receipt, use the original JSON and a key from a trusted source with an independently configured algorithm. Task status is a reported outcome; copying or printing does not verify it.</p>
+      <p class="presentation-note">Share the complete receipt with a developer or agent to have it checked.</p>
+      <div class="actions">
+        <a id="download-receipt" class="btn" href="{html.escape(download_url, quote=True)}" download="proof-receipt.json">Download receipt JSON</a>
+        <a class="btn btn-secondary" href="#raw-receipt">View receipt data</a>
+      </div>
+      <details class="receipt-handoff">
+        <summary>How verification and sharing work</summary>
+        <p class="presentation-note">This certificate presents receipt data and the supplied verification state. To verify the receipt, use the original JSON and a key from a trusted source with an independently configured algorithm. Task status is a reported outcome; copying or printing does not verify it.</p>
+        <p class="receipt-handoff">For an Ed25519 receipt, get the sender’s public verification key through a trusted channel. Never share private signing keys or HMAC secrets.</p>
+        <p class="receipt-handoff">If your browser cannot save the file, use the receipt data below. Saving or sharing does not verify it. Review recorded paths, environment, and metadata before sharing.</p>
+      </details>
     </section>
 
     <div class="badge-card" role="img" aria-label="Receipt badge: {presentation_label}">
@@ -597,7 +611,7 @@ def generate_html_certificate(
       </div>
     </div>
 
-    <h2 class="section-title">Raw Proof Receipt (JSON)</h2>
+    <h2 id="raw-receipt" class="section-title">Raw Proof Receipt (JSON)</h2>
     <div class="data-card">
       <pre tabindex="0" role="region" aria-label="Raw proof receipt JSON"><code>{html.escape(json_str)}</code></pre>
     </div>

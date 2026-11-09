@@ -27,6 +27,24 @@ and release readiness through January 16, 2027.
 
 ## First run from source
 
+Choose the path for your task:
+
+- **Review a receipt without coding:** open the HTML certificate supplied by its
+  sender. Read the reported task and verification state, then use **Download
+  receipt JSON** to hand the complete receipt to your developer or agent. A
+  certificate does not verify itself. Ask for an Ed25519 public verification key
+  through a trusted channel; never share private keys or HMAC secrets. This repo
+  has no hosted upload-and-verify service.
+- **Build an integration:** follow the source setup below, then the
+  [installation guide](docs/QUICKSTART.md) for a separate consumer project and
+  the TypeScript or Python API examples on this page.
+- **Run an agent or automation gate:** use the
+  [public-only reference consumers](docs/INSTALLED_CONSUMERS.md) and
+  `verify --require-trusted-v2 --json` with an independently configured key and
+  algorithm. Check the exit code and `policy.passed`; add `--check-files` when
+  local artifacts must match. See [verification recovery](docs/VERIFICATION_SECURITY.md)
+  before retrying a rejection. Never weaken the gate to make an action proceed.
+
 With Node.js 22.12 through 26.x and npm 11 installed:
 
 ~~~sh
@@ -201,6 +219,11 @@ if not result["trusted"]:
 ~~~
 
 ## HTML certificates
+
+Certificates include a **Download receipt JSON** link that works without
+JavaScript and saves the complete receipt for a developer or agent to verify.
+If a browser cannot save it, use **View receipt data** to access the same JSON.
+Review recorded paths, environment and metadata before sharing.
 
 Use `node bin/proof-ledger.js badge proof.json --format html --out certificate.html`
 or either runtime's HTML certificate API to create a portable receipt view. It adapts to phone widths

@@ -87,6 +87,32 @@ function attribute(attributes: string, name: string): string | undefined {
 }
 
 describe("Standalone certificate experience", () => {
+  it("exports the complete original receipt for a verifier without running scripts", async () => {
+    const secret = ProofSigner.generateSecretKey();
+    const receipt = await createReceipt({
+      task: { name: 'Customer review <&" 📄', status: "SUCCESS", exitCode: 0 },
+      artifacts: [{ path: "release/report.json", data: "artifact" }],
+      signingKey: secret,
+      signerIdentity: "release-gate",
+      metadata: { handoff: 'quotes " and Unicode \u2028 📄' },
+    });
+    const html = generateHtmlCertificate(receipt);
+    const link = html.match(/<a\b([^>]*id="download-receipt"[^>]*)>/);
+    assert.ok(link);
+    assert.equal(attribute(link[1]!, "download"), "proof-receipt.json");
+    const url = attribute(link[1]!, "href");
+    assert.ok(url);
+    assert.ok(url.startsWith("data:application/json;charset=utf-8,"));
+    const saved = JSON.parse(decodeURIComponent(url.slice(url.indexOf(",") + 1)));
+    assert.deepEqual(saved, receipt);
+    const result = await verifyReceipt(saved, {
+      expectedAlgorithm: "HMAC-SHA256", publicKeyOrSecret: secret,
+    });
+    assert.equal(result.trusted, true);
+    assert.ok(html.includes('href="#raw-receipt"'));
+    assert.ok(html.includes('id="raw-receipt"'));
+  });
+
   it("provides landmarks, selectable proof data, and a named keyboard-scrollable artifact table", async () => {
     const { receipt, html } = await certificate();
     assert.match(html, /<main\b[^>]*>/);
