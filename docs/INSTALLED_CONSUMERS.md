@@ -136,12 +136,17 @@ Read [verification boundaries](VERIFICATION_SECURITY.md) and
 ## Evidence status
 
 Current source also checks the unreleased `--require-task-success` policy using
-an installed Node producer and all three installed CLIs. Correctly signed
+the packaged [task-policy demo](../examples/task-success-demo.mjs) and all three
+installed CLIs. The harness copies the demo outside the checkout and requires
+matching example bytes in the npm and Python source archives. Correctly signed
 `SUCCESS`/zero and `FAILURE`/nonzero records both authenticate and match their
 artifacts; only the successful task record passes the requested task policy.
 The producer keeps its disposable private key in memory and supplies public
-configuration outside the artifact directories. Historical archives do not
-contain this new policy option.
+configuration outside the artifact directories. The demo itself succeeds only
+when both expected policy outcomes match. Explicitly supplied historical archives
+can lack the option or the packaged example; the receipt marks that profile
+UNAVAILABLE rather than reporting a functional pass. Mixed example availability
+across archives is rejected.
 
 For a real policy-engine producer using the same installed verifier and archive
 harness, see the [PermitMesh decision integration](POLICY_DECISION_INTEGRATION.md).

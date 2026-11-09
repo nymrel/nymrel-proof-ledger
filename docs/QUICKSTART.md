@@ -33,6 +33,45 @@ the verifier's public key and algorithm through an authenticated channel.
 `trusted: true` authenticates the documented signed fields under that key. It does
 not independently prove execution or register a real-world signer identity.
 
+## Try the retained task-policy demo (unreleased source)
+
+From a built, reviewed checkout containing the new example, run one command:
+
+```sh
+node examples/task-success-demo.mjs ../new-ledger-task-demo
+```
+
+Use a new directory whose parent already exists. The demo refuses an existing
+file, directory or symlink at that output path. It leaves its output in place on
+success and on failure; it never removes or replaces user files. Inspect any
+partial output before retrying with another new path.
+Unknown options are rejected; use `./--name` for a literal hyphen-leading path.
+
+The command signs two synthetic task records with a disposable Ed25519 key held
+only in memory. It provisions `public.json` outside the `success/` and `failure/`
+artifact directories, then invokes this same package's actual CLI with that
+explicit public key/algorithm, `--check-files` and `--require-task-success`.
+
+| Synthetic signed record | Authentication and artifact checks | Requested task policy | Verifier exit |
+| --- | --- | --- | --- |
+| SUCCESS, exit 0 | Pass | Pass | 0 |
+| FAILURE, exit 1 | Pass | Fail | 1 |
+
+The demo itself prints JSON `status: "PASS"` and exits zero only when **both
+expected outcomes** match. Its failed task fixture remains a failed claim.
+No task is executed, and no private key is printed or saved. The retained public
+configuration is experimental provisioning; real verifiers obtain their trusted
+key and algorithm through an independently authenticated channel.
+
+To try the same script from a separate application, first build/pack and install
+the exact local archive using the steps below. Copy
+`node_modules/@nymrel/proof-ledger/examples/task-success-demo.mjs` into that
+application and run `node task-success-demo.mjs ./new-demo-output`. It resolves
+the installed package API and CLI rather than importing a source checkout.
+Older archives can lack this example even if they include the task-policy flag.
+This source demo establishes neither actual execution nor signer authority,
+authorization, freshness, artifact completeness or outside adoption.
+
 ## Install into a Node project
 
 From the built checkout, create a local archive:

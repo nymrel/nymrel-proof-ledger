@@ -314,6 +314,12 @@ def main():
             example_stream = distribution.extractfile(example_member)
             require(example_stream is not None, 'Installed-consumer acceptance condition failed')
             python_example_bytes = example_stream.read()
+            task_demo_member = next((name for name in names if name.endswith('/examples/task-success-demo.mjs')), None)
+            task_demo_bytes = None
+            if task_demo_member is not None:
+                task_demo_stream = distribution.extractfile(task_demo_member)
+                require(task_demo_stream is not None, 'Packaged task-success demo could not be read')
+                task_demo_bytes = task_demo_stream.read()
             policy_example_bytes = None
             if args.permitmesh_wheel:
                 policy_example_member = next(name for name in names if name.endswith('/examples/permitmesh_decision.py'))
@@ -472,32 +478,22 @@ def main():
                     'Installed task-policy capability differs across distributions')
             require(args.artifacts or all(task_capabilities),
                     'Current-source distributions must expose the task-success policy')
-            if all(task_capabilities):
-                # A signed unsuccessful task is authentic data, but may fail a CI policy.
-                # Use the installed Node API as producer; keep its private key in memory.
+            packaged_demo = node_project / 'node_modules/@nymrel/proof-ledger/examples/task-success-demo.mjs'
+            has_demo = packaged_demo.is_file()
+            require(has_demo == (task_demo_bytes is not None),
+                    'Packaged task-success demo availability differs across distributions')
+            require(args.artifacts or has_demo, 'Current-source distributions must include the task-success demo')
+            if all(task_capabilities) and has_demo:
+                require(packaged_demo.read_bytes() == task_demo_bytes,
+                        'Packaged task-success demo bytes differ across distributions')
                 task_root = consumer_root / 'task-policy'
-                task_root.mkdir()
-                task_producer = node_project / 'task-policy-producer.mjs'
-                task_producer.write_text('''
-    import { mkdirSync, writeFileSync } from 'node:fs';
-    import { join } from 'node:path';
-    import { createReceipt, ProofSigner } from '@nymrel/proof-ledger';
-    const parent = process.argv[2];
-    const keys = ProofSigner.generateKeyPair();
-    writeFileSync(join(parent, 'public.json'), JSON.stringify({ algorithm: 'Ed25519', publicKey: keys.publicKey }), { flag: 'wx' });
-    for (const [name, status, exitCode] of [['success', 'SUCCESS', 0], ['failure', 'FAILURE', 1]]) {
-      const root = join(parent, name);
-      mkdirSync(root);
-      writeFileSync(join(root, 'artifact.txt'), 'Synthetic installed task-policy artifact', { flag: 'wx' });
-      const receipt = await createReceipt({ task: { name: 'Synthetic task policy', status, exitCode },
-        artifacts: [{ path: 'artifact.txt' }], cwd: root, signingKey: keys.privateKey,
-        signerIdentity: 'experimental-installed-task-policy', algorithm: 'Ed25519' });
-      writeFileSync(join(root, 'proof.json'), JSON.stringify(receipt), { flag: 'wx' });
-    }
-    console.log(JSON.stringify({ status: 'CREATED' }));
-    ''', encoding='utf-8')
-                created = json_run('task-policy-installed-producer', ['node', task_producer, task_root], node_project)
-                require(created['status'] == 'CREATED', 'Task-policy fixtures were not created')
+                copied_demo = node_project / 'task-success-demo.mjs'
+                shutil.copyfile(packaged_demo, copied_demo)
+                created = json_run('task-policy-installed-demo', ['node', copied_demo, task_root], node_project)
+                require(created['status'] == 'PASS' and len(created['checks']) == 2,
+                        'Packaged task-success demo did not verify both expected outcomes')
+                require(str(node_project / 'node_modules') in created['module']
+                        and str(ROOT) not in created['module'], 'Task demo imported a source checkout')
                 task_checks = []
                 for consumer, project, cli in consumers:
                     for name, accepted in (('success', True), ('failure', False)):
@@ -511,11 +507,15 @@ def main():
                                 and result['policy']['passed'] is accepted,
                                 'Installed task-success policy returned an unexpected result')
                         task_checks.append({'consumer': consumer, 'signed_task': name, 'accepted': accepted})
-                report['task_success_policy_checks'] = {'status': 'PASS', 'checks': task_checks}
+                report['task_success_policy_checks'] = {
+                    'status': 'PASS', 'checks': task_checks,
+                    'demo': created, 'example_sha256': digest(copied_demo),
+                }
             else:
                 report['task_success_policy_checks'] = {
                     'status': 'UNAVAILABLE', 'checks': [],
-                    'reason': 'Explicitly supplied historical distributions do not expose the new policy',
+                    'policyAvailable': all(task_capabilities), 'exampleAvailable': has_demo,
+                    'reason': 'Explicitly supplied historical distributions lack the policy or packaged demo',
                 }
             report['consumer_environments_removed'] = True
         report['status'] = 'PASS'
